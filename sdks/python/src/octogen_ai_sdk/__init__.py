@@ -13,9 +13,13 @@ from octogen_ai_sdk.errors import (
 )
 from octogen_ai_sdk.models import (
     AgeGroup,
+    Attribute,
+    AttributeValue,
     AudienceView,
     BrandView,
     BreadcrumbView,
+    CanonicalBrand,
+    CanonicalBrandEnrichment,
     CategoryView,
     ColorFamily,
     ColorView,
@@ -23,6 +27,7 @@ from octogen_ai_sdk.models import (
     Facet,
     FacetName,
     Gender,
+    HTTPValidationError,
     IdentifiersView,
     MerchantCatalogSummary,
     MerchantProductListItem,
@@ -38,14 +43,19 @@ from octogen_ai_sdk.models import (
     RatingView,
     ReviewView,
     TextSearchQuery,
+    ValidationErrorModel,
     VideoView,
 )
 
 __all__ = [
     "AgeGroup",
+    "Attribute",
+    "AttributeValue",
     "AudienceView",
     "BrandView",
     "BreadcrumbView",
+    "CanonicalBrand",
+    "CanonicalBrandEnrichment",
     "CategoryView",
     "ColorFamily",
     "ColorView",
@@ -53,6 +63,7 @@ __all__ = [
     "Facet",
     "FacetName",
     "Gender",
+    "HTTPValidationError",
     "IdentifiersView",
     "MerchantCatalogSummary",
     "MerchantProductListItem",
@@ -77,5 +88,6 @@ __all__ = [
     "RatingView",
     "ReviewView",
     "TextSearchQuery",
+    "ValidationErrorModel",
     "VideoView",
 ]

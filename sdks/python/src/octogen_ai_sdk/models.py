@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class _ResponseModel(BaseModel):
@@ -125,13 +125,7 @@ class ProgrammaticProductSearchRequest(_RequestModel):
 class ProgrammaticProductLookupRequest(_RequestModel):
     """Product lookup request."""
 
-    url: str | None = Field(default=None, min_length=1)
-
-    @model_validator(mode="after")
-    def require_url(self) -> ProgrammaticProductLookupRequest:
-        if self.url is None:
-            raise ValueError("url is required")
-        return self
+    url: str = Field(min_length=1)
 
 
 class AttributeValue(_ResponseModel):

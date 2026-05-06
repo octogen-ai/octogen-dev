@@ -3,18 +3,40 @@ from __future__ import annotations
 import os
 
 import httpx
+import octogen_ai_sdk
 import pytest
 import respx
 from octogen_ai_sdk import (
+    Attribute,
+    AttributeValue,
+    CanonicalBrand,
+    CanonicalBrandEnrichment,
     EmbeddingColumn,
     FacetName,
+    HTTPValidationError,
     MissingAPIKeyError,
     OctogenClient,
     OctogenNotFoundError,
+    ProgrammaticProductLookupRequest,
     TextSearchQuery,
+    ValidationErrorModel,
 )
 
 BASE_URL = "https://api.octogen.ai/v1"
+
+
+def test_public_model_exports_are_available() -> None:
+    assert octogen_ai_sdk.Attribute is Attribute
+    assert octogen_ai_sdk.AttributeValue is AttributeValue
+    assert octogen_ai_sdk.CanonicalBrand is CanonicalBrand
+    assert octogen_ai_sdk.CanonicalBrandEnrichment is CanonicalBrandEnrichment
+    assert octogen_ai_sdk.HTTPValidationError is HTTPValidationError
+    assert octogen_ai_sdk.ValidationErrorModel is ValidationErrorModel
+
+
+def test_lookup_request_requires_url() -> None:
+    with pytest.raises(ValueError):
+        ProgrammaticProductLookupRequest.model_validate({})
 
 
 def test_client_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -49,6 +71,9 @@ async def test_list_catalogs_uses_env_api_key(
 
     assert route.called
     assert route.calls.last.request.headers["Authorization"] == "Bearer octo_test_key"
+    assert route.calls.last.request.headers["User-Agent"].startswith(
+        "octogen-ai-sdk-python/"
+    )
     assert catalogs[0].catalog == "acme"
     assert catalogs[0].display_name == "ACME"
     assert catalogs[0].product_count == 12

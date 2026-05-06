@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.metadata as metadata
+import json as json_module
 import os
 from collections.abc import Sequence
+from pprint import pformat
 from types import TracebackType
 from typing import Any, Self
 
@@ -30,6 +33,17 @@ from octogen_ai_sdk.models import (
 
 DEFAULT_BASE_URL = "https://api.octogen.ai/v1"
 DEFAULT_TIMEOUT = 30.0
+PACKAGE_NAME = "octogen-ai-sdk"
+
+
+def _package_version() -> str:
+    try:
+        return metadata.version(PACKAGE_NAME)
+    except metadata.PackageNotFoundError:
+        return "0.1.0"
+
+
+USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
 
 
 class OctogenClient:
@@ -136,12 +150,18 @@ class OctogenClient:
         *,
         json: dict[str, Any] | None = None,
     ) -> Any:
+        headers = self._headers()
+        content: str | None = None
+        if json is not None:
+            headers["Content-Type"] = "application/json"
+            content = json_module.dumps(json, separators=(",", ":"))
+
         try:
             response = await self._client.request(
                 method,
                 self._url(path),
-                headers=self._headers(),
-                json=json,
+                headers=headers,
+                content=content,
             )
         except httpx.RequestError as exc:
             raise OctogenConnectionError(str(exc)) from exc
@@ -168,7 +188,7 @@ class OctogenClient:
         return {
             "Accept": "application/json",
             "Authorization": f"Bearer {self._api_key}",
-            "User-Agent": "octogen-ai-sdk-python/0.1.0",
+            "User-Agent": USER_AGENT,
         }
 
 
@@ -219,4 +239,9 @@ def _error_detail(response: httpx.Response) -> Any:
 def _error_message(response: httpx.Response, detail: Any) -> str:
     if isinstance(detail, str) and detail:
         return detail
+    if detail not in (None, "", [], {}):
+        return (
+            f"Octogen API request failed with status {response.status_code}: "
+            f"{pformat(detail)}"
+        )
     return f"Octogen API request failed with status {response.status_code}"
