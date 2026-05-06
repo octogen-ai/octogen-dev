@@ -1,0 +1,53 @@
+{
+  "name": "@octogen-ai/sdk",
+  "version": "0.1.0",
+  "description": "Async TypeScript SDK for the Octogen AI commerce API",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Octogen AI",
+  "homepage": "https://github.com/octogen-ai/octogen-dev#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/octogen-ai/octogen-dev.git",
+    "directory": "sdks/typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/octogen-ai/octogen-dev/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "npm run lint && npm run format && npm run typecheck && npm run test && npm run build",
+    "clean": "rm -rf dist coverage",
+    "example:search-clothes": "tsx ../../examples/typescript/search_clothes.ts",
+    "format": "cd ../.. && sdks/typescript/node_modules/.bin/prettier --check sdks/typescript examples/typescript eslint.config.mjs",
+    "format:write": "cd ../.. && sdks/typescript/node_modules/.bin/prettier --write sdks/typescript examples/typescript eslint.config.mjs",
+    "lint": "cd ../.. && sdks/typescript/node_modules/.bin/eslint --config eslint.config.mjs sdks/typescript examples/typescript",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.1.5"
+  }
+}

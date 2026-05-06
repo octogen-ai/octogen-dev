@@ -57,6 +57,15 @@ cd sdks/python
 uv run pytest
 ```
 
+The TypeScript SDK is initialized in `sdks/typescript` as an ESM package using
+the platform `fetch`, strict TypeScript, ESLint, Prettier, and Vitest. Run its
+quality suite with:
+
+```bash
+npm --prefix sdks/typescript install
+npm --prefix sdks/typescript run check
+```
+
 Install the repo hooks with `prek`:
 
 ```bash
