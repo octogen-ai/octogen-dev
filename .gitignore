@@ -1,0 +1,98 @@
+# macOS and system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+Thumbs.db
+
+# Editor and IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+build/
+dist/
+site/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# TypeScript and Node.js
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.turbo/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+coverage/
+*.tsbuildinfo
+*.d.ts.map
+
+# SDK build outputs
+sdks/**/build/
+sdks/**/dist/
+sdks/**/coverage/
+sdks/**/.coverage
+sdks/**/.pytest_cache/
+sdks/**/.mypy_cache/
+sdks/**/.ruff_cache/
+sdks/**/node_modules/
+
+# Test and fixture scratch data
+tests/**/.cache/
+tests/**/tmp/
+tests/**/output/
+
+# Generated docs
+docs/_build/
+docs/site/
+
+# Temporary files
+tmp/
+temp/
+.cache/
