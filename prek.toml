@@ -1,0 +1,49 @@
+default_install_hook_types = ["pre-commit"]
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "end-of-file-fixer" },
+  { id = "trailing-whitespace" },
+  { id = "check-merge-conflict" },
+  { id = "detect-private-key" },
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "python-sdk-ruff-check",
+    name = "Python SDK Ruff lint",
+    language = "system",
+    entry = "uv run --project sdks/python ruff check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python",
+    files = "^(sdks/python|examples/python)/",
+    pass_filenames = false,
+  },
+  {
+    id = "python-sdk-ruff-format-check",
+    name = "Python SDK Ruff format check",
+    language = "system",
+    entry = "uv run --project sdks/python ruff format --check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python",
+    files = "^(sdks/python|examples/python)/",
+    pass_filenames = false,
+  },
+  {
+    id = "python-sdk-ty-check",
+    name = "Python SDK ty typecheck",
+    language = "system",
+    entry = "uv run --project sdks/python ty check --project sdks/python sdks/python/src sdks/python/tests examples/python",
+    files = "^(sdks/python|examples/python)/",
+    pass_filenames = false,
+  },
+  {
+    id = "python-sdk-tests",
+    name = "Python SDK tests",
+    language = "system",
+    entry = "uv run --project sdks/python pytest -c sdks/python/pyproject.toml sdks/python/tests",
+    files = "^(sdks/python|examples/python)/",
+    pass_filenames = false,
+  },
+]
