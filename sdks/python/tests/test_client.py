@@ -15,7 +15,9 @@ from octogen_ai_sdk import (
     FacetName,
     HTTPValidationError,
     MissingAPIKeyError,
+    OctogenAPIError,
     OctogenClient,
+    OctogenConnectionError,
     OctogenNotFoundError,
     ProgrammaticProductLookupRequest,
     TextSearchQuery,
@@ -184,6 +186,45 @@ async def test_api_errors_include_status_and_detail() -> None:
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "product_not_found"
+
+
+@respx.mock
+async def test_rate_limit_errors_include_status_and_detail() -> None:
+    respx.get(f"{BASE_URL}/catalogs").mock(
+        return_value=httpx.Response(429, json={"detail": "rate_limited"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenAPIError) as exc_info:
+            await client.list_catalogs()
+
+    assert exc_info.value.status_code == 429
+    assert exc_info.value.detail == "rate_limited"
+
+
+@respx.mock
+async def test_connection_errors_are_wrapped() -> None:
+    respx.get(f"{BASE_URL}/catalogs").mock(
+        side_effect=httpx.ConnectTimeout("request timed out")
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenConnectionError) as exc_info:
+            await client.list_catalogs()
+
+    assert "request timed out" in str(exc_info.value)
+
+
+async def test_no_content_response_returns_none() -> None:
+    transport = httpx.MockTransport(lambda _: httpx.Response(204))
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = OctogenClient(
+            api_key="key",
+            base_url=BASE_URL,
+            http_client=http_client,
+        )
+
+        assert await client._request("DELETE", "/products/lookup") is None
 
 
 async def test_api_key_can_be_passed_without_mutating_env(
