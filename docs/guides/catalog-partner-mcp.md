@@ -3,7 +3,7 @@
 The Octogen Catalog Partner MCP server lets agents (Claude Code, Codex CLI,
 Claude Desktop, and any other [Model Context Protocol](https://modelcontextprotocol.io/)
 client) discover and query the product catalogs granted to your organization.
-It is the interactive sibling of [Platform Catalog API v1](../api/catalog-partner-mcp.md);
+It is the interactive sibling of [Platform Catalog API v1](../api/platform-catalog-api-v1.md);
 both share the same business logic and the same set of granted catalogs.
 
 | Connection | What you should know |
@@ -104,7 +104,7 @@ as long as the refresh token is valid.
 ## What the tools do
 
 Three tools are available. Each one maps to an endpoint in the
-[Platform Catalog API v1 (REST)](../api/catalog-partner-mcp.md), so the
+[Platform Catalog API v1 (REST)](../api/platform-catalog-api-v1.md), so the
 arguments and result shapes are the same on either surface.
 
 ### `list_catalogs()`
@@ -208,5 +208,5 @@ one path takes effect immediately on the other.
 
 ## Next
 
-- [Tool reference (this guide's API-shape counterpart)](../api/catalog-partner-mcp.md)
+- [Platform Catalog API v1 — REST reference](../api/platform-catalog-api-v1.md)
 - [Model Context Protocol specification](https://modelcontextprotocol.io/specification/2025-06-18)
