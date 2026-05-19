@@ -256,10 +256,10 @@ Both surfaces are equally supported and run against the same grants table.
 | | REST (`/v1`, API keys) | MCP (OAuth) |
 | --- | --- | --- |
 | Best for | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop) |
-| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound JWT |
+| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound Octogen access token |
 | Caller identity | (api_key_id, org_id) | (user_sub, org_id, oauth_client_id) |
 | Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
-| Revocation | Revoke the API key | Revoke the session or remove the user from the organization |
+| Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
 
 A grant change on one path takes effect immediately on the other.
 

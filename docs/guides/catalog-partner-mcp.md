@@ -25,9 +25,9 @@ Before your first tool call:
 1. Your organization is provisioned as a Catalog Partner (`org_type=catalog_partner`)
    and your account has been granted at least one catalog. If you don't yet
    have a Catalog Partner organization, contact Octogen support.
-2. You can sign in to WorkOS with the email that belongs to the Catalog Partner
-   organization. If you belong to multiple organizations, you'll be asked to
-   pick which one to act as during sign-in.
+2. You can sign in to the Octogen Platform with the email that belongs to the
+   Catalog Partner organization. If you belong to multiple organizations,
+   you'll be asked to pick which one to act as during sign-in.
 
 ## Choose your client
 
@@ -38,9 +38,9 @@ claude mcp add --transport http octogen https://mcp.octogen.ai/mcp
 ```
 
 The first tool call opens a browser tab for sign-in. Subsequent runs reuse
-the cached token until WorkOS expires the session. To share the configuration
-with a team, add `--scope project` so the entry lands in a committed
-`.mcp.json` at your repo root.
+the cached token until your Octogen sign-in session expires. To share the
+configuration with a team, add `--scope project` so the entry lands in a
+committed `.mcp.json` at your repo root.
 
 ### Codex CLI
 
@@ -76,8 +76,8 @@ the equivalent on other platforms:
 }
 ```
 
-Fully quit and reopen Claude Desktop. The adapter opens the same WorkOS
-browser flow on first connection.
+Fully quit and reopen Claude Desktop. The adapter opens the same Octogen
+sign-in flow on first connection.
 
 ### Other clients
 
@@ -91,8 +91,8 @@ The first tool call triggers a browser hand-off:
 
 1. Your client opens `https://auth.octogen.ai/oauth2/authorize?...` in a
    browser tab.
-2. WorkOS AuthKit signs you in (email + password, SSO, magic link — whatever
-   your organization is configured for).
+2. The Octogen Platform signs you in (email + password, SSO, magic link —
+   whatever your organization is configured for).
 3. If you belong to multiple organizations, you pick which one to act as.
 4. You consent to the requested scopes.
 5. The browser redirects to your client's local callback. The client exchanges
@@ -198,10 +198,10 @@ against the same grants table — no migration needed.
 | | Platform Catalog API v1 (API keys) | MCP (OAuth) |
 | --- | --- | --- |
 | Use case | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop) |
-| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound WorkOS JWT |
+| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound Octogen access token |
 | Caller identity | (api_key_id, org_id) | (user_sub, org_id, oauth_client_id) |
 | Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
-| Revocation | Revoke the API key | Revoke the WorkOS session or remove the user from the organization |
+| Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
 
 Both surfaces enforce the same per-org catalog grants. A grant revoked on
 one path takes effect immediately on the other.
