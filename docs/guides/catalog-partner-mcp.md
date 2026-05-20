@@ -8,10 +8,10 @@ both share the same business logic and the same set of granted catalogs.
 
 | Connection | What you should know |
 | --- | --- |
-| Base URL | `https://mcp.octogen.ai/mcp` |
+| Base URL | `https://mcp.octogen.ai/mcp` for most clients; `https://codex-mcp.octogen.ai/mcp` for Codex CLI |
 | Transport | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) |
 | Authentication | OAuth 2.1 with PKCE-S256 against `https://auth.octogen.ai` |
-| Discovery | RFC 9728 protected-resource metadata at `https://mcp.octogen.ai/.well-known/oauth-protected-resource` |
+| Discovery | RFC 9728 protected-resource metadata at `https://mcp.octogen.ai/.well-known/oauth-protected-resource`; Codex uses `https://codex-mcp.octogen.ai/.well-known/oauth-protected-resource` |
 | Client registration | RFC 7591 Dynamic Client Registration — your MCP client registers itself on first launch |
 
 You do not need to provision API keys, client IDs, or shared secrets. Compliant
@@ -44,11 +44,17 @@ committed `.mcp.json` at your repo root.
 
 ### Codex CLI
 
-Add the server to `~/.codex/config.toml`:
+Codex CLI should use Octogen's Codex compatibility endpoint:
+
+```bash
+codex mcp add octogen --url https://codex-mcp.octogen.ai/mcp
+```
+
+Or add the server manually to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.octogen]
-url = "https://mcp.octogen.ai/mcp"
+url = "https://codex-mcp.octogen.ai/mcp"
 ```
 
 Then sign in:
@@ -56,6 +62,18 @@ Then sign in:
 ```bash
 codex mcp login octogen
 ```
+
+You can verify the configured URL with:
+
+```bash
+codex mcp get octogen
+```
+
+The compatibility endpoint is only for Codex. It advertises OAuth resource
+indicator support and forwards the authorize/token requests to Octogen AuthKit
+with the canonical MCP resource (`https://mcp.octogen.ai`) attached. The access
+token still targets the canonical MCP audience; the separate hostname only
+helps Codex complete OAuth discovery and token minting correctly.
 
 ### Claude Desktop
 
@@ -89,8 +107,10 @@ chain automatically.
 
 The first tool call triggers a browser hand-off:
 
-1. Your client opens `https://auth.octogen.ai/oauth2/authorize?...` in a
-   browser tab.
+1. Your client opens an Octogen OAuth authorize URL in a browser tab. Most
+   clients open `https://auth.octogen.ai/oauth2/authorize?...`; Codex opens
+   `https://codex-mcp.octogen.ai/oauth2/authorize?...`, which forwards to
+   AuthKit after attaching the MCP resource indicator.
 2. The Octogen Platform signs you in (email + password, SSO, magic link —
    whatever your organization is configured for).
 3. If you belong to multiple organizations, you pick which one to act as.
