@@ -23,14 +23,12 @@ async def main() -> None:
                 print("No catalogs are available for this API key.")
                 return
 
-            catalog = catalogs[0].catalog
             results = await client.search_products(
-                catalog=catalog,
                 q="women's linen summer dresses",
                 limit=5,
             )
 
-            print(f"Catalog: {catalog}")
+            print("Catalog scope: all granted catalogs")
             for product in results.items:
                 brand = product.brand.name if product.brand else "Unknown brand"
                 price = (

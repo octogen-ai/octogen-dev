@@ -123,6 +123,19 @@ async def test_search_products_sends_typed_request() -> None:
 
 
 @respx.mock
+async def test_search_products_omits_catalog_for_all_catalog_search() -> None:
+    route = respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.search_products(q="linen summer dress", limit=5)
+
+    request = route.calls.last.request
+    assert request.read() == b'{"limit":5,"q":"linen summer dress"}'
+
+
+@respx.mock
 async def test_search_products_accepts_text_search_query_model() -> None:
     route = respx.post(f"{BASE_URL}/products/search").mock(
         return_value=httpx.Response(200, json={"items": [], "nextCursor": None})

@@ -3,9 +3,8 @@
 The Octogen Platform Catalog API v1 is the server-to-server surface for
 Catalog Partner organizations to search and look up products in the catalogs
 granted to them. It is the REST sibling of the
-[Catalog Partner MCP server](../guides/catalog-partner-mcp.md); both share the
-same business logic, the same per-org catalog grants, and the same response
-shapes — pick the surface that fits your runtime.
+[Catalog Partner MCP server](../guides/catalog-partner-mcp.md); both enforce
+the same per-org catalog grants — pick the surface that fits your runtime.
 
 | Property | Value |
 | --- | --- |
@@ -34,9 +33,9 @@ immediately on the next request.
 
 ## Endpoints
 
-Three endpoints are available. Each one maps 1:1 to a tool on the
-[Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so the response
-shape is the same on either surface.
+Three endpoints are available. They use the same catalog grants as the
+[Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
+control is consistent across surfaces.
 
 ### `GET /catalogs` — list catalogs
 
@@ -61,8 +60,9 @@ Response:
 ]
 ```
 
-Use the `catalog` value when calling `/products/search`. An organization with
-no active catalog grants gets an empty list — not an error.
+Pass a `catalog` value to `/products/search` when you want to restrict search
+to one catalog. Omit it to search all catalogs granted to your key. An
+organization with no active catalog grants gets an empty list — not an error.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -116,15 +116,14 @@ record has them.
 
 ### `POST /products/search` — search products
 
-Searches products inside a single granted catalog. The request body must
-include `catalog`; everything else is optional.
+Searches products across all catalogs granted to your API key. To restrict
+the search to one catalog, include `catalog`; everything else is optional.
 
 ```bash
 curl -sS https://api.octogen.ai/v1/products/search \
   -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "catalog": "warrenlotas",
     "q": "black hoodie",
     "facets": [
       {"name": "color", "values": ["black"]},
@@ -140,7 +139,7 @@ Request fields:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `catalog` | string | Required. Must be a catalog granted to your key. Single-catalog by design — cross-catalog search is not supported. |
+| `catalog` | string | Optional. When omitted, searches all catalogs granted to your key. When provided, must be one granted catalog. |
 | `q` | string | Free-text keyword query. Omit to browse without filtering. |
 | `facets` | array | Structured filters (brand, category, color, product attributes). |
 | `price_min` | number | Inclusive minimum price. |
@@ -198,10 +197,11 @@ Example `422` body:
 {
   "detail": [
     {
-      "loc": ["body", "catalog"],
-      "msg": "Field required",
-      "type": "missing",
-      "input": {}
+      "loc": ["body", "limit"],
+      "msg": "Input should be less than or equal to 100",
+      "type": "less_than_equal",
+      "input": 500,
+      "ctx": {"le": 100}
     }
   ]
 }

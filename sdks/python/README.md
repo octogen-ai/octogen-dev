@@ -30,10 +30,7 @@ from octogen_ai_sdk import OctogenClient
 
 async def main() -> None:
     async with OctogenClient() as client:
-        catalogs = await client.list_catalogs()
-        catalog = catalogs[0].catalog
         results = await client.search_products(
-            catalog=catalog,
             q="women's linen summer dresses",
             limit=5,
         )
@@ -43,6 +40,13 @@ async def main() -> None:
 
 asyncio.run(main())
 ```
+
+## API
+
+- `list_catalogs()` lists active catalogs available to the API key's merchant.
+- `search_products(...)` searches all authorized catalogs by default, or one
+  catalog when `catalog` is provided.
+- `lookup_product(url)` looks up a product by canonical URL.
 
 ## Tests
 

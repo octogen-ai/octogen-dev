@@ -121,6 +121,21 @@ describe("OctogenClient", () => {
     expect(page.items[0]?.brand?.name).toBe("ACME");
   });
 
+  it("omits catalog for all-catalog search", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchProducts({
+      limit: 5,
+      q: "linen summer dress",
+    });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      limit: 5,
+      q: "linen summer dress",
+    });
+  });
+
   it("serializes text search query options to API field names", async () => {
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
