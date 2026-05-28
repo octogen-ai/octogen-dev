@@ -23,9 +23,7 @@ pass `apiKey` explicitly.
 import { OctogenClient } from "@octogen-ai/sdk";
 
 const client = new OctogenClient();
-const catalogs = await client.listCatalogs();
 const results = await client.searchProducts({
-  catalog: catalogs[0].catalog,
   limit: 5,
   q: "women's linen summer dresses",
 });
@@ -38,7 +36,8 @@ for (const product of results.items) {
 ## API
 
 - `listCatalogs()` lists active catalogs available to the API key's merchant.
-- `searchProducts(params)` searches products in a single authorized catalog.
+- `searchProducts(params)` searches all authorized catalogs by default, or one
+  catalog when `catalog` is provided.
 - `lookupProduct(url)` looks up a product by canonical URL.
 
 Requests are authenticated with `Authorization: Bearer <api-key>`.

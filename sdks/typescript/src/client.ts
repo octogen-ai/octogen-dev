@@ -153,16 +153,18 @@ function assertNonEmptyString(value: string, fieldName: string): void {
 function toSearchPayload(
   params: SearchProductsParams,
 ): ProgrammaticProductSearchRequest {
-  assertNonEmptyString(params.catalog, "catalog");
+  if (params.catalog !== undefined) {
+    assertNonEmptyString(params.catalog, "catalog");
+  }
   const limit = params.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("limit must be an integer between 1 and 100");
   }
 
-  const payload: ProgrammaticProductSearchRequest = {
-    catalog: params.catalog,
-    limit,
-  };
+  const payload: ProgrammaticProductSearchRequest = { limit };
+  if (params.catalog !== undefined) {
+    payload.catalog = params.catalog;
+  }
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;
   }

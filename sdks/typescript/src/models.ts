@@ -111,7 +111,7 @@ export interface TextSearchQueryPayload {
 }
 
 export interface SearchProductsParams {
-  catalog: string;
+  catalog?: string;
   cursor?: string;
   limit?: number;
   q?: string;
@@ -122,7 +122,7 @@ export interface SearchProductsParams {
 }
 
 export interface ProgrammaticProductSearchRequest {
-  catalog: string;
+  catalog?: string;
   cursor?: string;
   limit: number;
   q?: string;

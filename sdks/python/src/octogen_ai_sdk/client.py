@@ -108,7 +108,7 @@ class OctogenClient:
     async def search_products(
         self,
         *,
-        catalog: str,
+        catalog: str | None = None,
         q: str | None = None,
         text_search_query: TextSearchQuery | dict[str, Any] | None = None,
         facets: Sequence[Facet | dict[str, Any]] | None = None,
@@ -117,7 +117,7 @@ class OctogenClient:
         cursor: str | None = None,
         limit: int = 50,
     ) -> MerchantProductListPage:
-        """Search products in a single authorized catalog."""
+        """Search products in one catalog, or all authorized catalogs if omitted."""
         resolved_text_search_query: TextSearchQuery | None = None
         if text_search_query is not None:
             resolved_text_search_query = _coerce_text_search_query(text_search_query)

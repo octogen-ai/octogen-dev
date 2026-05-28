@@ -14,19 +14,12 @@ async function main(): Promise<void> {
       return;
     }
 
-    const catalog = catalogs[0];
-    if (catalog === undefined) {
-      console.log("No catalogs are available for this API key.");
-      return;
-    }
-
     const results = await client.searchProducts({
-      catalog: catalog.catalog,
       limit: 5,
       q: "women's linen summer dresses",
     });
 
-    console.log(`Catalog: ${catalog.catalog}`);
+    console.log("Catalog scope: all granted catalogs");
     for (const product of results.items) {
       const brand = product.brand?.name ?? "Unknown brand";
       const price =

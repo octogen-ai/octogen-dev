@@ -110,9 +110,9 @@ class TextSearchQuery(_RequestModel):
 
 
 class ProgrammaticProductSearchRequest(_RequestModel):
-    """Product search request targeting a single catalog."""
+    """Product search request targeting one catalog or all granted catalogs."""
 
-    catalog: str = Field(min_length=1)
+    catalog: str | None = Field(default=None, min_length=1)
     cursor: str | None = None
     limit: int = Field(default=50, ge=1, le=100)
     q: str | None = None
