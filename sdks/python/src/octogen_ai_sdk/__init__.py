@@ -1,10 +1,17 @@
 """Async Python SDK for the Octogen AI commerce API."""
 
+from octogen_ai_sdk.bigquery import (
+    BigQuerySubscriptionResult,
+    parse_listing_resource,
+    subscribe_to_listing,
+)
 from octogen_ai_sdk.client import OctogenClient
 from octogen_ai_sdk.errors import (
     MissingAPIKeyError,
     OctogenAPIError,
     OctogenAuthenticationError,
+    OctogenBigQueryAccessPendingError,
+    OctogenBigQueryError,
     OctogenConnectionError,
     OctogenError,
     OctogenForbiddenError,
@@ -52,6 +59,7 @@ __all__ = [
     "Attribute",
     "AttributeValue",
     "AudienceView",
+    "BigQuerySubscriptionResult",
     "BrandView",
     "BreadcrumbView",
     "CanonicalBrand",
@@ -74,6 +82,8 @@ __all__ = [
     "MissingAPIKeyError",
     "OctogenAPIError",
     "OctogenAuthenticationError",
+    "OctogenBigQueryAccessPendingError",
+    "OctogenBigQueryError",
     "OctogenClient",
     "OctogenConnectionError",
     "OctogenError",
@@ -90,4 +100,6 @@ __all__ = [
     "TextSearchQuery",
     "ValidationErrorModel",
     "VideoView",
+    "parse_listing_resource",
+    "subscribe_to_listing",
 ]
