@@ -48,6 +48,40 @@ asyncio.run(main())
   catalog when `catalog` is provided.
 - `lookup_product(url)` looks up a product by canonical URL.
 
+## BigQuery subscribe (optional)
+
+Once Octogen grants your organization access to a catalog's BigQuery Analytics
+Hub listing, subscribe to it — creating the linked dataset in **your** GCP
+project — without leaving the terminal. Install the extra and authenticate with
+Application Default Credentials:
+
+```bash
+pip install "octogen-ai-sdk[bigquery]"
+gcloud auth application-default login
+```
+
+CLI (dry-run by default; `--apply` to subscribe):
+
+```bash
+octogen-bq-subscribe --listing <listing-resource> --project my-gcp-project --apply
+```
+
+Or programmatically:
+
+```python
+from octogen_ai_sdk import subscribe_to_listing
+
+result = subscribe_to_listing(
+    listing_resource="projects/octogen-prod/locations/us/dataExchanges/oneoff/listings/farfetch",
+    destination_project="my-gcp-project",
+)
+print(result.linked_dataset, result.state)
+```
+
+Copy `<listing-resource>` from the Platform UI BigQuery sharing page. It's
+idempotent, and raises `OctogenBigQueryAccessPendingError` if Octogen's IAM
+grant hasn't landed yet (it's asynchronous — retry in a few minutes).
+
 ## Tests
 
 Run the mocked SDK tests:

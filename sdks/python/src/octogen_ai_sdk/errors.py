@@ -50,3 +50,16 @@ class OctogenNotFoundError(OctogenAPIError):
 
 class OctogenValidationError(OctogenAPIError):
     """Raised for request validation errors returned by the API."""
+
+
+class OctogenBigQueryError(OctogenError):
+    """Raised when a BigQuery Analytics Hub subscribe operation fails."""
+
+
+class OctogenBigQueryAccessPendingError(OctogenBigQueryError):
+    """Raised when the subscriber principal isn't yet authorized on the listing.
+
+    Octogen grants ``roles/analyticshub.subscriber`` asynchronously after the
+    subscriber is registered; until that lands, subscribing fails with
+    PermissionDenied. This is expected — retry in a few minutes.
+    """
