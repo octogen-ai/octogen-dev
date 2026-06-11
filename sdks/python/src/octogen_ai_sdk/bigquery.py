@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -39,9 +39,6 @@ from octogen_ai_sdk.errors import (
     OctogenBigQueryAccessPendingError,
     OctogenBigQueryError,
 )
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    pass
 
 # projects/{project}/locations/{location}/dataExchanges/{exchange}/listings/{listing}
 _LISTING_RE = re.compile(
