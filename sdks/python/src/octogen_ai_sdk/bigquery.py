@@ -50,6 +50,11 @@ _LISTING_RE = re.compile(
 )
 # BigQuery dataset ids allow letters, numbers, and underscores only.
 _DATASET_SANITIZE_RE = re.compile(r"[^A-Za-z0-9_]")
+# Analytics Hub Subscription.State values whose linked dataset is usable. The
+# full enum is STATE_ACTIVE, STATE_STALE, STATE_INACTIVE, STATE_UNSPECIFIED —
+# there is no STATE_REVOKED; INACTIVE is the cancelled/revoked case, which must
+# NOT be treated as an existing subscription.
+_USABLE_STATES = frozenset({"STATE_ACTIVE", "STATE_STALE"})
 
 
 @dataclass(frozen=True)
@@ -224,12 +229,14 @@ class _AnalyticsHubSubscriber:
             for subscription in self._client.list_subscriptions(parent=parent):
                 if getattr(subscription, "listing", None) != listing_resource:
                     continue
-                if _state_name(subscription) == "STATE_REVOKED":
+                # Skip cancelled/unusable subscriptions (e.g. STATE_INACTIVE) so
+                # we don't report a dead subscription as already-subscribed.
+                if _state_name(subscription) not in _USABLE_STATES:
                     continue
                 return _subscription_info(subscription)
             return None
         except Exception as exc:  # noqa: BLE001 - surface as a typed SDK error
-            raise _wrap_google_error(exc) from exc
+            raise _wrap_google_error(exc, operation="list") from exc
 
     def subscribe(
         self,
@@ -255,7 +262,7 @@ class _AnalyticsHubSubscriber:
         try:
             response = self._client.subscribe_listing(request=request)
         except Exception as exc:  # noqa: BLE001 - surface as a typed SDK error
-            raise _wrap_google_error(exc) from exc
+            raise _wrap_google_error(exc, operation="subscribe") from exc
         return _subscription_info(response.subscription)
 
 
@@ -270,14 +277,28 @@ def _import_analyticshub() -> Any:
     return ah
 
 
-def _wrap_google_error(exc: Exception) -> OctogenBigQueryError:
-    """Map google exceptions to typed SDK errors (access-pending vs generic)."""
+def _wrap_google_error(exc: Exception, *, operation: str) -> OctogenBigQueryError:
+    """Map a google exception to a typed SDK error.
+
+    A 403 on ``subscribe`` almost always means Octogen's listing grant hasn't
+    landed yet (it's asynchronous), so we surface the retryable access-pending
+    error. A 403 on any other operation — e.g. listing existing subscriptions in
+    the caller's own project — is an ordinary IAM problem on the caller side, not
+    a pending listing grant, so we don't mislabel it as access-pending.
+    """
     name = type(exc).__name__
-    if name == "PermissionDenied" or getattr(exc, "code", None) == 403:
+    is_forbidden = name == "PermissionDenied" or getattr(exc, "code", None) == 403
+    if is_forbidden and operation == "subscribe":
         return OctogenBigQueryAccessPendingError(
             "Your principal isn't authorized on this listing yet. Octogen grants "
             "access asynchronously after the subscriber is registered — wait a few "
             "minutes and retry. (Underlying: PermissionDenied)"
+        )
+    if is_forbidden:
+        return OctogenBigQueryError(
+            f"Permission denied during {operation}: your credentials lack the "
+            f"required IAM permission (this is not the listing grant). "
+            f"(Underlying: {name})"
         )
     return OctogenBigQueryError(f"Analytics Hub call failed: {name}: {exc}")
 

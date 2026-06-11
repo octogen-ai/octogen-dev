@@ -6,9 +6,11 @@ orchestration, parsing, and error mapping are tested with no GCP access.
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
+from octogen_ai_sdk import _bigquery_cli as cli
 from octogen_ai_sdk import bigquery as bq
 from octogen_ai_sdk.errors import (
     OctogenBigQueryAccessPendingError,
@@ -129,24 +131,34 @@ class TestSubscribeOrchestration:
 
 
 class TestErrorMapping:
-    def test_permission_denied_maps_to_access_pending(self) -> None:
+    def test_subscribe_permission_denied_maps_to_access_pending(self) -> None:
         class PermissionDenied(Exception):
             pass
 
-        mapped = bq._wrap_google_error(PermissionDenied("nope"))
+        mapped = bq._wrap_google_error(PermissionDenied("nope"), operation="subscribe")
         assert isinstance(mapped, OctogenBigQueryAccessPendingError)
 
-    def test_403_code_maps_to_access_pending(self) -> None:
+    def test_subscribe_403_code_maps_to_access_pending(self) -> None:
         class SomeError(Exception):
             code = 403
 
         assert isinstance(
-            bq._wrap_google_error(SomeError("denied")),
+            bq._wrap_google_error(SomeError("denied"), operation="subscribe"),
             OctogenBigQueryAccessPendingError,
         )
 
+    def test_list_403_maps_to_generic_permission_not_access_pending(self) -> None:
+        # A 403 while listing the caller's own subscriptions is an IAM problem on
+        # their side, not a pending Octogen listing grant.
+        class PermissionDenied(Exception):
+            pass
+
+        mapped = bq._wrap_google_error(PermissionDenied("nope"), operation="list")
+        assert isinstance(mapped, OctogenBigQueryError)
+        assert not isinstance(mapped, OctogenBigQueryAccessPendingError)
+
     def test_other_errors_map_to_generic(self) -> None:
-        mapped = bq._wrap_google_error(ValueError("boom"))
+        mapped = bq._wrap_google_error(ValueError("boom"), operation="subscribe")
         assert isinstance(mapped, OctogenBigQueryError)
         assert not isinstance(mapped, OctogenBigQueryAccessPendingError)
 
@@ -239,11 +251,11 @@ class TestAnalyticsHubAdapter:
         assert info.linked_dataset == "octogen_farfetch"
         assert info.state == "STATE_ACTIVE"
 
-    def test_find_existing_returns_match_and_skips_revoked(self) -> None:
+    def test_find_existing_returns_match_and_skips_inactive(self) -> None:
         client = FakeAnalyticsHubClient(
             subscriptions=[
                 _fake_subscription(
-                    listing=LISTING, state="STATE_REVOKED", name="sub_revoked"
+                    listing=LISTING, state="STATE_INACTIVE", name="sub_inactive"
                 ),
                 _fake_subscription(
                     listing=LISTING,
@@ -284,14 +296,17 @@ class TestAnalyticsHubAdapter:
 
     def test_find_existing_wraps_paging_error(self) -> None:
         # Regression guard: the pager raises during iteration, which must still be
-        # mapped to a typed SDK error (the loop lives inside the try).
+        # mapped to a typed SDK error (the loop lives inside the try). It's a
+        # `list` 403, so it surfaces as a generic permission error, not the
+        # subscribe-only access-pending error.
         client = FakeAnalyticsHubClient(list_result=_RaisingPager())
         subscriber = bq._AnalyticsHubSubscriber(client=client, ah=object())
 
-        with pytest.raises(OctogenBigQueryAccessPendingError):
+        with pytest.raises(OctogenBigQueryError) as excinfo:
             subscriber.find_existing(
                 project="my-proj", location="us", listing_resource=LISTING
             )
+        assert not isinstance(excinfo.value, OctogenBigQueryAccessPendingError)
 
 
 class TestExtractionHelpers:
@@ -315,3 +330,19 @@ class TestExtractionHelpers:
     def test_state_name_handles_missing_state(self) -> None:
         assert bq._state_name(SimpleNamespace(state=None)) == ""
         assert bq._state_name(SimpleNamespace()) == ""
+
+
+class TestCli:
+    def test_dry_run_json_matches_apply_schema(self, capsys) -> None:  # noqa: ANN001
+        # Dry-run makes no GCP call, so this runs without the bigquery extra.
+        rc = cli.main(["--listing", LISTING, "--project", "my-proj", "--json"])
+        assert rc == 0
+        data = json.loads(capsys.readouterr().out)
+        # snake_case keys, consistent with the --apply (model_dump) output.
+        assert data["applied"] is False
+        assert data["linked_project"] == "my-proj"
+        assert data["linked_dataset"] == "octogen_farfetch"
+        assert "sample_query" in data
+        # No camelCase leftovers from the old dry-run-only schema.
+        assert "destinationProject" not in data
+        assert "destinationDataset" not in data

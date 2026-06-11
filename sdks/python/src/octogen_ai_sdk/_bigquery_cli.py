@@ -17,6 +17,7 @@ import json
 import sys
 
 from octogen_ai_sdk.bigquery import (
+    build_sample_query,
     default_dataset_id,
     parse_listing_resource,
     subscribe_to_listing,
@@ -75,13 +76,15 @@ def main(argv: list[str] | None = None) -> int:
     location = args.location or parts.location
 
     if not args.apply:
+        # Keys mirror the --apply result (snake_case) so automation can parse
+        # both dry-run and applied output with one schema.
         plan = {
-            "action": "subscribe",
-            "listing": parts.raw,
-            "destinationProject": args.project,
-            "destinationDataset": dataset_id,
-            "location": location,
             "applied": False,
+            "listing": parts.raw,
+            "linked_project": args.project,
+            "linked_dataset": dataset_id,
+            "location": location,
+            "sample_query": build_sample_query(args.project, dataset_id),
         }
         if args.json:
             print(json.dumps(plan, indent=2))
@@ -107,7 +110,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.json:
-        print(result.model_dump_json(indent=2))
+        payload = {"applied": True, **result.model_dump()}
+        print(json.dumps(payload, indent=2))
     else:
         verb = "Already subscribed" if result.already_subscribed else "Subscribed"
         print(
