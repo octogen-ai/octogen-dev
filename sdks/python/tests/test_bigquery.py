@@ -6,6 +6,8 @@ orchestration, parsing, and error mapping are tested with no GCP access.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from octogen_ai_sdk import bigquery as bq
 from octogen_ai_sdk.errors import (
@@ -154,3 +156,162 @@ def test_public_exports() -> None:
 
     assert octogen_ai_sdk.subscribe_to_listing is bq.subscribe_to_listing
     assert octogen_ai_sdk.BigQuerySubscriptionResult is bq.BigQuerySubscriptionResult
+
+
+class PermissionDenied(Exception):
+    """Mimics google.api_core PermissionDenied — matched by class name."""
+
+
+def _fake_subscription(*, listing, state, project=None, dataset=None, name="sub"):  # noqa: ANN001
+    """A proto-shaped Subscription stand-in for the extraction helpers."""
+    return SimpleNamespace(
+        listing=listing,
+        name=name,
+        state=SimpleNamespace(name=state),
+        destination_dataset=SimpleNamespace(
+            dataset_reference=SimpleNamespace(project_id=project, dataset_id=dataset)
+        ),
+        linked_dataset_map={},
+    )
+
+
+class _RaisingPager:
+    """Mimics a google pager that raises while iterating, not on the call."""
+
+    def __iter__(self):  # noqa: ANN204
+        raise PermissionDenied("listing not granted yet")
+
+
+class FakeAnalyticsHubClient:
+    """Records subscribe requests; returns canned list/subscribe responses."""
+
+    def __init__(self, *, subscriptions=None, list_result=None):  # noqa: ANN001
+        self._subscriptions = subscriptions or []
+        self._list_result = list_result
+        self.subscribe_requests: list = []
+        self.subscribe_response = None
+
+    def list_subscriptions(self, *, parent):  # noqa: ANN001
+        if self._list_result is not None:
+            return self._list_result
+        return list(self._subscriptions)
+
+    def subscribe_listing(self, *, request):  # noqa: ANN001
+        self.subscribe_requests.append(request)
+        return self.subscribe_response
+
+
+class TestAnalyticsHubAdapter:
+    """Covers _AnalyticsHubSubscriber — the real google glue behind the protocol."""
+
+    def test_subscribe_builds_real_request_and_extracts_result(self) -> None:
+        # Use the real google types so a wrong field name fails here, not in prod.
+        ah = pytest.importorskip("google.cloud.bigquery_analyticshub_v1")
+        client = FakeAnalyticsHubClient()
+        client.subscribe_response = SimpleNamespace(
+            subscription=_fake_subscription(
+                listing=LISTING,
+                state="STATE_ACTIVE",
+                project="my-proj",
+                dataset="octogen_farfetch",
+                name="projects/my-proj/locations/us/subscriptions/sub_x",
+            )
+        )
+        subscriber = bq._AnalyticsHubSubscriber(client=client, ah=ah)
+
+        info = subscriber.subscribe(
+            listing_resource=LISTING,
+            project="my-proj",
+            dataset_id="octogen_farfetch",
+            location="us",
+            friendly_name=None,
+        )
+
+        [request] = client.subscribe_requests
+        assert isinstance(request, ah.SubscribeListingRequest)
+        assert request.name == LISTING
+        ref = request.destination_dataset.dataset_reference
+        assert ref.project_id == "my-proj"
+        assert ref.dataset_id == "octogen_farfetch"
+        assert request.destination_dataset.location == "us"
+        assert request.destination_dataset.friendly_name == "Octogen octogen_farfetch"
+        assert info.linked_project == "my-proj"
+        assert info.linked_dataset == "octogen_farfetch"
+        assert info.state == "STATE_ACTIVE"
+
+    def test_find_existing_returns_match_and_skips_revoked(self) -> None:
+        client = FakeAnalyticsHubClient(
+            subscriptions=[
+                _fake_subscription(
+                    listing=LISTING, state="STATE_REVOKED", name="sub_revoked"
+                ),
+                _fake_subscription(
+                    listing=LISTING,
+                    state="STATE_ACTIVE",
+                    project="my-proj",
+                    dataset="octogen_farfetch",
+                    name="sub_active",
+                ),
+            ]
+        )
+        subscriber = bq._AnalyticsHubSubscriber(client=client, ah=object())
+
+        info = subscriber.find_existing(
+            project="my-proj", location="us", listing_resource=LISTING
+        )
+
+        assert info is not None
+        assert info.name == "sub_active"
+        assert info.linked_dataset == "octogen_farfetch"
+
+    def test_find_existing_returns_none_when_listing_not_subscribed(self) -> None:
+        client = FakeAnalyticsHubClient(
+            subscriptions=[
+                _fake_subscription(
+                    listing="projects/x/locations/us/dataExchanges/e/listings/other",
+                    state="STATE_ACTIVE",
+                ),
+            ]
+        )
+        subscriber = bq._AnalyticsHubSubscriber(client=client, ah=object())
+
+        assert (
+            subscriber.find_existing(
+                project="my-proj", location="us", listing_resource=LISTING
+            )
+            is None
+        )
+
+    def test_find_existing_wraps_paging_error(self) -> None:
+        # Regression guard: the pager raises during iteration, which must still be
+        # mapped to a typed SDK error (the loop lives inside the try).
+        client = FakeAnalyticsHubClient(list_result=_RaisingPager())
+        subscriber = bq._AnalyticsHubSubscriber(client=client, ah=object())
+
+        with pytest.raises(OctogenBigQueryAccessPendingError):
+            subscriber.find_existing(
+                project="my-proj", location="us", listing_resource=LISTING
+            )
+
+
+class TestExtractionHelpers:
+    def test_linked_dataset_prefers_destination_reference(self) -> None:
+        sub = _fake_subscription(
+            listing=LISTING, state="STATE_ACTIVE", project="p", dataset="d"
+        )
+        assert bq._linked_dataset(sub) == ("p", "d")
+
+    def test_linked_dataset_falls_back_to_linked_resource_map(self) -> None:
+        sub = SimpleNamespace(
+            name="sub",
+            state=SimpleNamespace(name="STATE_ACTIVE"),
+            destination_dataset=None,
+            linked_dataset_map={
+                "us": SimpleNamespace(linked_resource="projects/p2/datasets/d2")
+            },
+        )
+        assert bq._linked_dataset(sub) == ("p2", "d2")
+
+    def test_state_name_handles_missing_state(self) -> None:
+        assert bq._state_name(SimpleNamespace(state=None)) == ""
+        assert bq._state_name(SimpleNamespace()) == ""

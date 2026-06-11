@@ -199,8 +199,14 @@ def _result(
 class _AnalyticsHubSubscriber:
     """Default ListingSubscriber backed by google-cloud-bigquery-analyticshub."""
 
-    def __init__(self, *, credentials: Any = None) -> None:
-        self._ah = _import_analyticshub()
+    def __init__(
+        self, *, credentials: Any = None, client: Any = None, ah: Any = None
+    ) -> None:
+        # client/ah are injection seams for tests; production passes neither.
+        self._ah = ah if ah is not None else _import_analyticshub()
+        if client is not None:
+            self._client = client
+            return
         kwargs: dict[str, Any] = {}
         if credentials is not None:
             kwargs["credentials"] = credentials
@@ -210,17 +216,20 @@ class _AnalyticsHubSubscriber:
         self, *, project: str, location: str, listing_resource: str
     ) -> _SubscriptionInfo | None:
         parent = f"projects/{project}/locations/{location}"
+        # list_subscriptions returns a lazy pager: the RPCs fire while iterating,
+        # not when the method returns. Keep the loop inside the try so a paging
+        # error (e.g. PermissionDenied) is mapped to a typed SDK error instead of
+        # escaping raw.
         try:
-            subscriptions = self._client.list_subscriptions(parent=parent)
+            for subscription in self._client.list_subscriptions(parent=parent):
+                if getattr(subscription, "listing", None) != listing_resource:
+                    continue
+                if _state_name(subscription) == "STATE_REVOKED":
+                    continue
+                return _subscription_info(subscription)
+            return None
         except Exception as exc:  # noqa: BLE001 - surface as a typed SDK error
             raise _wrap_google_error(exc) from exc
-        for subscription in subscriptions:
-            if getattr(subscription, "listing", None) != listing_resource:
-                continue
-            if _state_name(subscription) == "STATE_REVOKED":
-                continue
-            return _subscription_info(subscription)
-        return None
 
     def subscribe(
         self,
