@@ -8,7 +8,8 @@ application-default login`) and needs the ``bigquery`` extra:
     pip install "octogen-ai-sdk[bigquery]"
 
 Run from the repository root (copy the listing resource from the Platform UI
-BigQuery sharing page):
+BigQuery sharing page or from the Catalog Partner MCP
+``list_bigquery_listing_resources`` tool):
 
     uv run --project sdks/python --extra bigquery \
         python examples/python/subscribe_bigquery.py \
