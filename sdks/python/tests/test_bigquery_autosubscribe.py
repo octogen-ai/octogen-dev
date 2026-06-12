@@ -50,12 +50,12 @@ def _listing(catalog: str = "farfetch") -> dict[str, Any]:
     }
 
 
-def _subscriber() -> dict[str, Any]:
+def _subscriber(desired_state: str = "enabled") -> dict[str, Any]:
     return {
         "subscriberId": "bqsub_1",
         "subscriberProjectId": PROJECT,
         "subscriberPrincipal": PRINCIPAL,
-        "desiredState": "enabled",
+        "desiredState": desired_state,
     }
 
 
@@ -181,6 +181,94 @@ def test_apply_registers_missing_reader_subscribes_and_refreshes() -> None:
         "share_schema": "exported_product_view",
         "schema_version": "v1",
     }
+
+
+def test_apply_uses_registration_cells_when_follow_up_list_is_empty() -> None:
+    def fail_subscribe(**_kwargs: Any) -> BigQuerySubscriptionResult:
+        raise AssertionError("preparing cell should not subscribe")
+
+    mcp = FakeMCP(
+        {
+            "list_bigquery_listing_resources": [[_listing()]],
+            "list_bigquery_subscribers": [
+                _detail(subscribers=[], cells=[]),
+                _detail(subscribers=[_subscriber()], cells=[]),
+            ],
+            "register_bigquery_subscriber": [
+                {
+                    "subscriber": _subscriber(),
+                    "cells": [_cell("preparing", "preparing")],
+                }
+            ],
+        }
+    )
+
+    result = autosubscribe_bigquery_listings(
+        mcp=mcp,
+        subscriber_project_id=PROJECT,
+        subscriber_principal=PRINCIPAL,
+        apply=True,
+        subscribe=fail_subscribe,
+    )
+
+    assert result.registered_subscriber is True
+    assert result.summary == {"pending": 1}
+    assert result.catalogs[0].status == "preparing"
+    assert result.catalogs[0].reason_code == "preparing"
+
+
+def test_existing_reader_without_cells_reports_granted_listings_pending() -> None:
+    mcp = FakeMCP(
+        {
+            "list_bigquery_listing_resources": [[_listing()]],
+            "list_bigquery_subscribers": [
+                _detail(subscribers=[_subscriber()], cells=[]),
+            ],
+        }
+    )
+
+    result = autosubscribe_bigquery_listings(
+        mcp=mcp,
+        subscriber_project_id=PROJECT,
+        subscriber_principal=PRINCIPAL,
+        apply=True,
+    )
+
+    assert result.would_register_subscriber is False
+    assert result.summary == {"pending": 1}
+    assert result.catalogs[0].catalog_key == "farfetch"
+    assert result.catalogs[0].listing_resource == LISTING
+    assert "waiting for Octogen subscriber status" in (
+        result.catalogs[0].message or ""
+    )
+
+
+def test_disabled_reader_is_not_registered_again() -> None:
+    mcp = FakeMCP(
+        {
+            "list_bigquery_listing_resources": [[_listing()]],
+            "list_bigquery_subscribers": [
+                _detail(subscribers=[_subscriber("disabled")], cells=[]),
+            ],
+        }
+    )
+
+    result = autosubscribe_bigquery_listings(
+        mcp=mcp,
+        subscriber_project_id=PROJECT,
+        subscriber_principal=PRINCIPAL,
+        apply=True,
+    )
+
+    assert result.subscriber_id == "bqsub_1"
+    assert result.would_register_subscriber is False
+    assert result.registered_subscriber is False
+    assert result.summary == {"pending": 1}
+    assert result.catalogs[0].status == "disabled"
+    assert [call[0] for call in mcp.calls] == [
+        "list_bigquery_listing_resources",
+        "list_bigquery_subscribers",
+    ]
 
 
 def test_apply_skips_already_active_cell() -> None:

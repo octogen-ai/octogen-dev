@@ -243,10 +243,10 @@ def autosubscribe_bigquery_listings(
         detail,
         subscriber_project_id=subscriber_project_id,
         subscriber_principal=subscriber_principal,
-        enabled_only=True,
     )
     registered_subscriber = False
     would_register_subscriber = subscriber is None
+    created_cells: list[dict[str, Any]] = []
 
     if subscriber is None and apply:
         created = _as_dict(
@@ -264,6 +264,7 @@ def autosubscribe_bigquery_listings(
         subscriber = _as_dict(
             created.get("subscriber"), tool="register_bigquery_subscriber.subscriber"
         )
+        created_cells = _as_optional_dict_list(created.get("cells"))
         registered_subscriber = True
         would_register_subscriber = False
         detail = _as_dict(
@@ -296,12 +297,44 @@ def autosubscribe_bigquery_listings(
             catalogs=results,
         )
 
+    if subscriber.get("desiredState") != "enabled":
+        results = [
+            BigQueryAutoSubscribeCatalogResult(
+                catalog_key=catalog_key,
+                action="pending",
+                status=_string_or_none(subscriber.get("desiredState")),
+                listing_resource=_string_or_none(listing.get("listingResource")),
+                linked_dataset=_string_or_none(listing.get("linkedDatasetSuggestion")),
+                sample_query=_string_or_none(listing.get("sampleQuery")),
+                message=(
+                    "Reader is registered but disabled in Octogen; re-enable it "
+                    "before subscribing."
+                ),
+            )
+            for catalog_key, listing in sorted(listing_by_catalog.items())
+        ]
+        return _result(
+            apply=apply,
+            subscriber_project_id=subscriber_project_id,
+            subscriber_principal=subscriber_principal,
+            subscriber_id=_string_or_none(subscriber.get("subscriberId")),
+            registered_subscriber=registered_subscriber,
+            would_register_subscriber=False,
+            catalogs=results,
+        )
+
     subscriber_id = str(subscriber.get("subscriberId") or "")
     cells = _subscriber_cells(detail, subscriber_id=subscriber_id)
+    if not cells and created_cells:
+        cells = [
+            cell
+            for cell in created_cells
+            if str(cell.get("subscriberId") or subscriber_id) == subscriber_id
+        ]
     if requested_catalogs:
         requested_set = set(requested_catalogs)
         cells = [cell for cell in cells if cell.get("catalogKey") in requested_set]
-    results = [
+    results: list[BigQueryAutoSubscribeCatalogResult] = [
         _handle_cell(
             mcp=mcp,
             cell=cell,
@@ -316,6 +349,20 @@ def autosubscribe_bigquery_listings(
         )
         for cell in sorted(cells, key=lambda item: str(item.get("catalogKey") or ""))
     ]
+    result_catalogs = {item.catalog_key for item in results}
+    for catalog_key, listing in sorted(listing_by_catalog.items()):
+        if catalog_key in result_catalogs:
+            continue
+        results.append(
+            BigQueryAutoSubscribeCatalogResult(
+                catalog_key=catalog_key,
+                action="pending",
+                listing_resource=_string_or_none(listing.get("listingResource")),
+                linked_dataset=_string_or_none(listing.get("linkedDatasetSuggestion")),
+                sample_query=_string_or_none(listing.get("sampleQuery")),
+                message="Reader is registered; waiting for Octogen subscriber status.",
+            )
+        )
 
     return _result(
         apply=apply,
@@ -588,7 +635,6 @@ def _find_subscriber(
     *,
     subscriber_project_id: str,
     subscriber_principal: str,
-    enabled_only: bool,
 ) -> dict[str, Any] | None:
     subscribers = detail.get("subscribers") or []
     if not isinstance(subscribers, list):
@@ -599,8 +645,6 @@ def _find_subscriber(
         if subscriber.get("subscriberProjectId") != subscriber_project_id:
             continue
         if subscriber.get("subscriberPrincipal") != subscriber_principal:
-            continue
-        if enabled_only and subscriber.get("desiredState") != "enabled":
             continue
         return subscriber
     return None
@@ -631,6 +675,12 @@ def _as_dict(value: Any, *, tool: str) -> dict[str, Any]:
 
 def _as_optional_dict(value: Any) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
+
+
+def _as_optional_dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def _as_list(value: Any, *, tool: str) -> list[Any]:
