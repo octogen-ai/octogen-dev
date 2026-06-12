@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from octogen_ai_sdk import _bigquery_autosubscribe_cli as cli
 from octogen_ai_sdk.bigquery import BigQuerySubscriptionResult
 from octogen_ai_sdk.bigquery_autosubscribe import (
@@ -239,9 +238,7 @@ def test_existing_reader_without_cells_reports_granted_listings_pending() -> Non
     assert result.summary == {"pending": 1}
     assert result.catalogs[0].catalog_key == "farfetch"
     assert result.catalogs[0].listing_resource == LISTING
-    assert "waiting for Octogen subscriber status" in (
-        result.catalogs[0].message or ""
-    )
+    assert "waiting for Octogen subscriber status" in (result.catalogs[0].message or "")
 
 
 def test_disabled_reader_is_not_registered_again() -> None:

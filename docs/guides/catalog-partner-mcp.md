@@ -2,11 +2,11 @@
 
 The Octogen Catalog Partner MCP server lets agents (Claude Code, Codex CLI,
 Claude Desktop, and any other [Model Context Protocol](https://modelcontextprotocol.io/)
-client) discover, query, and subscribe to the product catalogs granted to your
-organization.
+client) discover and query the product catalogs granted to your organization.
 It is the interactive sibling of [Platform Catalog API v1](../api/platform-catalog-api-v1.md);
-the product search tools share the same business logic and the same set of
-granted catalogs.
+both share the same business logic and the same set of granted catalogs. MCP
+also exposes BigQuery listing/subscriber helpers for organizations with
+BigQuery access.
 
 | Connection | What you should know |
 | --- | --- |
@@ -30,6 +30,9 @@ Before your first tool call:
 2. You can sign in to the Octogen Platform with the email that belongs to the
    Catalog Partner organization. If you belong to multiple organizations,
    you'll be asked to pick which one to act as during sign-in.
+3. To use BigQuery subscription tools, your organization needs active
+   `bigquery_listing` grants. Subscriber registration and status tools require
+   your account to be an owner/admin member of the Catalog Partner organization.
 
 ## Choose your client
 
@@ -125,10 +128,10 @@ as long as the refresh token is valid.
 
 ## What the tools do
 
-Eight tools are available. The product discovery tools map to endpoints in the
+The catalog read tools map to endpoints in the
 [Platform Catalog API v1 (REST)](../api/platform-catalog-api-v1.md), so the
-arguments and result shapes are the same on either surface. The BigQuery tools
-are MCP-only orchestration helpers for customer credential subscriber setup.
+arguments and result shapes are the same on either surface. BigQuery tools are
+OAuth-only and help an agent coordinate Analytics Hub subscription setup.
 
 ### `list_catalogs()`
 
@@ -186,76 +189,88 @@ cursor    string   optional  Opaque cursor from a previous response's
 
 Returns a page of items plus a `nextCursor` for pagination.
 
-## BigQuery subscriber workflow
-
-If your organization has `bigquery_listing` grants, agents can use MCP to
-complete the customer-side BigQuery subscription workflow without copying
-resource names out of the Platform UI.
-
 ### `list_bigquery_listing_resources(catalogs?)`
 
-Returns Analytics Hub `listingResource` values for granted catalogs. Start here
-when you need the resource name for the customer-side subscribe helper.
+Returns Analytics Hub listing resources for catalogs where your organization
+has an active `bigquery_listing` grant. Use this before subscribing from a
+customer GCP project.
 
 ```json
 [
   {
     "catalogKey": "warrenlotas",
-    "catalogDisplayName": "Warren Lotas",
-    "listingResource": "projects/octogen-prod/locations/US/dataExchanges/catalogs_prod/listings/catalog_warrenlotas_exported_product_view_v1",
-    "shareSchema": "exported_product_view",
-    "schemaVersion": "v1"
+    "status": "active",
+    "location": "us",
+    "listingResource": "projects/octogen-prod/locations/us/dataExchanges/octogen/listings/warrenlotas",
+    "linkedDatasetSuggestion": "octogen_warrenlotas",
+    "sampleQuery": "SELECT * FROM `my_project.octogen_warrenlotas.products` LIMIT 10"
   }
 ]
 ```
 
-Pass `catalogs` to narrow the response to a subset of granted catalogs.
+Pass `catalogs` when you want to limit the response to specific granted
+catalogs. If a requested catalog does not have a BigQuery listing grant, the
+tool returns a structured `catalog_not_granted` error.
 
 ### `list_bigquery_subscribers()`
 
-Owner/admin only. Returns registered subscriber projects/principals, eligible
-catalogs, and per-catalog status cells. Use it after registration to wait for
-cells to reach `awaiting_subscription`, which means Octogen has granted
-Analytics Hub subscriber access and the customer can run the GCP subscribe
-step.
+Lists registered subscriber projects/principals for your organization and the
+per-catalog materialization status for each subscriber. Owner/admin membership
+is required because the response includes customer GCP principals.
+
+Important cell states:
+
+| Status | Meaning |
+| --- | --- |
+| `preparing` | Octogen accepted the subscriber but has not finished granting Analytics Hub IAM. |
+| `awaiting_subscription` | IAM is ready; run the customer-side BigQuery subscribe helper. |
+| `active` | Analytics Hub sees the linked dataset subscription. |
+| `removing` | The subscriber was disabled and teardown is in progress. |
 
 ### `register_bigquery_subscriber(request)`
 
-Owner/admin only. Declares the customer GCP project and subscriber principal
-that should receive Analytics Hub subscriber access.
+Registers the customer GCP project and subscriber principal that should receive
+Analytics Hub subscriber access. Owner/admin membership is required.
 
 ```json
 {
-  "subscriberProjectId": "customer-project",
-  "subscriberPrincipal": "user:data@example.com"
+  "subscriberProjectId": "my-gcp-project",
+  "subscriberPrincipal": "user:data-team@example.com",
+  "shareSchema": "exported_product_view",
+  "schemaVersion": "v1"
 }
 ```
 
-Registration is asynchronous: Octogen's reconciler grants subscriber access per
-catalog, and `list_bigquery_subscribers()` shows when each cell is ready.
+`shareSchema` and `schemaVersion` are optional for the default product export
+view. After registration, poll `list_bigquery_subscribers` until the target
+cell is `awaiting_subscription`.
 
 ### `delete_bigquery_subscriber(subscriber_id)`
 
-Owner/admin only. Disables a registered subscriber. Share teardown is
-asynchronous; keep polling `list_bigquery_subscribers()` until the subscriber or
-cells disappear.
+Disables a registered subscriber. Teardown is asynchronous; use
+`list_bigquery_subscribers` to watch cells move through `removing`.
 
 ### `refresh_bigquery_subscription_status(catalog_key, subscriber_principal, share_schema?, schema_version?)`
 
-Owner/admin only. Call after the customer runs the GCP subscribe step. The tool
-checks Analytics Hub and returns `active` once the linked dataset subscription
-exists; otherwise it remains `awaiting_subscription`.
+After you run the customer-side subscribe helper, this tool asks Analytics Hub
+whether the linked dataset subscription exists. It returns `active` once the
+subscription is visible; otherwise retry after a short delay.
 
-Typical flow:
+### BigQuery setup flow
 
-1. Call `list_bigquery_listing_resources()` and choose the catalog's
-   `listingResource`.
-2. Call `register_bigquery_subscriber(...)`.
-3. Poll `list_bigquery_subscribers()` until the target cell is
+1. Call `list_bigquery_listing_resources` and choose a `listingResource`.
+2. Call `register_bigquery_subscriber` with the customer project and principal.
+3. Poll `list_bigquery_subscribers` until the matching catalog cell is
    `awaiting_subscription`.
-4. Run `octogen-bq-subscribe --listing <listingResource> --project <customer-project> --apply`
-   from the Python SDK's BigQuery extra.
-5. Poll `refresh_bigquery_subscription_status(...)` until the cell is `active`.
+4. Run the customer-side helper from the Python SDK:
+
+   ```bash
+   pip install "octogen-ai-sdk[bigquery]"
+   gcloud auth application-default login
+   octogen-bq-subscribe --listing <listing-resource> --project <customer-project> --apply
+   ```
+
+5. Poll `refresh_bigquery_subscription_status` until the status is `active`.
 
 ### Cron automation
 
@@ -314,8 +329,8 @@ token. If WorkOS rotates that refresh token during exchange, the command writes
 the replacement back to the same file while holding a sibling `.lock` file, so
 overlapping cron runs do not use and overwrite the same rotating token at once.
 The autosubscribe command can also use `OCTOGEN_MCP_CLIENT_ID` instead of
-`OCTOGEN_MCP_CLIENT_ID_FILE`, `OCTOGEN_MCP_TOKEN_COMMAND` for custom token brokers, or
-`OCTOGEN_MCP_ACCESS_TOKEN` for short-lived manual runs.
+`OCTOGEN_MCP_CLIENT_ID_FILE`, `OCTOGEN_MCP_TOKEN_COMMAND` for custom token
+brokers, or `OCTOGEN_MCP_ACCESS_TOKEN` for short-lived manual runs.
 
 ## Error model
 
@@ -340,11 +355,13 @@ failure. The codes you can see:
 | `lookup_product` | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
 | `search_products` | `catalog_not_granted` | The `catalog` argument is not in your active grants. |
 | `search_products` | `invalid_limit` | `limit` was outside the 1..100 range. |
-| BigQuery tools | `catalog_not_granted` | The requested catalog is not in your active `bigquery_listing` grants. |
-| BigQuery subscriber tools | `not_authorized` | The tool requires an owner/admin member of the catalog partner organization. |
+| BigQuery tools | `catalog_not_granted` | A requested catalog does not have an active `bigquery_listing` grant. |
+| BigQuery subscriber tools | `not_authorized` | Your user is not an owner/admin member of the target organization. |
+| BigQuery tools | `request_failed` | The backing Analytics Hub or subscriber operation failed. |
 
 If an agent encounters one of these, the right move is usually to call
-`list_catalogs` again and retry with valid inputs.
+`list_catalogs` or `list_bigquery_listing_resources` again and retry with
+valid inputs.
 
 ## Coexistence with API keys
 
@@ -356,13 +373,11 @@ against the same grants table — no migration needed.
 | Use case | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop) |
 | Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound Octogen access token |
 | Caller identity | (api_key_id, org_id) | (user_sub, org_id, oauth_client_id) |
-| BigQuery subscriber setup | Not available | Listing discovery, subscriber registration, and status refresh |
 | Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
 | Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
 
-Product tools on both surfaces enforce the same per-org catalog grants. BigQuery
-listing reads additionally require `bigquery_listing` grants, and subscriber
-state tools require owner/admin membership.
+Both surfaces enforce the same per-org catalog grants. A grant revoked on
+one path takes effect immediately on the other.
 
 ## Next
 

@@ -78,11 +78,10 @@ result = subscribe_to_listing(
 print(result.linked_dataset, result.state)
 ```
 
-Get `<listing-resource>` from the Catalog Partner MCP
-`list_bigquery_listing_resources` tool or from the Platform UI BigQuery sharing
-page. It's idempotent, and raises `OctogenBigQueryAccessPendingError` if
-Octogen's IAM grant hasn't landed yet (it's asynchronous — retry in a few
-minutes).
+Copy `<listing-resource>` from the Platform UI BigQuery sharing page or from
+the Catalog Partner MCP `list_bigquery_listing_resources` tool. It's
+idempotent, and raises `OctogenBigQueryAccessPendingError` if Octogen's IAM
+grant hasn't landed yet (it's asynchronous — retry in a few minutes).
 
 ### Auto-subscribe new listings
 

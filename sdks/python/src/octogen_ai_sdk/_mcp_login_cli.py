@@ -134,7 +134,9 @@ def main(argv: list[str] | None = None) -> int:
     client_id_file = Path(args.client_id_file).expanduser()
     redirect_uri_file = Path(args.redirect_uri_file).expanduser()
     refresh_token_file = Path(args.refresh_token_file).expanduser()
-    requested_redirect_uri = args.redirect_uri or f"http://127.0.0.1:{args.port}/callback"
+    requested_redirect_uri = (
+        args.redirect_uri or f"http://127.0.0.1:{args.port}/callback"
+    )
 
     try:
         with httpx.Client() as client:
@@ -159,8 +161,8 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 client_id, redirect_uri = resolved
             verifier, challenge = generate_pkce()
-            state = base64.urlsafe_b64encode(os.urandom(16)).rstrip(b"=").decode(
-                "ascii"
+            state = (
+                base64.urlsafe_b64encode(os.urandom(16)).rstrip(b"=").decode("ascii")
             )
             authorize_url = _build_authorize_url_from_metadata(
                 metadata,
@@ -173,8 +175,7 @@ def main(argv: list[str] | None = None) -> int:
             )
 
             print(
-                "Open this URL and sign in with your Octogen catalog-partner "
-                "account:",
+                "Open this URL and sign in with your Octogen catalog-partner account:",
                 file=sys.stderr,
             )
             print(authorize_url, file=sys.stderr, flush=True)
@@ -282,8 +283,7 @@ def _localhost_redirect_port(redirect_uri: str) -> int:
     parsed = urlparse(redirect_uri)
     if parsed.hostname not in {"localhost", "127.0.0.1"} or parsed.port is None:
         raise OctogenMCPError(
-            "octogen-mcp-login requires a localhost redirect URI with an explicit "
-            "port."
+            "octogen-mcp-login requires a localhost redirect URI with an explicit port."
         )
     return parsed.port
 
