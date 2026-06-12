@@ -20,6 +20,7 @@ from octogen_ai_sdk.mcp_auth import (
     DEFAULT_MCP_LOGIN_PORT,
     DEFAULT_MCP_RESOURCE,
     DEFAULT_MCP_SCOPE,
+    DEFAULT_REDIRECT_URI_FILE,
     DEFAULT_REFRESH_TOKEN_FILE,
     capture_authorization_response,
     decode_jwt_aud,
@@ -73,6 +74,19 @@ def main(argv: list[str] | None = None) -> int:
         help="Where to read/write the public OAuth client id.",
     )
     parser.add_argument(
+        "--redirect-uri",
+        default=os.getenv("OCTOGEN_MCP_REDIRECT_URI"),
+        help="Registered OAuth redirect URI. Required when reusing --client-id.",
+    )
+    parser.add_argument(
+        "--redirect-uri-file",
+        default=os.getenv(
+            "OCTOGEN_MCP_REDIRECT_URI_FILE",
+            str(DEFAULT_REDIRECT_URI_FILE),
+        ),
+        help="Where to read/write the redirect URI registered for the client id.",
+    )
+    parser.add_argument(
         "--refresh-token-file",
         default=os.getenv(
             "OCTOGEN_MCP_REFRESH_TOKEN_FILE",
@@ -118,8 +132,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     client_id_file = Path(args.client_id_file).expanduser()
+    redirect_uri_file = Path(args.redirect_uri_file).expanduser()
     refresh_token_file = Path(args.refresh_token_file).expanduser()
-    redirect_uri = f"http://localhost:{args.port}/callback"
+    requested_redirect_uri = args.redirect_uri or f"http://localhost:{args.port}/callback"
 
     try:
         with httpx.Client() as client:
@@ -127,16 +142,22 @@ def main(argv: list[str] | None = None) -> int:
                 client,
                 authkit_domain=args.authkit_domain,
             )
-            client_id = _resolve_client_id(
+            resolved = _resolve_client_registration(
                 explicit_client_id=args.client_id,
                 client_id_file=client_id_file,
+                explicit_redirect_uri=args.redirect_uri,
+                redirect_uri_file=redirect_uri_file,
+                requested_redirect_uri=requested_redirect_uri,
             )
-            if client_id is None:
+            if resolved is None:
                 client_id = register_public_client(
                     client,
                     registration_endpoint=metadata["registration_endpoint"],
-                    redirect_uri=redirect_uri,
+                    redirect_uri=requested_redirect_uri,
                 )
+                redirect_uri = requested_redirect_uri
+            else:
+                client_id, redirect_uri = resolved
             verifier, challenge = generate_pkce()
             state = base64.urlsafe_b64encode(os.urandom(16)).rstrip(b"=").decode(
                 "ascii"
@@ -166,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
             )
 
             captured = capture_authorization_response(
-                port=args.port,
+                port=_localhost_redirect_port(redirect_uri),
                 timeout_seconds=args.timeout,
             )
             if captured.get("error"):
@@ -198,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
                 refresh_token = verify_refresh or refresh_token
 
         write_secret_file(client_id_file, client_id)
+        write_secret_file(redirect_uri_file, redirect_uri)
         write_secret_file(refresh_token_file, refresh_token)
     except (httpx.HTTPError, OSError, TimeoutError, OctogenMCPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -207,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
         payload = {
             "client_id": client_id,
             "client_id_file": str(client_id_file),
+            "redirect_uri": redirect_uri,
+            "redirect_uri_file": str(redirect_uri_file),
             "refresh_token_file": str(refresh_token_file),
             "resource": args.resource,
             "access_token_aud": access_aud,
@@ -218,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         _print_success(
             client_id=client_id,
             client_id_file=client_id_file,
+            redirect_uri=redirect_uri,
+            redirect_uri_file=redirect_uri_file,
             refresh_token_file=refresh_token_file,
             resource=args.resource,
             access_aud=access_aud,
@@ -227,17 +253,39 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _resolve_client_id(
+def _resolve_client_registration(
     *,
     explicit_client_id: str | None,
     client_id_file: Path,
-) -> str | None:
+    explicit_redirect_uri: str | None,
+    redirect_uri_file: Path,
+    requested_redirect_uri: str,
+) -> tuple[str, str] | None:
     if explicit_client_id:
-        return explicit_client_id
-    if client_id_file.exists():
-        value = read_text_file(client_id_file)
-        return value or None
+        if not explicit_redirect_uri:
+            raise OctogenMCPError(
+                "Reusing --client-id requires --redirect-uri matching that "
+                "client's registered redirect URI."
+            )
+        return explicit_client_id, explicit_redirect_uri
+    if client_id_file.exists() and redirect_uri_file.exists():
+        client_id = read_text_file(client_id_file)
+        redirect_uri = read_text_file(redirect_uri_file)
+        if client_id and redirect_uri == requested_redirect_uri:
+            return client_id, redirect_uri
     return None
+
+
+def _localhost_redirect_port(redirect_uri: str) -> int:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(redirect_uri)
+    if parsed.hostname not in {"localhost", "127.0.0.1"} or parsed.port is None:
+        raise OctogenMCPError(
+            "octogen-mcp-login requires a localhost redirect URI with an explicit "
+            "port."
+        )
+    return parsed.port
 
 
 def _build_authorize_url_from_metadata(
@@ -267,6 +315,8 @@ def _print_success(
     *,
     client_id: str,
     client_id_file: Path,
+    redirect_uri: str,
+    redirect_uri_file: Path,
     refresh_token_file: Path,
     resource: str,
     access_aud: Any,
@@ -275,7 +325,9 @@ def _print_success(
 ) -> None:
     print("Octogen MCP login complete.")
     print(f"client id file      : {client_id_file}")
+    print(f"redirect URI file   : {redirect_uri_file}")
     print(f"refresh token file  : {refresh_token_file}")
+    print(f"redirect URI        : {redirect_uri}")
     print(f"resource            : {resource}")
     print(f"access token aud    : {access_aud!r}")
     if verified:
@@ -283,10 +335,12 @@ def _print_success(
     print()
     print("Use these for cron:")
     print(f"export OCTOGEN_MCP_CLIENT_ID_FILE={client_id_file}")
+    print(f"export OCTOGEN_MCP_REDIRECT_URI_FILE={redirect_uri_file}")
     print(f"export OCTOGEN_MCP_REFRESH_TOKEN_FILE={refresh_token_file}")
     print()
     print("Or, if you prefer to store the client id directly:")
     print(f"export OCTOGEN_MCP_CLIENT_ID={client_id}")
+    print(f"export OCTOGEN_MCP_REDIRECT_URI={redirect_uri}")
     print(f"export OCTOGEN_MCP_REFRESH_TOKEN_FILE={refresh_token_file}")
 
 

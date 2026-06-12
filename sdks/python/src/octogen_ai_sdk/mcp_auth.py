@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -22,8 +24,10 @@ DEFAULT_MCP_LOGIN_PORT = 8765
 DEFAULT_MCP_SCOPE = "openid profile email offline_access"
 DEFAULT_CONFIG_DIR = Path("~/.config/octogen").expanduser()
 DEFAULT_CLIENT_ID_FILE = DEFAULT_CONFIG_DIR / "mcp.client-id"
+DEFAULT_REDIRECT_URI_FILE = DEFAULT_CONFIG_DIR / "mcp.redirect-uri"
 DEFAULT_REFRESH_TOKEN_FILE = DEFAULT_CONFIG_DIR / "mcp.refresh"
 TIMEOUT_SECONDS = 30.0
+DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 300
 
 
 def generate_pkce() -> tuple[str, str]:
@@ -280,6 +284,12 @@ class MCPRefreshTokenProvider:
     def __call__(self) -> str:
         if self._access_token and time.monotonic() < self._access_token_expires_at:
             return self._access_token
+        if self._refresh_token_file is not None:
+            with _refresh_token_file_lock(self._refresh_token_file):
+                return self._refresh_access_token()
+        return self._refresh_access_token()
+
+    def _refresh_access_token(self) -> str:
         refresh_token = self._read_refresh_token()
         client = self._http_client or httpx.Client(timeout=self._timeout)
         close_client = self._http_client is None
@@ -319,7 +329,20 @@ class MCPRefreshTokenProvider:
 
 
 def _access_token_expires_at(expires_in: int | float | None) -> float:
-    if not expires_in or expires_in <= 0:
+    ttl = DEFAULT_ACCESS_TOKEN_TTL_SECONDS if expires_in is None else float(expires_in)
+    if ttl <= 0:
         return 0.0
-    leeway = min(30.0, float(expires_in) / 2)
-    return time.monotonic() + float(expires_in) - leeway
+    leeway = min(30.0, ttl / 2)
+    return time.monotonic() + ttl - leeway
+
+
+@contextlib.contextmanager
+def _refresh_token_file_lock(path: Path):
+    lock_path = path.expanduser().with_suffix(path.expanduser().suffix + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("w") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)

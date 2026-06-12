@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 
+from octogen_ai_sdk import _mcp_login_cli as login_cli
 from octogen_ai_sdk import mcp_auth
 
 
@@ -78,6 +79,7 @@ def test_refresh_token_provider_persists_rotated_token(tmp_path: Path) -> None:
     assert provider() == "access-1"
     assert provider() == "access-1"
     assert token_file.read_text() == "refresh-new\n"
+    assert token_file.with_suffix(".refresh.lock").exists()
     assert len(requests) == 1
     assert b"refresh_token=refresh-old" in requests[0].content
     assert b"client_id=client_123" in requests[0].content
@@ -121,6 +123,76 @@ def test_refresh_token_provider_refreshes_after_access_token_expiry(
     assert provider() == "access-2"
     assert token_file.read_text() == "refresh-2\n"
     assert len(requests) == 2
+
+
+def test_refresh_token_provider_caches_when_expires_in_missing(tmp_path: Path) -> None:
+    token_file = tmp_path / "octogen-mcp.refresh"
+    token_file.write_text("refresh-old\n")
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"access_token": "access-1", "refresh_token": "refresh-new"},
+        )
+
+    provider = mcp_auth.MCPRefreshTokenProvider(
+        client_id="client_123",
+        refresh_token=None,
+        refresh_token_file=token_file,
+        token_endpoint="https://auth.example.test/oauth2/token",
+        timeout=5.0,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert provider() == "access-1"
+    assert provider() == "access-1"
+    assert len(requests) == 1
+
+
+def test_login_requires_redirect_uri_for_explicit_reused_client(
+    tmp_path: Path,
+) -> None:
+    try:
+        login_cli._resolve_client_registration(
+            explicit_client_id="client_123",
+            client_id_file=tmp_path / "mcp.client-id",
+            explicit_redirect_uri=None,
+            redirect_uri_file=tmp_path / "mcp.redirect-uri",
+            requested_redirect_uri="http://localhost:8765/callback",
+        )
+    except mcp_auth.OctogenMCPError as exc:
+        assert "--redirect-uri" in str(exc)
+    else:
+        raise AssertionError("explicit client id without redirect URI should fail")
+
+
+def test_login_reuses_file_client_only_for_matching_redirect_uri(
+    tmp_path: Path,
+) -> None:
+    client_id_file = tmp_path / "mcp.client-id"
+    redirect_uri_file = tmp_path / "mcp.redirect-uri"
+    client_id_file.write_text("client_123\n")
+    redirect_uri_file.write_text("http://localhost:8765/callback\n")
+
+    assert login_cli._resolve_client_registration(
+        explicit_client_id=None,
+        client_id_file=client_id_file,
+        explicit_redirect_uri=None,
+        redirect_uri_file=redirect_uri_file,
+        requested_redirect_uri="http://localhost:8765/callback",
+    ) == ("client_123", "http://localhost:8765/callback")
+    assert (
+        login_cli._resolve_client_registration(
+            explicit_client_id=None,
+            client_id_file=client_id_file,
+            explicit_redirect_uri=None,
+            redirect_uri_file=redirect_uri_file,
+            requested_redirect_uri="http://localhost:9999/callback",
+        )
+        is None
+    )
 
 
 def test_write_secret_file_creates_private_parent(tmp_path: Path) -> None:
