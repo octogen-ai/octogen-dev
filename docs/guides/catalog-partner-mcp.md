@@ -257,6 +257,49 @@ Typical flow:
    from the Python SDK's BigQuery extra.
 5. Poll `refresh_bigquery_subscription_status(...)` until the cell is `active`.
 
+### Cron automation
+
+Customers who want to automatically pick up new listings can run the Python
+SDK's `octogen-bq-autosubscribe` command on a schedule. The command performs
+the MCP flow above in one idempotent pass:
+
+1. Lists granted BigQuery listings.
+2. Lists registered subscribers.
+3. Registers the configured Reader if it is missing.
+4. Subscribes every cell whose status is `awaiting_subscription`.
+5. Refreshes Octogen status after each linked dataset is created.
+
+Install the SDK with the BigQuery extra and authenticate to Google with
+credentials that can create linked datasets in the destination project:
+
+```bash
+pip install "octogen-ai-sdk[bigquery]"
+gcloud auth application-default login
+```
+
+Dry-run first:
+
+```bash
+OCTOGEN_MCP_CLIENT_ID=client_... \
+OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh \
+octogen-bq-autosubscribe \
+  --project customer-project \
+  --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com \
+  --json
+```
+
+Then run with `--apply` from cron:
+
+```cron
+*/15 * * * * OCTOGEN_MCP_CLIENT_ID=client_... OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh octogen-bq-autosubscribe --project customer-project --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com --apply --json
+```
+
+`OCTOGEN_MCP_REFRESH_TOKEN_FILE` should contain an Octogen MCP OAuth refresh
+token. If WorkOS rotates that refresh token during exchange, the command writes
+the replacement back to the same file. The autosubscribe command can also use
+`OCTOGEN_MCP_TOKEN_COMMAND` for custom token brokers, or
+`OCTOGEN_MCP_ACCESS_TOKEN` for short-lived manual runs.
+
 ## Error model
 
 The tools return two flavors of error.

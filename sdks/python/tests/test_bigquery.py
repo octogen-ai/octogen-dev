@@ -10,10 +10,12 @@ import json
 from types import SimpleNamespace
 
 import pytest
+
 from octogen_ai_sdk import _bigquery_cli as cli
 from octogen_ai_sdk import bigquery as bq
 from octogen_ai_sdk.errors import (
     OctogenBigQueryAccessPendingError,
+    OctogenBigQueryAlreadyExistsError,
     OctogenBigQueryError,
 )
 
@@ -78,7 +80,7 @@ class TestParsing:
 
     def test_build_sample_query(self) -> None:
         q = bq.build_sample_query("proj", "octogen_farfetch")
-        assert "`proj.octogen_farfetch.product`" in q
+        assert "`proj.octogen_farfetch.products_current_v1`" in q
 
 
 class TestSubscribeOrchestration:
@@ -93,7 +95,7 @@ class TestSubscribeOrchestration:
         assert result.linked_project == "my-proj"
         assert result.linked_dataset == "octogen_farfetch"
         assert result.state == "STATE_ACTIVE"
-        assert "`my-proj.octogen_farfetch.product`" in result.sample_query
+        assert "`my-proj.octogen_farfetch.products_current_v1`" in result.sample_query
         # Location + dataset id were derived from the listing resource.
         [call] = sub.subscribe_calls
         assert call["location"] == "us"
@@ -129,6 +131,30 @@ class TestSubscribeOrchestration:
         assert result.subscription_name == existing.name
         assert sub.subscribe_calls == []  # did not re-subscribe
 
+    def test_subscribe_already_exists_is_idempotent(self) -> None:
+        class AlreadyExistsSubscriber(FakeSubscriber):
+            def subscribe(
+                self,
+                *,
+                listing_resource,
+                project,
+                dataset_id,
+                location,
+                friendly_name,
+            ):  # noqa: ANN001
+                raise OctogenBigQueryAlreadyExistsError("already exists")
+
+        result = bq.subscribe_to_listing(
+            listing_resource=LISTING,
+            destination_project="my-proj",
+            subscriber=AlreadyExistsSubscriber(),
+        )
+
+        assert result.already_subscribed is True
+        assert result.state == "ALREADY_EXISTS"
+        assert result.linked_project == "my-proj"
+        assert result.linked_dataset == "octogen_farfetch"
+
 
 class TestErrorMapping:
     def test_subscribe_permission_denied_maps_to_access_pending(self) -> None:
@@ -145,6 +171,15 @@ class TestErrorMapping:
         assert isinstance(
             bq._wrap_google_error(SomeError("denied"), operation="subscribe"),
             OctogenBigQueryAccessPendingError,
+        )
+
+    def test_subscribe_already_exists_maps_to_typed_error(self) -> None:
+        class AlreadyExists(Exception):
+            code = 409
+
+        assert isinstance(
+            bq._wrap_google_error(AlreadyExists("exists"), operation="subscribe"),
+            OctogenBigQueryAlreadyExistsError,
         )
 
     def test_list_403_maps_to_generic_permission_not_access_pending(self) -> None:

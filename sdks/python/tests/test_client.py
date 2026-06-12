@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 
 import httpx
-import octogen_ai_sdk
 import pytest
 import respx
+
+import octogen_ai_sdk
 from octogen_ai_sdk import (
     Attribute,
     AttributeValue,
