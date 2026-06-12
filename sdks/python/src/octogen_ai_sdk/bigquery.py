@@ -6,8 +6,9 @@ final step — subscribing to the listing to create a *linked dataset* in YOUR
 GCP project — can only run with YOUR credentials, so it lives here in the
 customer SDK rather than on the Octogen platform.
 
-This is Phase 1: given the listing resource name (copy it from the Platform UI's
-BigQuery sharing page) and your destination project, it performs the Analytics
+Given the listing resource name (from the Catalog Partner MCP
+``list_bigquery_listing_resources`` tool or the Platform UI's BigQuery sharing
+page) and your destination project, it performs the Analytics
 Hub subscription under your Application Default Credentials and reports the
 linked dataset. It's idempotent — re-running detects an existing subscription
 to the same listing and returns it instead of subscribing again.
@@ -37,6 +38,7 @@ from pydantic import BaseModel, ConfigDict
 
 from octogen_ai_sdk.errors import (
     OctogenBigQueryAccessPendingError,
+    OctogenBigQueryAlreadyExistsError,
     OctogenBigQueryError,
 )
 
@@ -72,7 +74,9 @@ def parse_listing_resource(resource: str) -> ListingResource:
         raise OctogenBigQueryError(
             "Invalid listing resource. Expected "
             "'projects/<p>/locations/<loc>/dataExchanges/<ex>/listings/<id>', "
-            f"got {resource!r}. Copy it from the Platform UI BigQuery sharing page."
+            f"got {resource!r}. Get it from the MCP "
+            "'list_bigquery_listing_resources' tool or the Platform UI "
+            "BigQuery sharing page."
         )
     return ListingResource(raw=resource.strip(), **match.groupdict())
 
@@ -85,7 +89,7 @@ def default_dataset_id(listing_id: str) -> str:
 
 def build_sample_query(project: str, dataset: str) -> str:
     """A copy-paste query an operator can run once the dataset is linked."""
-    return f"SELECT * FROM `{project}.{dataset}.product` LIMIT 10;"
+    return f"SELECT * FROM `{project}.{dataset}.products_current_v1` LIMIT 10;"
 
 
 class BigQuerySubscriptionResult(BaseModel):
@@ -167,13 +171,26 @@ def subscribe_to_listing(
             parts.raw, existing, destination_project, dataset_id, already=True
         )
 
-    info = backend.subscribe(
-        listing_resource=parts.raw,
-        project=destination_project,
-        dataset_id=dataset_id,
-        location=resolved_location,
-        friendly_name=friendly_name,
-    )
+    try:
+        info = backend.subscribe(
+            listing_resource=parts.raw,
+            project=destination_project,
+            dataset_id=dataset_id,
+            location=resolved_location,
+            friendly_name=friendly_name,
+        )
+    except OctogenBigQueryAlreadyExistsError:
+        # Analytics Hub may report the destination dataset already exists even
+        # when list_subscriptions did not surface the subscription. Treat that
+        # as idempotent for the requested dataset so cron reruns do not fail
+        # after a successful subscribe/refresh cycle.
+        info = _SubscriptionInfo(
+            name="",
+            state="ALREADY_EXISTS",
+            linked_project=destination_project,
+            linked_dataset=dataset_id,
+        )
+        return _result(parts.raw, info, destination_project, dataset_id, already=True)
     return _result(parts.raw, info, destination_project, dataset_id, already=False)
 
 
@@ -285,6 +302,11 @@ def _wrap_google_error(exc: Exception, *, operation: str) -> OctogenBigQueryErro
     """
     name = type(exc).__name__
     is_forbidden = name == "PermissionDenied" or getattr(exc, "code", None) == 403
+    is_already_exists = name == "AlreadyExists" or getattr(exc, "code", None) == 409
+    if is_already_exists and operation == "subscribe":
+        return OctogenBigQueryAlreadyExistsError(
+            f"Destination linked dataset already exists. (Underlying: {name})"
+        )
     if is_forbidden and operation == "subscribe":
         return OctogenBigQueryAccessPendingError(
             "Your principal isn't authorized on this listing yet. Octogen grants "

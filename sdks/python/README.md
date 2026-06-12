@@ -83,6 +83,47 @@ the Catalog Partner MCP `list_bigquery_listing_resources` tool. It's
 idempotent, and raises `OctogenBigQueryAccessPendingError` if Octogen's IAM
 grant hasn't landed yet (it's asynchronous — retry in a few minutes).
 
+### Auto-subscribe new listings
+
+For cron jobs, use the higher-level autosubscribe command. It calls Octogen MCP
+to register your Reader if needed, finds every ready listing that is not active
+yet, creates linked datasets in your GCP project, then refreshes Octogen's
+status.
+
+Bootstrap Octogen MCP credentials once from an interactive terminal:
+
+```bash
+uv run --project sdks/python octogen-mcp-login \
+  --client-id-file /secure/octogen-mcp.client-id \
+  --refresh-token-file /secure/octogen-mcp.refresh
+```
+
+Dry-run first:
+
+```bash
+OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id \
+OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh \
+uv run --project sdks/python --extra bigquery \
+  octogen-bq-autosubscribe \
+  --project my-gcp-project \
+  --principal serviceAccount:bq-reader@my-gcp-project.iam.gserviceaccount.com \
+  --json
+```
+
+Apply from cron:
+
+```cron
+*/15 * * * * cd /path/to/octogen-dev && OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh uv run --project sdks/python --extra bigquery octogen-bq-autosubscribe --project my-gcp-project --principal serviceAccount:bq-reader@my-gcp-project.iam.gserviceaccount.com --apply --json
+```
+
+`OCTOGEN_MCP_REFRESH_TOKEN_FILE` should contain an Octogen MCP OAuth refresh
+token. If WorkOS rotates that refresh token during exchange, the command writes
+the replacement back to the same file. The command also accepts
+`OCTOGEN_MCP_CLIENT_ID` instead of `OCTOGEN_MCP_CLIENT_ID_FILE`,
+`OCTOGEN_MCP_TOKEN_COMMAND` for custom token brokers, or
+`OCTOGEN_MCP_ACCESS_TOKEN` for short-lived manual runs. BigQuery subscription
+still uses your local Google Application Default Credentials.
+
 ## Tests
 
 Run the mocked SDK tests:

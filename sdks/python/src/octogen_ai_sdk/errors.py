@@ -63,3 +63,11 @@ class OctogenBigQueryAccessPendingError(OctogenBigQueryError):
     subscriber is registered; until that lands, subscribing fails with
     PermissionDenied. This is expected — retry in a few minutes.
     """
+
+
+class OctogenBigQueryAlreadyExistsError(OctogenBigQueryError):
+    """Raised when Analytics Hub reports the linked dataset already exists."""
+
+
+class OctogenMCPError(OctogenError):
+    """Raised when an Octogen MCP tool call or transport request fails."""

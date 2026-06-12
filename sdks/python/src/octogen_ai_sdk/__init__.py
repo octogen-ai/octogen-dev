@@ -5,16 +5,24 @@ from octogen_ai_sdk.bigquery import (
     parse_listing_resource,
     subscribe_to_listing,
 )
+from octogen_ai_sdk.bigquery_autosubscribe import (
+    BigQueryAutoSubscribeCatalogResult,
+    BigQueryAutoSubscribeResult,
+    BigQueryMCPClient,
+    autosubscribe_bigquery_listings,
+)
 from octogen_ai_sdk.client import OctogenClient
 from octogen_ai_sdk.errors import (
     MissingAPIKeyError,
     OctogenAPIError,
     OctogenAuthenticationError,
     OctogenBigQueryAccessPendingError,
+    OctogenBigQueryAlreadyExistsError,
     OctogenBigQueryError,
     OctogenConnectionError,
     OctogenError,
     OctogenForbiddenError,
+    OctogenMCPError,
     OctogenNotFoundError,
     OctogenValidationError,
 )
@@ -59,6 +67,9 @@ __all__ = [
     "Attribute",
     "AttributeValue",
     "AudienceView",
+    "BigQueryAutoSubscribeCatalogResult",
+    "BigQueryAutoSubscribeResult",
+    "BigQueryMCPClient",
     "BigQuerySubscriptionResult",
     "BrandView",
     "BreadcrumbView",
@@ -83,11 +94,13 @@ __all__ = [
     "OctogenAPIError",
     "OctogenAuthenticationError",
     "OctogenBigQueryAccessPendingError",
+    "OctogenBigQueryAlreadyExistsError",
     "OctogenBigQueryError",
     "OctogenClient",
     "OctogenConnectionError",
     "OctogenError",
     "OctogenForbiddenError",
+    "OctogenMCPError",
     "OctogenNotFoundError",
     "OctogenValidationError",
     "ProductDetailsView",
@@ -100,6 +113,7 @@ __all__ = [
     "TextSearchQuery",
     "ValidationErrorModel",
     "VideoView",
+    "autosubscribe_bigquery_listings",
     "parse_listing_resource",
     "subscribe_to_listing",
 ]
