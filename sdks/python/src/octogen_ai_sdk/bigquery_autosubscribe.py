@@ -503,15 +503,16 @@ def _handle_cell(
     action: CatalogAction = (
         "already_subscribed" if subscription.already_subscribed else "subscribed"
     )
+    refreshed_status = _string_or_none(refreshed.get("status"))
     return BigQueryAutoSubscribeCatalogResult(
         catalog_key=catalog_key,
         action=action,
-        status=status,
+        status=refreshed_status or status,
         reason_code=reason_code,
         listing_resource=listing_resource,
         linked_dataset=subscription.linked_dataset,
         sample_query=subscription.sample_query,
-        refresh_status=_string_or_none(refreshed.get("status")),
+        refresh_status=refreshed_status,
     )
 
 

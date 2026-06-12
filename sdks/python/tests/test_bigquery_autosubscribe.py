@@ -158,6 +158,7 @@ def test_apply_registers_missing_reader_subscribes_and_refreshes() -> None:
     assert result.registered_subscriber is True
     assert result.would_register_subscriber is False
     assert result.summary == {"subscribed": 1}
+    assert result.catalogs[0].status == "active"
     assert result.catalogs[0].refresh_status == "active"
     assert subscribe_calls == [
         {

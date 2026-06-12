@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import contextlib
-import fcntl
 import hashlib
 import json
 import os
@@ -16,6 +15,20 @@ from typing import Any
 import httpx
 
 from octogen_ai_sdk.errors import OctogenMCPError
+
+try:
+    import fcntl as _fcntl
+except ImportError:  # pragma: no cover - Windows import path
+    fcntl = None
+else:
+    fcntl: Any = _fcntl
+
+try:
+    import msvcrt as _msvcrt
+except ImportError:  # pragma: no cover - Unix import path
+    msvcrt = None
+else:
+    msvcrt: Any = _msvcrt
 
 DEFAULT_AUTHKIT_DOMAIN = "https://auth.octogen.ai"
 DEFAULT_MCP_RESOURCE = "https://mcp.octogen.ai"
@@ -340,9 +353,21 @@ def _access_token_expires_at(expires_in: int | float | None) -> float:
 def _refresh_token_file_lock(path: Path):
     lock_path = path.expanduser().with_suffix(path.expanduser().suffix + ".lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("w") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    with lock_path.open("a+") as handle:
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        elif msvcrt is not None:
+            handle.seek(0)
+            if not handle.read(1):
+                handle.write("\0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
         try:
             yield
         finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            elif msvcrt is not None:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
