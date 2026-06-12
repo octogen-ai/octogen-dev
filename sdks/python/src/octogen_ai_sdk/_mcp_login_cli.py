@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     client_id_file = Path(args.client_id_file).expanduser()
     redirect_uri_file = Path(args.redirect_uri_file).expanduser()
     refresh_token_file = Path(args.refresh_token_file).expanduser()
-    requested_redirect_uri = args.redirect_uri or f"http://localhost:{args.port}/callback"
+    requested_redirect_uri = args.redirect_uri or f"http://127.0.0.1:{args.port}/callback"
 
     try:
         with httpx.Client() as client:
