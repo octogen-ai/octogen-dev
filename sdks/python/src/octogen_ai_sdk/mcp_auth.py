@@ -162,8 +162,8 @@ def refresh_access_token(
     refresh_token: str,
     client_id: str,
     timeout: float = TIMEOUT_SECONDS,
-) -> tuple[str, str | None]:
-    """Exchange a public-client refresh token for ``(access, new_refresh)``."""
+) -> tuple[str, str | None, int | None]:
+    """Exchange a public-client refresh token for access token details."""
     response = client.post(
         token_endpoint,
         data={
@@ -179,7 +179,10 @@ def refresh_access_token(
     access_token = body.get("access_token")
     if not access_token:
         raise OctogenMCPError("refresh exchange returned no access_token")
-    return str(access_token), body.get("refresh_token")
+    expires_in = body.get("expires_in")
+    if not isinstance(expires_in, int | float):
+        expires_in = None
+    return str(access_token), body.get("refresh_token"), expires_in
 
 
 def capture_authorization_response(
@@ -272,15 +275,16 @@ class MCPRefreshTokenProvider:
         self._timeout = timeout
         self._http_client = http_client
         self._access_token: str | None = None
+        self._access_token_expires_at = 0.0
 
     def __call__(self) -> str:
-        if self._access_token:
+        if self._access_token and time.monotonic() < self._access_token_expires_at:
             return self._access_token
         refresh_token = self._read_refresh_token()
         client = self._http_client or httpx.Client(timeout=self._timeout)
         close_client = self._http_client is None
         try:
-            access_token, new_refresh = refresh_access_token(
+            access_token, new_refresh, expires_in = refresh_access_token(
                 client,
                 token_endpoint=self._token_endpoint,
                 refresh_token=refresh_token,
@@ -301,6 +305,7 @@ class MCPRefreshTokenProvider:
             if self._refresh_token_file is not None:
                 write_secret_file(self._refresh_token_file, new_refresh)
         self._access_token = access_token
+        self._access_token_expires_at = _access_token_expires_at(expires_in)
         return self._access_token
 
     def _read_refresh_token(self) -> str:
@@ -311,3 +316,10 @@ class MCPRefreshTokenProvider:
         if self._refresh_token:
             return self._refresh_token
         raise OctogenMCPError("MCP refresh token is empty.")
+
+
+def _access_token_expires_at(expires_in: int | float | None) -> float:
+    if not expires_in or expires_in <= 0:
+        return 0.0
+    leeway = min(30.0, float(expires_in) / 2)
+    return time.monotonic() + float(expires_in) - leeway

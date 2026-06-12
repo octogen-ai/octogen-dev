@@ -76,7 +76,7 @@ def _cell(status: str, reason: str | None = None) -> dict[str, Any]:
         "listingResource": LISTING,
         "linkedDatasetSuggestion": DATASET,
         "location": "US",
-        "shareSchema": "exported_product_view_v1",
+        "shareSchema": "exported_product_view",
         "schemaVersion": "v1",
     }
 
@@ -156,6 +156,7 @@ def test_apply_registers_missing_reader_subscribes_and_refreshes() -> None:
     )
 
     assert result.registered_subscriber is True
+    assert result.would_register_subscriber is False
     assert result.summary == {"subscribed": 1}
     assert result.catalogs[0].refresh_status == "active"
     assert subscribe_calls == [
@@ -174,6 +175,12 @@ def test_apply_registers_missing_reader_subscribes_and_refreshes() -> None:
         "list_bigquery_subscribers",
         "refresh_bigquery_subscription_status",
     ]
+    assert mcp.calls[-1][1] == {
+        "catalog_key": "farfetch",
+        "subscriber_principal": PRINCIPAL,
+        "share_schema": "exported_product_view",
+        "schema_version": "v1",
+    }
 
 
 def test_apply_skips_already_active_cell() -> None:
@@ -251,6 +258,7 @@ def test_refresh_token_provider_persists_rotated_token(tmp_path: Path) -> None:
             json={
                 "access_token": "access-1",
                 "refresh_token": "refresh-new",
+                "expires_in": 300,
             },
         )
 

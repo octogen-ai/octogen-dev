@@ -265,6 +265,7 @@ def autosubscribe_bigquery_listings(
             created.get("subscriber"), tool="register_bigquery_subscriber.subscriber"
         )
         registered_subscriber = True
+        would_register_subscriber = False
         detail = _as_dict(
             mcp.call_tool("list_bigquery_subscribers", {}),
             tool="list_bigquery_subscribers",
@@ -434,8 +435,7 @@ def _handle_cell(
                 {
                     "catalog_key": catalog_key,
                     "subscriber_principal": subscriber_principal,
-                    "share_schema": cell.get("shareSchema")
-                    or "exported_product_view_v1",
+                    "share_schema": cell.get("shareSchema") or "exported_product_view",
                     "schema_version": cell.get("schemaVersion") or "v1",
                 },
             ),

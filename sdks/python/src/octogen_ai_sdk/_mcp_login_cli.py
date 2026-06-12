@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
             access_aud = decode_jwt_aud(access_token)
             verified_aud: Any = None
             if args.verify:
-                verify_access, verify_refresh = refresh_access_token(
+                verify_access, verify_refresh, _expires_in = refresh_access_token(
                     client,
                     token_endpoint=metadata["token_endpoint"],
                     refresh_token=refresh_token,

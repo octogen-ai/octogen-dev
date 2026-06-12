@@ -59,7 +59,11 @@ def test_refresh_token_provider_persists_rotated_token(tmp_path: Path) -> None:
         requests.append(request)
         return httpx.Response(
             200,
-            json={"access_token": "access-1", "refresh_token": "refresh-new"},
+            json={
+                "access_token": "access-1",
+                "refresh_token": "refresh-new",
+                "expires_in": 300,
+            },
         )
 
     provider = mcp_auth.MCPRefreshTokenProvider(
@@ -78,6 +82,45 @@ def test_refresh_token_provider_persists_rotated_token(tmp_path: Path) -> None:
     assert b"refresh_token=refresh-old" in requests[0].content
     assert b"client_id=client_123" in requests[0].content
     assert oct(os.stat(token_file).st_mode & 0o777) == "0o600"
+
+
+def test_refresh_token_provider_refreshes_after_access_token_expiry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    token_file = tmp_path / "octogen-mcp.refresh"
+    token_file.write_text("refresh-old\n")
+    requests: list[httpx.Request] = []
+    now = 1000.0
+
+    def monotonic() -> float:
+        return now
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "access_token": f"access-{len(requests)}",
+                "refresh_token": f"refresh-{len(requests)}",
+                "expires_in": 300,
+            },
+        )
+
+    monkeypatch.setattr(mcp_auth.time, "monotonic", monotonic)
+    provider = mcp_auth.MCPRefreshTokenProvider(
+        client_id="client_123",
+        refresh_token=None,
+        refresh_token_file=token_file,
+        token_endpoint="https://auth.example.test/oauth2/token",
+        timeout=5.0,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert provider() == "access-1"
+    now = 1271.0
+    assert provider() == "access-2"
+    assert token_file.read_text() == "refresh-2\n"
+    assert len(requests) == 2
 
 
 def test_write_secret_file_creates_private_parent(tmp_path: Path) -> None:
