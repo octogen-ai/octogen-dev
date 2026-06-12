@@ -4,7 +4,9 @@ The Octogen Catalog Partner MCP server lets agents (Claude Code, Codex CLI,
 Claude Desktop, and any other [Model Context Protocol](https://modelcontextprotocol.io/)
 client) discover and query the product catalogs granted to your organization.
 It is the interactive sibling of [Platform Catalog API v1](../api/platform-catalog-api-v1.md);
-both share the same business logic and the same set of granted catalogs.
+both share the same business logic and the same set of granted catalogs. MCP
+also exposes BigQuery listing/subscriber helpers for organizations with
+BigQuery access.
 
 | Connection | What you should know |
 | --- | --- |
@@ -28,6 +30,9 @@ Before your first tool call:
 2. You can sign in to the Octogen Platform with the email that belongs to the
    Catalog Partner organization. If you belong to multiple organizations,
    you'll be asked to pick which one to act as during sign-in.
+3. To use BigQuery subscription tools, your organization needs active
+   `bigquery_listing` grants. Subscriber registration and status tools require
+   your account to be an owner/admin member of the Catalog Partner organization.
 
 ## Choose your client
 
@@ -123,9 +128,10 @@ as long as the refresh token is valid.
 
 ## What the tools do
 
-Three tools are available. Each one maps to an endpoint in the
+The catalog read tools map to endpoints in the
 [Platform Catalog API v1 (REST)](../api/platform-catalog-api-v1.md), so the
-arguments and result shapes are the same on either surface.
+arguments and result shapes are the same on either surface. BigQuery tools are
+OAuth-only and help an agent coordinate Analytics Hub subscription setup.
 
 ### `list_catalogs()`
 
@@ -183,6 +189,89 @@ cursor    string   optional  Opaque cursor from a previous response's
 
 Returns a page of items plus a `nextCursor` for pagination.
 
+### `list_bigquery_listing_resources(catalogs?)`
+
+Returns Analytics Hub listing resources for catalogs where your organization
+has an active `bigquery_listing` grant. Use this before subscribing from a
+customer GCP project.
+
+```json
+[
+  {
+    "catalogKey": "warrenlotas",
+    "status": "active",
+    "location": "us",
+    "listingResource": "projects/octogen-prod/locations/us/dataExchanges/octogen/listings/warrenlotas",
+    "linkedDatasetSuggestion": "octogen_warrenlotas",
+    "sampleQuery": "SELECT * FROM `my_project.octogen_warrenlotas.products` LIMIT 10"
+  }
+]
+```
+
+Pass `catalogs` when you want to limit the response to specific granted
+catalogs. If a requested catalog does not have a BigQuery listing grant, the
+tool returns a structured `catalog_not_granted` error.
+
+### `list_bigquery_subscribers()`
+
+Lists registered subscriber projects/principals for your organization and the
+per-catalog materialization status for each subscriber. Owner/admin membership
+is required because the response includes customer GCP principals.
+
+Important cell states:
+
+| Status | Meaning |
+| --- | --- |
+| `preparing` | Octogen accepted the subscriber but has not finished granting Analytics Hub IAM. |
+| `awaiting_subscription` | IAM is ready; run the customer-side BigQuery subscribe helper. |
+| `active` | Analytics Hub sees the linked dataset subscription. |
+| `removing` | The subscriber was disabled and teardown is in progress. |
+
+### `register_bigquery_subscriber(request)`
+
+Registers the customer GCP project and subscriber principal that should receive
+Analytics Hub subscriber access. Owner/admin membership is required.
+
+```json
+{
+  "subscriberProjectId": "my-gcp-project",
+  "subscriberPrincipal": "user:data-team@example.com",
+  "shareSchema": "exported_product_view",
+  "schemaVersion": "v1"
+}
+```
+
+`shareSchema` and `schemaVersion` are optional for the default product export
+view. After registration, poll `list_bigquery_subscribers` until the target
+cell is `awaiting_subscription`.
+
+### `delete_bigquery_subscriber(subscriber_id)`
+
+Disables a registered subscriber. Teardown is asynchronous; use
+`list_bigquery_subscribers` to watch cells move through `removing`.
+
+### `refresh_bigquery_subscription_status(catalog_key, subscriber_principal, share_schema?, schema_version?)`
+
+After you run the customer-side subscribe helper, this tool asks Analytics Hub
+whether the linked dataset subscription exists. It returns `active` once the
+subscription is visible; otherwise retry after a short delay.
+
+### BigQuery setup flow
+
+1. Call `list_bigquery_listing_resources` and choose a `listingResource`.
+2. Call `register_bigquery_subscriber` with the customer project and principal.
+3. Poll `list_bigquery_subscribers` until the matching catalog cell is
+   `awaiting_subscription`.
+4. Run the customer-side helper from the Python SDK:
+
+   ```bash
+   pip install "octogen-ai-sdk[bigquery]"
+   gcloud auth application-default login
+   octogen-bq-subscribe --listing <listing-resource> --project <customer-project> --apply
+   ```
+
+5. Poll `refresh_bigquery_subscription_status` until the status is `active`.
+
 ## Error model
 
 The tools return two flavors of error.
@@ -206,9 +295,13 @@ failure. The codes you can see:
 | `lookup_product` | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
 | `search_products` | `catalog_not_granted` | The `catalog` argument is not in your active grants. |
 | `search_products` | `invalid_limit` | `limit` was outside the 1..100 range. |
+| BigQuery tools | `catalog_not_granted` | A requested catalog does not have an active `bigquery_listing` grant. |
+| BigQuery subscriber tools | `not_authorized` | Your user is not an owner/admin member of the target organization. |
+| BigQuery tools | `request_failed` | The backing Analytics Hub or subscriber operation failed. |
 
 If an agent encounters one of these, the right move is usually to call
-`list_catalogs` again and retry with valid inputs.
+`list_catalogs` or `list_bigquery_listing_resources` again and retry with
+valid inputs.
 
 ## Coexistence with API keys
 
