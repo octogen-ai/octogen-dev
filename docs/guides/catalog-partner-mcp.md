@@ -269,6 +269,19 @@ the MCP flow above in one idempotent pass:
 4. Subscribes every cell whose status is `awaiting_subscription`.
 5. Refreshes Octogen status after each linked dataset is created.
 
+Bootstrap cron credentials once from an interactive terminal:
+
+```bash
+octogen-mcp-login \
+  --client-id-file /secure/octogen-mcp.client-id \
+  --refresh-token-file /secure/octogen-mcp.refresh
+```
+
+The login command opens Octogen AuthKit in your browser, registers a public MCP
+OAuth client if needed, requests an MCP-audience refresh token, and writes the
+client id plus rotating refresh token to the requested files. It does not print
+the refresh token.
+
 Install the SDK with the BigQuery extra and authenticate to Google with
 credentials that can create linked datasets in the destination project:
 
@@ -280,7 +293,7 @@ gcloud auth application-default login
 Dry-run first:
 
 ```bash
-OCTOGEN_MCP_CLIENT_ID=client_... \
+OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id \
 OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh \
 octogen-bq-autosubscribe \
   --project customer-project \
@@ -291,12 +304,13 @@ octogen-bq-autosubscribe \
 Then run with `--apply` from cron:
 
 ```cron
-*/15 * * * * OCTOGEN_MCP_CLIENT_ID=client_... OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh octogen-bq-autosubscribe --project customer-project --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com --apply --json
+*/15 * * * * OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh octogen-bq-autosubscribe --project customer-project --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com --apply --json
 ```
 
 `OCTOGEN_MCP_REFRESH_TOKEN_FILE` should contain an Octogen MCP OAuth refresh
 token. If WorkOS rotates that refresh token during exchange, the command writes
 the replacement back to the same file. The autosubscribe command can also use
+`OCTOGEN_MCP_CLIENT_ID` instead of `OCTOGEN_MCP_CLIENT_ID_FILE`,
 `OCTOGEN_MCP_TOKEN_COMMAND` for custom token brokers, or
 `OCTOGEN_MCP_ACCESS_TOKEN` for short-lived manual runs.
 

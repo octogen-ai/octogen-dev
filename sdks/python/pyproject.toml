@@ -23,6 +23,7 @@ bigquery = [
 [project.scripts]
 octogen-bq-subscribe = "octogen_ai_sdk._bigquery_cli:main"
 octogen-bq-autosubscribe = "octogen_ai_sdk._bigquery_autosubscribe_cli:main"
+octogen-mcp-login = "octogen_ai_sdk._mcp_login_cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.9,<0.12.0"]

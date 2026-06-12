@@ -12,8 +12,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-import httpx
-
 from octogen_ai_sdk.bigquery_autosubscribe import (
     DEFAULT_MCP_URL,
     BigQueryAutoSubscribeResult,
@@ -21,6 +19,13 @@ from octogen_ai_sdk.bigquery_autosubscribe import (
     autosubscribe_bigquery_listings,
 )
 from octogen_ai_sdk.errors import OctogenBigQueryError, OctogenMCPError
+from octogen_ai_sdk.mcp_auth import (
+    DEFAULT_MCP_TOKEN_ENDPOINT,
+    MCPRefreshTokenProvider,
+    read_text_file,
+)
+
+_RefreshTokenProvider = MCPRefreshTokenProvider
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Public OAuth client id used to refresh an MCP OAuth token.",
     )
     parser.add_argument(
+        "--mcp-client-id-file",
+        default=os.getenv("OCTOGEN_MCP_CLIENT_ID_FILE"),
+        help="File containing the public OAuth client id from octogen-mcp-login.",
+    )
+    parser.add_argument(
         "--mcp-refresh-token",
         default=os.getenv("OCTOGEN_MCP_REFRESH_TOKEN"),
         help=(
@@ -101,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         "--mcp-token-endpoint",
         default=os.getenv(
             "OCTOGEN_MCP_TOKEN_ENDPOINT",
-            "https://auth.octogen.ai/oauth2/token",
+            DEFAULT_MCP_TOKEN_ENDPOINT,
         ),
         help="OAuth token endpoint for MCP refresh-token exchange.",
     )
@@ -129,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
             access_token=args.mcp_access_token,
             token_command=args.mcp_token_command,
             client_id=args.mcp_client_id,
+            client_id_file=args.mcp_client_id_file,
             refresh_token=args.mcp_refresh_token,
             refresh_token_file=args.mcp_refresh_token_file,
             token_endpoint=args.mcp_token_endpoint,
@@ -163,6 +174,7 @@ def _build_token_provider(
     access_token: str | None,
     token_command: str | None,
     client_id: str | None,
+    client_id_file: str | None,
     refresh_token: str | None,
     refresh_token_file: str | None,
     token_endpoint: str,
@@ -171,12 +183,14 @@ def _build_token_provider(
     if token_command:
         return lambda: _run_token_command(token_command)
     if refresh_token or refresh_token_file:
+        client_id = _resolve_client_id(client_id, client_id_file)
         if not client_id:
             raise ValueError(
-                "--mcp-client-id or OCTOGEN_MCP_CLIENT_ID is required when "
-                "using an MCP refresh token."
+                "--mcp-client-id, OCTOGEN_MCP_CLIENT_ID, --mcp-client-id-file, "
+                "or OCTOGEN_MCP_CLIENT_ID_FILE is required when using an MCP "
+                "refresh token."
             )
-        return _RefreshTokenProvider(
+        return MCPRefreshTokenProvider(
             client_id=client_id,
             refresh_token=refresh_token,
             refresh_token_file=Path(refresh_token_file) if refresh_token_file else None,
@@ -187,8 +201,9 @@ def _build_token_provider(
         return lambda: access_token
     raise ValueError(
         "MCP authentication is required. Set OCTOGEN_MCP_REFRESH_TOKEN_FILE "
-        "with OCTOGEN_MCP_CLIENT_ID, set OCTOGEN_MCP_ACCESS_TOKEN, pass "
-        "--mcp-access-token, or pass --mcp-token-command."
+        "with OCTOGEN_MCP_CLIENT_ID or OCTOGEN_MCP_CLIENT_ID_FILE, set "
+        "OCTOGEN_MCP_ACCESS_TOKEN, pass --mcp-access-token, or pass "
+        "--mcp-token-command."
     )
 
 
@@ -216,88 +231,13 @@ def _run_token_command(command: str) -> str:
     return output.splitlines()[0].strip()
 
 
-class _RefreshTokenProvider:
-    def __init__(
-        self,
-        *,
-        client_id: str,
-        refresh_token: str | None,
-        refresh_token_file: Path | None,
-        token_endpoint: str,
-        timeout: float,
-        http_client: httpx.Client | None = None,
-    ) -> None:
-        self._client_id = client_id
-        self._refresh_token = refresh_token
-        self._refresh_token_file = refresh_token_file
-        self._token_endpoint = token_endpoint
-        self._timeout = timeout
-        self._http_client = http_client
-        self._access_token: str | None = None
-
-    def __call__(self) -> str:
-        if self._access_token:
-            return self._access_token
-        refresh_token = self._read_refresh_token()
-        client = self._http_client or httpx.Client(timeout=self._timeout)
-        close_client = self._http_client is None
-        try:
-            response = client.post(
-                self._token_endpoint,
-                data={
-                    "grant_type": "refresh_token",
-                    "refresh_token": refresh_token,
-                    "client_id": self._client_id,
-                },
-                headers={"Accept": "application/json"},
-                timeout=self._timeout,
-            )
-        except httpx.HTTPError as exc:
-            raise ValueError(f"MCP refresh-token exchange failed: {exc}") from exc
-        finally:
-            if close_client:
-                client.close()
-        if response.status_code != 200:
-            raise ValueError(
-                "MCP refresh-token exchange failed with HTTP "
-                f"{response.status_code}: {response.text[:200]}"
-            )
-        try:
-            body = response.json()
-        except ValueError as exc:
-            raise ValueError("MCP token endpoint returned non-JSON.") from exc
-        if not isinstance(body, dict):
-            raise ValueError("MCP token endpoint returned unexpected JSON shape.")
-        access_token = body.get("access_token")
-        if not access_token:
-            raise ValueError(
-                "MCP token endpoint response did not include access_token."
-            )
-        new_refresh = body.get("refresh_token")
-        if (
-            isinstance(new_refresh, str)
-            and new_refresh
-            and new_refresh != refresh_token
-        ):
-            self._refresh_token = new_refresh
-            if self._refresh_token_file is not None:
-                self._refresh_token_file.write_text(f"{new_refresh}\n")
-        self._access_token = str(access_token)
-        return self._access_token
-
-    def _read_refresh_token(self) -> str:
-        if self._refresh_token_file is not None:
-            try:
-                token = self._refresh_token_file.read_text().strip()
-            except OSError as exc:
-                raise ValueError(
-                    f"Could not read MCP refresh token file: {exc}"
-                ) from exc
-            if token:
-                return token
-        if self._refresh_token:
-            return self._refresh_token
-        raise ValueError("MCP refresh token is empty.")
+def _resolve_client_id(client_id: str | None, client_id_file: str | None) -> str | None:
+    if client_id:
+        return client_id
+    if client_id_file:
+        value = read_text_file(Path(client_id_file))
+        return value or None
+    return None
 
 
 def _parse_catalogs(values: list[str]) -> list[str]:
