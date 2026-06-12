@@ -6,8 +6,9 @@ final step — subscribing to the listing to create a *linked dataset* in YOUR
 GCP project — can only run with YOUR credentials, so it lives here in the
 customer SDK rather than on the Octogen platform.
 
-This is Phase 1: given the listing resource name (copy it from the Platform UI's
-BigQuery sharing page) and your destination project, it performs the Analytics
+Given the listing resource name (from the Catalog Partner MCP
+``list_bigquery_listing_resources`` tool or the Platform UI's BigQuery sharing
+page) and your destination project, it performs the Analytics
 Hub subscription under your Application Default Credentials and reports the
 linked dataset. It's idempotent — re-running detects an existing subscription
 to the same listing and returns it instead of subscribing again.
@@ -72,7 +73,9 @@ def parse_listing_resource(resource: str) -> ListingResource:
         raise OctogenBigQueryError(
             "Invalid listing resource. Expected "
             "'projects/<p>/locations/<loc>/dataExchanges/<ex>/listings/<id>', "
-            f"got {resource!r}. Copy it from the Platform UI BigQuery sharing page."
+            f"got {resource!r}. Get it from the MCP "
+            "'list_bigquery_listing_resources' tool or the Platform UI "
+            "BigQuery sharing page."
         )
     return ListingResource(raw=resource.strip(), **match.groupdict())
 
