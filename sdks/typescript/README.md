@@ -41,6 +41,7 @@ for (const product of results.items) {
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
   or UUID, optionally within one catalog.
 - `lookupProduct(url)` looks up a product by canonical URL.
+- `recrawlProducts(params)` schedules product URLs or UUIDs for recrawl.
 
 Requests are authenticated with `Authorization: Bearer <api-key>`.
 
@@ -54,6 +55,20 @@ const similar = await client.moreLikeThisProducts({
 for (const product of similar.items) {
   console.log(product.title, product.productUrl);
 }
+```
+
+```ts
+const recrawl = await client.recrawlProducts({
+  targets: [
+    {
+      catalog: "warrenlotas",
+      url: "https://warrenlotas.com/products/black-hoodie",
+    },
+    { uuid: "product-uuid" },
+  ],
+});
+
+console.log(recrawl.tasksCreated, recrawl.taskIds);
 ```
 
 ## Development

@@ -49,6 +49,7 @@ asyncio.run(main())
 - `more_like_this_products(...)` finds products similar to a source product URL
   or UUID, optionally within one catalog.
 - `lookup_product(url)` looks up a product by canonical URL.
+- `recrawl_products(targets=[...])` schedules product URLs or UUIDs for recrawl.
 
 ```python
 async with OctogenClient() as client:
@@ -59,6 +60,20 @@ async with OctogenClient() as client:
     )
     for product in similar.items:
         print(product.title, product.product_url)
+```
+
+```python
+async with OctogenClient() as client:
+    recrawl = await client.recrawl_products(
+        targets=[
+            {
+                "catalog": "warrenlotas",
+                "url": "https://warrenlotas.com/products/black-hoodie",
+            },
+            {"uuid": "product-uuid"},
+        ],
+    )
+    print(recrawl.tasks_created, recrawl.task_ids)
 ```
 
 ## BigQuery subscribe (optional)

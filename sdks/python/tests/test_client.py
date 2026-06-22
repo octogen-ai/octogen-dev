@@ -4,10 +4,9 @@ import json
 import os
 
 import httpx
+import octogen_ai_sdk
 import pytest
 import respx
-
-import octogen_ai_sdk
 from octogen_ai_sdk import (
     Attribute,
     AttributeValue,
@@ -24,6 +23,7 @@ from octogen_ai_sdk import (
     PricePreference,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
+    ProgrammaticProductRecrawlTarget,
     TextSearchQuery,
     ValidationErrorModel,
 )
@@ -41,12 +41,26 @@ def test_public_model_exports_are_available() -> None:
     assert (
         octogen_ai_sdk.ProgrammaticMoreLikeThisSource is ProgrammaticMoreLikeThisSource
     )
+    assert (
+        octogen_ai_sdk.ProgrammaticProductRecrawlTarget
+        is ProgrammaticProductRecrawlTarget
+    )
     assert octogen_ai_sdk.ValidationErrorModel is ValidationErrorModel
 
 
 def test_lookup_request_requires_url() -> None:
     with pytest.raises(ValueError):
         ProgrammaticProductLookupRequest.model_validate({})
+
+
+def test_recrawl_target_requires_exactly_one_identifier() -> None:
+    with pytest.raises(ValueError):
+        ProgrammaticProductRecrawlTarget.model_validate({})
+
+    with pytest.raises(ValueError):
+        ProgrammaticProductRecrawlTarget.model_validate(
+            {"url": "https://example.com/p", "uuid": "product-1"}
+        )
 
 
 def test_more_like_this_source_requires_exactly_one_identifier() -> None:
@@ -97,6 +111,58 @@ async def test_list_catalogs_uses_env_api_key(
     assert catalogs[0].catalog == "acme"
     assert catalogs[0].display_name == "ACME"
     assert catalogs[0].product_count == 12
+
+
+@respx.mock
+async def test_recrawl_products_sends_typed_request() -> None:
+    route = respx.post(f"{BASE_URL}/products/recrawl").mock(
+        return_value=httpx.Response(
+            202,
+            json={
+                "requestId": "request-1",
+                "submitted": 2,
+                "tasksCreated": 1,
+                "taskIds": ["recrawl-request-1-acme-0001-products"],
+                "accepted": [
+                    {
+                        "catalog": "acme",
+                        "url": "https://example.com/products/linen-dress",
+                    }
+                ],
+                "rejected": [
+                    {
+                        "target": {"uuid": "missing-product"},
+                        "code": "product_not_found",
+                        "message": "No active product matched that UUID.",
+                    }
+                ],
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        response = await client.recrawl_products(
+            targets=[
+                {
+                    "catalog": "acme",
+                    "url": "https://example.com/products/linen-dress",
+                },
+                ProgrammaticProductRecrawlTarget(uuid="missing-product"),
+            ],
+        )
+
+    request = route.calls.last.request
+    assert request.read() == (
+        b'{"targets":[{"url":"https://example.com/products/linen-dress",'
+        b'"catalog":"acme"},{"uuid":"missing-product"}]}'
+    )
+    assert response.request_id == "request-1"
+    assert response.submitted == 2
+    assert response.tasks_created == 1
+    assert response.task_ids == ["recrawl-request-1-acme-0001-products"]
+    assert response.accepted[0].catalog == "acme"
+    assert response.rejected[0].code == "product_not_found"
+    assert response.rejected[0].target.uuid == "missing-product"
 
 
 @respx.mock

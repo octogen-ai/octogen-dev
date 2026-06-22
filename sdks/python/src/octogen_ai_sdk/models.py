@@ -134,6 +134,30 @@ class ProgrammaticProductLookupRequest(_RequestModel):
     url: str = Field(min_length=1)
 
 
+class ProgrammaticProductRecrawlTarget(_RequestModel):
+    """One product identifier to schedule for recrawl."""
+
+    url: str | None = Field(default=None, min_length=1)
+    uuid: str | None = Field(default=None, min_length=1)
+    catalog: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def require_exactly_one_identifier(self) -> ProgrammaticProductRecrawlTarget:
+        identifiers = [self.url is not None, self.uuid is not None]
+        if sum(identifiers) != 1:
+            raise ValueError("Exactly one of url or uuid is required")
+        return self
+
+
+class ProgrammaticProductRecrawlRequest(_RequestModel):
+    """Product recrawl request."""
+
+    targets: list[ProgrammaticProductRecrawlTarget] = Field(
+        min_length=1,
+        max_length=500,
+    )
+
+
 class ProgrammaticMoreLikeThisSource(_RequestModel):
     """Source product identifier for a More Like This request."""
 
@@ -397,6 +421,30 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     catalog_display_name: str = Field(alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
     product: MerchantProductView
+
+
+class ProgrammaticProductRecrawlAcceptedTarget(_ResponseModel):
+    catalog: str
+    url: str
+
+
+class ProgrammaticProductRecrawlRejectedTarget(_ResponseModel):
+    target: ProgrammaticProductRecrawlTarget
+    code: str
+    message: str
+
+
+class ProgrammaticProductRecrawlResponse(_ResponseModel):
+    request_id: str = Field(alias="requestId")
+    submitted: int
+    tasks_created: int = Field(alias="tasksCreated")
+    task_ids: list[str] = Field(default_factory=list, alias="taskIds")
+    accepted: list[ProgrammaticProductRecrawlAcceptedTarget] = Field(
+        default_factory=list,
+    )
+    rejected: list[ProgrammaticProductRecrawlRejectedTarget] = Field(
+        default_factory=list,
+    )
 
 
 class ValidationErrorModel(_ResponseModel):

@@ -31,6 +31,9 @@ from octogen_ai_sdk.models import (
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
+    ProgrammaticProductRecrawlRequest,
+    ProgrammaticProductRecrawlResponse,
+    ProgrammaticProductRecrawlTarget,
     ProgrammaticProductSearchRequest,
     TextSearchQuery,
 )
@@ -108,6 +111,22 @@ class OctogenClient:
             json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
+
+    async def recrawl_products(
+        self,
+        *,
+        targets: Sequence[ProgrammaticProductRecrawlTarget | dict[str, Any]],
+    ) -> ProgrammaticProductRecrawlResponse:
+        """Schedule product URLs or UUIDs for recrawl."""
+        request = ProgrammaticProductRecrawlRequest(
+            targets=[_coerce_recrawl_target(target) for target in targets],
+        )
+        data = await self._request(
+            "POST",
+            "/products/recrawl",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return ProgrammaticProductRecrawlResponse.model_validate(data)
 
     async def search_products(
         self,
@@ -251,6 +270,14 @@ def _coerce_facet(value: Facet | dict[str, Any]) -> Facet:
     if isinstance(value, Facet):
         return value
     return Facet.model_validate(value)
+
+
+def _coerce_recrawl_target(
+    value: ProgrammaticProductRecrawlTarget | dict[str, Any],
+) -> ProgrammaticProductRecrawlTarget:
+    if isinstance(value, ProgrammaticProductRecrawlTarget):
+        return value
+    return ProgrammaticProductRecrawlTarget.model_validate(value)
 
 
 def _api_error_from_response(response: httpx.Response) -> OctogenAPIError:
