@@ -26,6 +26,10 @@ from octogen_ai_sdk.models import (
     MerchantCatalogSummary,
     MerchantProductListPage,
     MerchantProductUrlLookupResponse,
+    PricePreference,
+    ProgrammaticMoreLikeThisRequest,
+    ProgrammaticMoreLikeThisResponse,
+    ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
     ProgrammaticProductSearchRequest,
     TextSearchQuery,
@@ -142,6 +146,49 @@ class OctogenClient:
             json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
         return MerchantProductListPage.model_validate(data)
+
+    async def more_like_this_products(
+        self,
+        *,
+        source_url: str | None = None,
+        source_uuid: str | None = None,
+        catalog: str | None = None,
+        include_facets: Sequence[Facet | dict[str, Any]] | None = None,
+        exclude_facets: Sequence[Facet | dict[str, Any]] | None = None,
+        price_preference: PricePreference | str = PricePreference.ANY,
+        cursor: str | None = None,
+        limit: int = 12,
+        debug: bool = False,
+    ) -> ProgrammaticMoreLikeThisResponse:
+        """Find products similar to a source product URL or UUID."""
+        resolved_include_facets: list[Facet] | None = None
+        if include_facets is not None:
+            resolved_include_facets = [_coerce_facet(facet) for facet in include_facets]
+
+        resolved_exclude_facets: list[Facet] | None = None
+        if exclude_facets is not None:
+            resolved_exclude_facets = [_coerce_facet(facet) for facet in exclude_facets]
+        resolved_price_preference = PricePreference(price_preference)
+
+        request = ProgrammaticMoreLikeThisRequest(
+            source=ProgrammaticMoreLikeThisSource(
+                url=source_url,
+                uuid=source_uuid,
+            ),
+            catalog=catalog,
+            cursor=cursor,
+            limit=limit,
+            include_facets=resolved_include_facets,
+            exclude_facets=resolved_exclude_facets,
+            price_preference=resolved_price_preference,
+            debug=debug,
+        )
+        data = await self._request(
+            "POST",
+            "/products/more-like-this",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return ProgrammaticMoreLikeThisResponse.model_validate(data)
 
     async def _request(
         self,

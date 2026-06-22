@@ -9,8 +9,12 @@ import {
 } from "./errors.js";
 import type {
   MerchantCatalogSummary,
+  MoreLikeThisProductsParams,
+  MoreLikeThisProductsResponse,
+  MoreLikeThisSource,
   MerchantProductListPage,
   MerchantProductUrlLookupResponse,
+  ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductSearchRequest,
   SearchProductsParams,
   TextSearchQuery,
@@ -71,6 +75,14 @@ export class OctogenClient {
     const payload = toSearchPayload(params);
     const data = await this.request("POST", "/products/search", payload);
     return data as MerchantProductListPage;
+  }
+
+  async moreLikeThisProducts(
+    params: MoreLikeThisProductsParams,
+  ): Promise<MoreLikeThisProductsResponse> {
+    const payload = toMoreLikeThisPayload(params);
+    const data = await this.request("POST", "/products/more-like-this", payload);
+    return data as MoreLikeThisProductsResponse;
   }
 
   private async request(
@@ -242,6 +254,66 @@ function toTextSearchQueryPayload(query: TextSearchQuery): TextSearchQueryPayloa
     payload.text_similarity_weight = query.textSimilarityWeight;
   }
   return payload;
+}
+
+function toMoreLikeThisPayload(
+  params: MoreLikeThisProductsParams,
+): ProgrammaticMoreLikeThisRequest {
+  if (params.catalog !== undefined) {
+    assertNonEmptyString(params.catalog, "catalog");
+  }
+
+  const limit = params.limit ?? 12;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new TypeError("limit must be an integer between 1 and 100");
+  }
+
+  const payload: ProgrammaticMoreLikeThisRequest = {
+    debug: params.debug ?? false,
+    limit,
+    price_preference: params.pricePreference ?? "any",
+    source: toMoreLikeThisSourcePayload(params.source),
+  };
+
+  if (params.catalog !== undefined) {
+    payload.catalog = params.catalog;
+  }
+  if (params.cursor !== undefined) {
+    payload.cursor = params.cursor;
+  }
+  if (params.includeFacets !== undefined) {
+    payload.include_facets = params.includeFacets;
+  }
+  if (params.excludeFacets !== undefined) {
+    payload.exclude_facets = params.excludeFacets;
+  }
+
+  return payload;
+}
+
+function toMoreLikeThisSourcePayload(
+  source: MoreLikeThisSource | null | undefined,
+): MoreLikeThisSource {
+  if (source === undefined || source === null) {
+    throw new TypeError("source is required");
+  }
+
+  const hasUrl = source.url !== undefined;
+  const hasUuid = source.uuid !== undefined;
+  if (Number(hasUrl) + Number(hasUuid) !== 1) {
+    throw new TypeError("Exactly one of source.url or source.uuid is required");
+  }
+
+  if (source.url !== undefined) {
+    assertNonEmptyString(source.url, "source.url");
+    return { url: source.url };
+  }
+
+  if (source.uuid === undefined) {
+    throw new TypeError("Exactly one of source.url or source.uuid is required");
+  }
+  assertNonEmptyString(source.uuid, "source.uuid");
+  return { uuid: source.uuid };
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {

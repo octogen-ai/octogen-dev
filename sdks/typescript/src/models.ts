@@ -40,6 +40,14 @@ export const EmbeddingColumn = {
 
 export type EmbeddingColumn = (typeof EmbeddingColumn)[keyof typeof EmbeddingColumn];
 
+export const PricePreference = {
+  LOWER: "lower",
+  ANY: "any",
+  HIGHER: "higher",
+} as const;
+
+export type PricePreference = (typeof PricePreference)[keyof typeof PricePreference];
+
 export const FacetName = {
   BRAND_NAME: "brand_name",
   BRAND_SLUG: "brand_slug",
@@ -134,6 +142,63 @@ export interface ProgrammaticProductSearchRequest {
 
 export interface ProgrammaticProductLookupRequest {
   url: string;
+}
+
+export interface MoreLikeThisSource {
+  url?: string;
+  uuid?: string;
+}
+
+export interface MoreLikeThisProductsParams {
+  source: MoreLikeThisSource;
+  catalog?: string;
+  cursor?: string;
+  limit?: number;
+  includeFacets?: Facet[];
+  excludeFacets?: Facet[];
+  pricePreference?: PricePreference;
+  debug?: boolean;
+}
+
+export interface ProgrammaticMoreLikeThisRequest {
+  source: MoreLikeThisSource;
+  catalog?: string;
+  cursor?: string;
+  limit: number;
+  include_facets?: Facet[];
+  exclude_facets?: Facet[];
+  price_preference: PricePreference;
+  debug: boolean;
+}
+
+export interface MoreLikeThisSourceResponse {
+  catalogKey: string;
+  uuid: string;
+  productUrl: string;
+  title?: string | null;
+}
+
+export interface MoreLikeThisEffectiveFacet {
+  name: string;
+  values: string[];
+}
+
+export interface MoreLikeThisEffectiveQuery {
+  text: string;
+  retrievalEmbeddingColumns?: string[] | null;
+  rankingEmbeddingColumns?: string[] | null;
+  facets?: MoreLikeThisEffectiveFacet[] | null;
+  exclusionFacets?: MoreLikeThisEffectiveFacet[] | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  limit: number;
+}
+
+export interface MoreLikeThisProductsResponse {
+  source: MoreLikeThisSourceResponse;
+  items: MerchantProductListItem[];
+  nextCursor?: string | null;
+  effectiveQuery?: MoreLikeThisEffectiveQuery | null;
 }
 
 export interface AttributeValue {
@@ -285,6 +350,7 @@ export interface MerchantCatalogSummary {
 
 export interface MerchantProductListItem {
   uuid: string;
+  catalogKey?: string | null;
   productUrl: string;
   title?: string | null;
   brand?: BrandView | null;
@@ -293,6 +359,9 @@ export interface MerchantProductListItem {
   imageUrl?: string | null;
   images?: string[];
   rating?: RatingView | null;
+  isActive?: boolean;
+  rawScore?: number | null;
+  displayMatchScore?: number | null;
   updatedAt?: string | null;
 }
 

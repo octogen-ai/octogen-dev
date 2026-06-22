@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 
 import httpx
-import octogen_ai_sdk
 import pytest
 import respx
+
+import octogen_ai_sdk
 from octogen_ai_sdk import (
     Attribute,
     AttributeValue,
@@ -19,6 +21,8 @@ from octogen_ai_sdk import (
     OctogenClient,
     OctogenConnectionError,
     OctogenNotFoundError,
+    PricePreference,
+    ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
     TextSearchQuery,
     ValidationErrorModel,
@@ -33,12 +37,26 @@ def test_public_model_exports_are_available() -> None:
     assert octogen_ai_sdk.CanonicalBrand is CanonicalBrand
     assert octogen_ai_sdk.CanonicalBrandEnrichment is CanonicalBrandEnrichment
     assert octogen_ai_sdk.HTTPValidationError is HTTPValidationError
+    assert octogen_ai_sdk.PricePreference is PricePreference
+    assert (
+        octogen_ai_sdk.ProgrammaticMoreLikeThisSource is ProgrammaticMoreLikeThisSource
+    )
     assert octogen_ai_sdk.ValidationErrorModel is ValidationErrorModel
 
 
 def test_lookup_request_requires_url() -> None:
     with pytest.raises(ValueError):
         ProgrammaticProductLookupRequest.model_validate({})
+
+
+def test_more_like_this_source_requires_exactly_one_identifier() -> None:
+    with pytest.raises(ValueError):
+        ProgrammaticMoreLikeThisSource.model_validate({})
+
+    with pytest.raises(ValueError):
+        ProgrammaticMoreLikeThisSource.model_validate(
+            {"url": "https://example.com/p", "uuid": "product-1"}
+        )
 
 
 def test_client_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -153,6 +171,72 @@ async def test_search_products_accepts_text_search_query_model() -> None:
     body = route.calls.last.request.read()
     assert b'"text_search_query"' in body
     assert b'"style_embedding"' in body
+
+
+@respx.mock
+async def test_more_like_this_products_sends_typed_request() -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": {
+                    "catalogKey": "acme",
+                    "uuid": "product-1",
+                    "productUrl": "https://example.com/products/linen-dress",
+                    "title": "Linen Dress",
+                },
+                "items": [
+                    {
+                        "uuid": "product-2",
+                        "catalogKey": "acme",
+                        "productUrl": "https://example.com/products/cotton-dress",
+                        "title": "Cotton Dress",
+                        "currentPrice": 98,
+                        "isActive": True,
+                        "displayMatchScore": 92,
+                    }
+                ],
+                "nextCursor": None,
+                "effectiveQuery": {
+                    "text": "linen dress",
+                    "retrievalEmbeddingColumns": [
+                        "style_embedding",
+                        "tags_embedding",
+                    ],
+                    "facets": [{"name": "gender", "values": ["female"]}],
+                    "priceMin": 128,
+                    "limit": 3,
+                },
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(
+            source_url="https://example.com/products/linen-dress",
+            catalog="acme",
+            include_facets=[{"name": FacetName.GENDER, "values": ["female"]}],
+            exclude_facets=[{"name": FacetName.COLOR_FAMILY, "values": ["Black"]}],
+            price_preference=PricePreference.HIGHER,
+            limit=3,
+            debug=True,
+        )
+
+    request = route.calls.last.request
+    assert json.loads(request.read()) == {
+        "source": {"url": "https://example.com/products/linen-dress"},
+        "catalog": "acme",
+        "limit": 3,
+        "include_facets": [{"name": "gender", "values": ["female"]}],
+        "exclude_facets": [{"name": "color_family", "values": ["Black"]}],
+        "price_preference": "higher",
+        "debug": True,
+    }
+    assert page.source.catalog_key == "acme"
+    assert page.items[0].catalog_key == "acme"
+    assert page.items[0].display_match_score == 92
+    assert page.effective_query is not None
+    assert page.effective_query.price_min == 128
 
 
 @respx.mock
