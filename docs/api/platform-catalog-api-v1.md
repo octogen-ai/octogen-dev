@@ -33,7 +33,7 @@ immediately on the next request.
 
 ## Endpoints
 
-Three endpoints are available. They use the same catalog grants as the
+Four endpoints are available. They use the same catalog grants as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
 
@@ -60,9 +60,10 @@ Response:
 ]
 ```
 
-Pass a `catalog` value to `/products/search` when you want to restrict search
-to one catalog. Omit it to search all catalogs granted to your key. An
-organization with no active catalog grants gets an empty list — not an error.
+Pass a `catalog` value to `/products/search` or `/products/more-like-this` when
+you want to restrict results to one catalog. Omit it to search all catalogs
+granted to your key. An organization with no active catalog grants gets an
+empty list — not an error.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -180,6 +181,72 @@ Attribute facets may be sent either as the bare attribute key (e.g. `fit`) or
 as a fully qualified key (e.g. `attribute_facets.fit`). Facet `values` should
 be lowercase; phrase values may contain spaces.
 
+### `POST /products/more-like-this` — find similar products
+
+Finds products similar to a source product. The server resolves the source by
+URL or UUID inside the API key's catalog grants, builds the similarity query
+from indexed product enrichment, excludes the source product, and returns a
+standard product list page.
+
+```bash
+curl -sS https://api.octogen.ai/v1/products/more-like-this \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": {
+      "url": "https://warrenlotas.com/products/black-hoodie"
+    },
+    "catalog": "warrenlotas",
+    "price_preference": "any",
+    "limit": 12
+  }'
+```
+
+Request fields:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `source.url` | string | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required. |
+| `source.uuid` | string | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required. |
+| `catalog` | string | Optional. If present, source resolution and search are limited to this granted catalog. |
+| `limit` | integer | Page size from 1 to 100. Defaults to 12. |
+| `cursor` | string | Opaque pagination cursor from the previous response. |
+| `include_facets` | array | Additional include facets appended after server-generated audience facets. |
+| `exclude_facets` | array | Facets to exclude from results. |
+| `price_preference` | string | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`. |
+| `debug` | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval. |
+
+Response:
+
+```json
+{
+  "source": {
+    "catalogKey": "warrenlotas",
+    "uuid": "prod_01HX...",
+    "productUrl": "https://warrenlotas.com/products/black-hoodie",
+    "title": "Black Hoodie"
+  },
+  "items": [
+    {
+      "uuid": "prod_01HY...",
+      "catalogKey": "warrenlotas",
+      "title": "Washed Black Hoodie",
+      "productUrl": "https://warrenlotas.com/products/washed-black-hoodie",
+      "imageUrl": "https://cdn.example.com/washed-black-hoodie.jpg",
+      "currentPrice": 190,
+      "isActive": true,
+      "updatedAt": "2026-05-11T18:04:10Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+With `"debug": true`, the response adds `effectiveQuery` containing only the
+server-derived fields intended for public inspection: `text`,
+`retrievalEmbeddingColumns`, `rankingEmbeddingColumns`, `facets`,
+`exclusionFacets`, `priceMin`, `priceMax`, and `limit`.
+
 ## Error model
 
 The API returns JSON error bodies using a standard `detail` field.
@@ -241,7 +308,8 @@ https://cdn.octogen.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- Operation IDs: `listCatalogs`, `searchProducts`, `lookupProduct`.
+- Operation IDs: `listCatalogs`, `searchProducts`, `moreLikeThisProducts`,
+  `lookupProduct`.
 - Full request and response schemas for code generation.
 - Example error bodies for auth, authorization, missing-catalog,
   missing-product, and validation failures.

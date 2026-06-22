@@ -38,9 +38,23 @@ for (const product of results.items) {
 - `listCatalogs()` lists active catalogs available to the API key's merchant.
 - `searchProducts(params)` searches all authorized catalogs by default, or one
   catalog when `catalog` is provided.
+- `moreLikeThisProducts(params)` finds products similar to a source product URL
+  or UUID, optionally within one catalog.
 - `lookupProduct(url)` looks up a product by canonical URL.
 
 Requests are authenticated with `Authorization: Bearer <api-key>`.
+
+```ts
+const similar = await client.moreLikeThisProducts({
+  source: { url: "https://warrenlotas.com/products/black-hoodie" },
+  pricePreference: "any",
+  limit: 12,
+});
+
+for (const product of similar.items) {
+  console.log(product.title, product.productUrl);
+}
+```
 
 ## Development
 

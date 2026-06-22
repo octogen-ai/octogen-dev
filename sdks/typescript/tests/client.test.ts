@@ -8,6 +8,7 @@ import {
   OctogenClient,
   OctogenConnectionError,
   OctogenNotFoundError,
+  PricePreference,
   USER_AGENT,
   type FetchLike,
 } from "../src/index.js";
@@ -154,6 +155,79 @@ describe("OctogenClient", () => {
         text: "relaxed cotton shirts",
       },
     });
+  });
+
+  it("sends a typed more-like-this request", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      source: {
+        catalogKey: "acme",
+        uuid: "product-1",
+        productUrl: "https://example.com/products/linen-dress",
+        title: "Linen Dress",
+      },
+      items: [
+        {
+          uuid: "product-2",
+          catalogKey: "acme",
+          productUrl: "https://example.com/products/cotton-dress",
+          title: "Cotton Dress",
+          currentPrice: 98,
+          isActive: true,
+          displayMatchScore: 92,
+        },
+      ],
+      nextCursor: null,
+      effectiveQuery: {
+        text: "linen dress",
+        retrievalEmbeddingColumns: ["style_embedding", "tags_embedding"],
+        facets: [{ name: "gender", values: ["female"] }],
+        priceMin: 128,
+        limit: 3,
+      },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({
+      catalog: "acme",
+      debug: true,
+      excludeFacets: [{ name: FacetName.COLOR_FAMILY, values: ["Black"] }],
+      includeFacets: [{ name: FacetName.GENDER, values: ["female"] }],
+      limit: 3,
+      pricePreference: PricePreference.HIGHER,
+      source: { url: "https://example.com/products/linen-dress" },
+    });
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/products/more-like-this`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({
+      catalog: "acme",
+      debug: true,
+      exclude_facets: [{ name: "color_family", values: ["Black"] }],
+      include_facets: [{ name: "gender", values: ["female"] }],
+      limit: 3,
+      price_preference: "higher",
+      source: { url: "https://example.com/products/linen-dress" },
+    });
+    expect(page.source.catalogKey).toBe("acme");
+    expect(page.items[0]?.catalogKey).toBe("acme");
+    expect(page.items[0]?.displayMatchScore).toBe(92);
+    expect(page.effectiveQuery?.priceMin).toBe(128);
+  });
+
+  it("rejects invalid more-like-this sources before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(
+      client.moreLikeThisProducts({
+        source: { url: "https://example.com/p", uuid: "p1" },
+      }),
+    ).rejects.toThrow("Exactly one of source.url or source.uuid is required");
+    await expect(client.moreLikeThisProducts({ source: { url: "" } })).rejects.toThrow(
+      "source.url is required",
+    );
+    expect(calls).toHaveLength(0);
   });
 
   it("parses product lookup responses", async () => {

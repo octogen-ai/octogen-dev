@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _ResponseModel(BaseModel):
@@ -53,6 +53,12 @@ class EmbeddingColumn(StrEnum):
     STYLE_EMBEDDING = "style_embedding"
     TAGS_EMBEDDING = "tags_embedding"
     ATTRIBUTES_EMBEDDING = "attributes_embedding"
+
+
+class PricePreference(StrEnum):
+    LOWER = "lower"
+    ANY = "any"
+    HIGHER = "higher"
 
 
 class FacetName(StrEnum):
@@ -126,6 +132,77 @@ class ProgrammaticProductLookupRequest(_RequestModel):
     """Product lookup request."""
 
     url: str = Field(min_length=1)
+
+
+class ProgrammaticMoreLikeThisSource(_RequestModel):
+    """Source product identifier for a More Like This request."""
+
+    url: str | None = Field(default=None, min_length=1)
+    uuid: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def require_exactly_one_identifier(self) -> ProgrammaticMoreLikeThisSource:
+        identifiers = [self.url is not None, self.uuid is not None]
+        if sum(identifiers) != 1:
+            raise ValueError("Exactly one of url or uuid is required")
+        return self
+
+
+class ProgrammaticMoreLikeThisRequest(_RequestModel):
+    """More Like This request targeting one catalog or all granted catalogs."""
+
+    source: ProgrammaticMoreLikeThisSource
+    catalog: str | None = Field(default=None, min_length=1)
+    cursor: str | None = None
+    limit: int = Field(default=12, ge=1, le=100)
+    include_facets: list[Facet] | None = None
+    exclude_facets: list[Facet] | None = None
+    price_preference: PricePreference = PricePreference.ANY
+    debug: bool = False
+
+
+class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):
+    """Source product identity returned by More Like This."""
+
+    catalog_key: str = Field(alias="catalogKey")
+    uuid: str
+    product_url: str = Field(alias="productUrl")
+    title: str | None = None
+
+
+class ProgrammaticMoreLikeThisEffectiveFacet(_ResponseModel):
+    name: str
+    values: list[str]
+
+
+class ProgrammaticMoreLikeThisEffectiveQuery(_ResponseModel):
+    text: str
+    retrieval_embedding_columns: list[str] | None = Field(
+        default=None,
+        alias="retrievalEmbeddingColumns",
+    )
+    ranking_embedding_columns: list[str] | None = Field(
+        default=None,
+        alias="rankingEmbeddingColumns",
+    )
+    facets: list[ProgrammaticMoreLikeThisEffectiveFacet] | None = None
+    exclusion_facets: list[ProgrammaticMoreLikeThisEffectiveFacet] | None = Field(
+        default=None,
+        alias="exclusionFacets",
+    )
+    price_min: float | None = Field(default=None, alias="priceMin")
+    price_max: float | None = Field(default=None, alias="priceMax")
+    limit: int
+
+
+class ProgrammaticMoreLikeThisResponse(_ResponseModel):
+    source: ProgrammaticMoreLikeThisSourceResponse
+    items: list[MerchantProductListItem] = Field(default_factory=list)
+    next_cursor: str | None = Field(default=None, alias="nextCursor")
+    effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
+        default=None,
+        alias="effectiveQuery",
+    )
 
 
 class AttributeValue(_ResponseModel):
@@ -277,6 +354,7 @@ class MerchantCatalogSummary(_ResponseModel):
 
 class MerchantProductListItem(_ResponseModel):
     uuid: str
+    catalog_key: str | None = Field(default=None, alias="catalogKey")
     product_url: str = Field(alias="productUrl")
     title: str | None = None
     brand: BrandView | None = None
@@ -285,6 +363,9 @@ class MerchantProductListItem(_ResponseModel):
     image_url: str | None = Field(default=None, alias="imageUrl")
     images: list[str] = Field(default_factory=list)
     rating: RatingView | None = None
+    is_active: bool = Field(default=True, alias="isActive")
+    raw_score: float | None = Field(default=None, alias="rawScore")
+    display_match_score: int | None = Field(default=None, alias="displayMatchScore")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
 

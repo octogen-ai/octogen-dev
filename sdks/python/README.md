@@ -46,7 +46,20 @@ asyncio.run(main())
 - `list_catalogs()` lists active catalogs available to the API key's merchant.
 - `search_products(...)` searches all authorized catalogs by default, or one
   catalog when `catalog` is provided.
+- `more_like_this_products(...)` finds products similar to a source product URL
+  or UUID, optionally within one catalog.
 - `lookup_product(url)` looks up a product by canonical URL.
+
+```python
+async with OctogenClient() as client:
+    similar = await client.more_like_this_products(
+        source_url="https://warrenlotas.com/products/black-hoodie",
+        price_preference="any",
+        limit=12,
+    )
+    for product in similar.items:
+        print(product.title, product.product_url)
+```
 
 ## BigQuery subscribe (optional)
 

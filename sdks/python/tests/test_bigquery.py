@@ -10,6 +10,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+
 from octogen_ai_sdk import _bigquery_cli as cli
 from octogen_ai_sdk import bigquery as bq
 from octogen_ai_sdk.errors import (
