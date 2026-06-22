@@ -15,7 +15,11 @@ import type {
   MerchantProductListPage,
   MerchantProductUrlLookupResponse,
   ProgrammaticMoreLikeThisRequest,
+  ProgrammaticProductRecrawlRequest,
   ProgrammaticProductSearchRequest,
+  ProductRecrawlResponse,
+  ProductRecrawlTarget,
+  RecrawlProductsParams,
   SearchProductsParams,
   TextSearchQuery,
   TextSearchQueryPayload,
@@ -69,6 +73,14 @@ export class OctogenClient {
     assertNonEmptyString(url, "url");
     const data = await this.request("POST", "/products/lookup", { url });
     return data as MerchantProductUrlLookupResponse;
+  }
+
+  async recrawlProducts(
+    params: RecrawlProductsParams,
+  ): Promise<ProductRecrawlResponse> {
+    const payload = toRecrawlPayload(params);
+    const data = await this.request("POST", "/products/recrawl", payload);
+    return data as ProductRecrawlResponse;
   }
 
   async searchProducts(params: SearchProductsParams): Promise<MerchantProductListPage> {
@@ -160,6 +172,49 @@ function assertNonEmptyString(value: string, fieldName: string): void {
   if (value.length === 0) {
     throw new TypeError(`${fieldName} is required`);
   }
+}
+
+function toRecrawlPayload(
+  params: RecrawlProductsParams,
+): ProgrammaticProductRecrawlRequest {
+  if (params.targets.length < 1 || params.targets.length > 500) {
+    throw new TypeError("targets must contain between 1 and 500 items");
+  }
+
+  return {
+    targets: params.targets.map((target, index) =>
+      toRecrawlTargetPayload(target, index),
+    ),
+  };
+}
+
+function toRecrawlTargetPayload(
+  target: ProductRecrawlTarget,
+  index: number,
+): ProductRecrawlTarget {
+  const fieldPrefix = `targets[${String(index)}]`;
+  const hasUrl = target.url !== undefined;
+  const hasUuid = target.uuid !== undefined;
+  if (Number(hasUrl) + Number(hasUuid) !== 1) {
+    throw new TypeError(
+      `Exactly one of ${fieldPrefix}.url or ${fieldPrefix}.uuid is required`,
+    );
+  }
+
+  const payload: ProductRecrawlTarget = {};
+  if (target.url !== undefined) {
+    assertNonEmptyString(target.url, `${fieldPrefix}.url`);
+    payload.url = target.url;
+  }
+  if (target.uuid !== undefined) {
+    assertNonEmptyString(target.uuid, `${fieldPrefix}.uuid`);
+    payload.uuid = target.uuid;
+  }
+  if (target.catalog !== undefined) {
+    assertNonEmptyString(target.catalog, `${fieldPrefix}.catalog`);
+    payload.catalog = target.catalog;
+  }
+  return payload;
 }
 
 function toSearchPayload(

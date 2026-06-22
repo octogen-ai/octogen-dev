@@ -144,6 +144,40 @@ export interface ProgrammaticProductLookupRequest {
   url: string;
 }
 
+export interface ProductRecrawlTarget {
+  url?: string;
+  uuid?: string;
+  catalog?: string;
+}
+
+export interface RecrawlProductsParams {
+  targets: ProductRecrawlTarget[];
+}
+
+export interface ProgrammaticProductRecrawlRequest {
+  targets: ProductRecrawlTarget[];
+}
+
+export interface ProductRecrawlAcceptedTarget {
+  catalog: string;
+  url: string;
+}
+
+export interface ProductRecrawlRejectedTarget {
+  target: ProductRecrawlTarget;
+  code: string;
+  message: string;
+}
+
+export interface ProductRecrawlResponse {
+  requestId: string;
+  submitted: number;
+  tasksCreated: number;
+  taskIds: string[];
+  accepted: ProductRecrawlAcceptedTarget[];
+  rejected: ProductRecrawlRejectedTarget[];
+}
+
 export interface MoreLikeThisSource {
   url?: string;
   uuid?: string;

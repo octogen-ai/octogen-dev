@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from octogen_ai_sdk import _bigquery_autosubscribe_cli as cli
 from octogen_ai_sdk.bigquery import BigQuerySubscriptionResult
 from octogen_ai_sdk.bigquery_autosubscribe import (

@@ -5,7 +5,6 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import httpx
-
 from octogen_ai_sdk import _mcp_login_cli as login_cli
 from octogen_ai_sdk import mcp_auth
 
