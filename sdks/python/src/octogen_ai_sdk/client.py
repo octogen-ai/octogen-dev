@@ -23,7 +23,6 @@ from octogen_ai_sdk.errors import (
 )
 from octogen_ai_sdk.models import (
     Facet,
-    MerchantCatalogSummary,
     MerchantProductListPage,
     MerchantProductUrlLookupResponse,
     PricePreference,
@@ -94,13 +93,6 @@ class OctogenClient:
         """Close the underlying HTTP client when this SDK created it."""
         if self._owns_client:
             await self._client.aclose()
-
-    async def list_catalogs(self) -> list[MerchantCatalogSummary]:
-        """List active catalogs available to the API key's merchant."""
-        data = await self._request("GET", "/catalogs")
-        if not isinstance(data, list):
-            raise OctogenAPIError("Expected catalog list response", detail=data)
-        return [MerchantCatalogSummary.model_validate(item) for item in data]
 
     async def lookup_product(self, url: str) -> MerchantProductUrlLookupResponse:
         """Lookup a product by canonical URL across the merchant's catalogs."""

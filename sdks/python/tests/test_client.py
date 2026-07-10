@@ -81,36 +81,25 @@ def test_client_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @respx.mock
-async def test_list_catalogs_uses_env_api_key(
+async def test_search_products_uses_env_api_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("OCTO_API_KEY", "octo_test_key")
-    route = respx.get(f"{BASE_URL}/catalogs").mock(
+    route = respx.post(f"{BASE_URL}/products/search").mock(
         return_value=httpx.Response(
             200,
-            json=[
-                {
-                    "catalog": "acme",
-                    "displayName": "ACME",
-                    "sourceBaseUrl": "https://example.com",
-                    "productCount": 12,
-                    "lastIndexedAt": "2026-05-01T12:00:00Z",
-                }
-            ],
+            json={"items": [], "nextCursor": None},
         )
     )
 
     async with OctogenClient() as client:
-        catalogs = await client.list_catalogs()
+        await client.search_products(q="shirt", limit=1)
 
     assert route.called
     assert route.calls.last.request.headers["Authorization"] == "Bearer octo_test_key"
     assert route.calls.last.request.headers["User-Agent"].startswith(
         "octogen-ai-sdk-python/"
     )
-    assert catalogs[0].catalog == "acme"
-    assert catalogs[0].display_name == "ACME"
-    assert catalogs[0].product_count == 12
 
 
 @respx.mock
@@ -353,13 +342,13 @@ async def test_api_errors_include_status_and_detail() -> None:
 
 @respx.mock
 async def test_rate_limit_errors_include_status_and_detail() -> None:
-    respx.get(f"{BASE_URL}/catalogs").mock(
+    respx.post(f"{BASE_URL}/products/lookup").mock(
         return_value=httpx.Response(429, json={"detail": "rate_limited"})
     )
 
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(OctogenAPIError) as exc_info:
-            await client.list_catalogs()
+            await client.lookup_product("https://example.com/product")
 
     assert exc_info.value.status_code == 429
     assert exc_info.value.detail == "rate_limited"
@@ -367,13 +356,13 @@ async def test_rate_limit_errors_include_status_and_detail() -> None:
 
 @respx.mock
 async def test_connection_errors_are_wrapped() -> None:
-    respx.get(f"{BASE_URL}/catalogs").mock(
+    respx.post(f"{BASE_URL}/products/lookup").mock(
         side_effect=httpx.ConnectTimeout("request timed out")
     )
 
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(OctogenConnectionError) as exc_info:
-            await client.list_catalogs()
+            await client.lookup_product("https://example.com/product")
 
     assert "request timed out" in str(exc_info.value)
 

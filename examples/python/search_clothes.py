@@ -18,17 +18,12 @@ from octogen_ai_sdk import OctogenAPIError, OctogenClient
 async def main() -> None:
     try:
         async with OctogenClient() as client:
-            catalogs = await client.list_catalogs()
-            if not catalogs:
-                print("No catalogs are available for this API key.")
-                return
-
             results = await client.search_products(
                 q="women's linen summer dresses",
                 limit=5,
             )
 
-            print("Catalog scope: all granted catalogs")
+            print("Catalog scope: all active crawled catalogs")
             for product in results.items:
                 brand = product.brand.name if product.brand else "Unknown brand"
                 price = (

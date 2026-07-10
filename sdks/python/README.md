@@ -43,7 +43,6 @@ asyncio.run(main())
 
 ## API
 
-- `list_catalogs()` lists active catalogs available to the API key's merchant.
 - `search_products(...)` searches all authorized catalogs by default, or one
   catalog when `catalog` is provided.
 - `more_like_this_products(...)` finds products similar to a source product URL

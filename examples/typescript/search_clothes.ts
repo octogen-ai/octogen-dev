@@ -8,18 +8,12 @@ import {
 async function main(): Promise<void> {
   try {
     const client = new OctogenClient();
-    const catalogs = await client.listCatalogs();
-    if (catalogs.length === 0) {
-      console.log("No catalogs are available for this API key.");
-      return;
-    }
-
     const results = await client.searchProducts({
       limit: 5,
       q: "women's linen summer dresses",
     });
 
-    console.log("Catalog scope: all granted catalogs");
+    console.log("Catalog scope: all active crawled catalogs");
     for (const product of results.items) {
       const brand = product.brand?.name ?? "Unknown brand";
       const price =

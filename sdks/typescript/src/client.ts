@@ -8,7 +8,6 @@ import {
   OctogenValidationError,
 } from "./errors.js";
 import type {
-  MerchantCatalogSummary,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
@@ -57,16 +56,6 @@ export class OctogenClient {
     this.baseUrl = trimTrailingSlash(options.baseUrl ?? DEFAULT_BASE_URL);
     this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  }
-
-  async listCatalogs(): Promise<MerchantCatalogSummary[]> {
-    const data = await this.request("GET", "/catalogs");
-    if (!Array.isArray(data)) {
-      throw new OctogenAPIError("Expected catalog list response", {
-        detail: data,
-      });
-    }
-    return data as MerchantCatalogSummary[];
   }
 
   async lookupProduct(url: string): Promise<MerchantProductUrlLookupResponse> {

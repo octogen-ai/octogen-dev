@@ -52,30 +52,19 @@ describe("OctogenClient", () => {
 
   it("uses OCTO_API_KEY from the environment", async () => {
     process.env["OCTO_API_KEY"] = "octo_test_key";
-    const { calls, fetchMock } = createFetchMock([
-      {
-        catalog: "acme",
-        displayName: "ACME",
-        sourceBaseUrl: "https://example.com",
-        productCount: 12,
-        lastIndexedAt: "2026-05-01T12:00:00Z",
-      },
-    ]);
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
 
     const client = new OctogenClient({ fetch: fetchMock });
-    const catalogs = await client.listCatalogs();
+    await client.searchProducts({ q: "shirt", limit: 1 });
 
     const call = lastCall(calls);
-    expect(call.input).toBe(`${BASE_URL}/catalogs`);
-    expect(call.init?.method).toBe("GET");
+    expect(call.input).toBe(`${BASE_URL}/products/search`);
+    expect(call.init?.method).toBe("POST");
     expect(call.init?.headers).toMatchObject({
       Accept: "application/json",
       Authorization: "Bearer octo_test_key",
       "User-Agent": USER_AGENT,
     });
-    expect(catalogs[0]?.catalog).toBe("acme");
-    expect(catalogs[0]?.displayName).toBe("ACME");
-    expect(catalogs[0]?.productCount).toBe(12);
   });
 
   it("sends a typed product search request", async () => {
@@ -361,11 +350,15 @@ describe("OctogenClient", () => {
     const { fetchMock } = createFetchMock({ detail: "rate_limited" }, { status: 429 });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    await expect(client.listCatalogs()).rejects.toMatchObject({
+    await expect(
+      client.lookupProduct("https://example.com/product"),
+    ).rejects.toMatchObject({
       detail: "rate_limited",
       statusCode: 429,
     });
-    await expect(client.listCatalogs()).rejects.toBeInstanceOf(OctogenAPIError);
+    await expect(
+      client.lookupProduct("https://example.com/product"),
+    ).rejects.toBeInstanceOf(OctogenAPIError);
   });
 
   it("wraps connection failures", async () => {
@@ -374,8 +367,12 @@ describe("OctogenClient", () => {
     };
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    await expect(client.listCatalogs()).rejects.toBeInstanceOf(OctogenConnectionError);
-    await expect(client.listCatalogs()).rejects.toThrow("request timed out");
+    await expect(
+      client.lookupProduct("https://example.com/product"),
+    ).rejects.toBeInstanceOf(OctogenConnectionError);
+    await expect(client.lookupProduct("https://example.com/product")).rejects.toThrow(
+      "request timed out",
+    );
   });
 
   it("returns undefined for 204 responses", async () => {
