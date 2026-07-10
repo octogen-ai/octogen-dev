@@ -116,7 +116,7 @@ class TextSearchQuery(_RequestModel):
 
 
 class ProgrammaticProductSearchRequest(_RequestModel):
-    """Product search request targeting one catalog or all granted catalogs."""
+    """Product search request targeting one or all active crawled catalogs."""
 
     catalog: str | None = Field(default=None, min_length=1)
     cursor: str | None = None
@@ -173,7 +173,7 @@ class ProgrammaticMoreLikeThisSource(_RequestModel):
 
 
 class ProgrammaticMoreLikeThisRequest(_RequestModel):
-    """More Like This request targeting one catalog or all granted catalogs."""
+    """More Like This request targeting one or all active crawled catalogs."""
 
     source: ProgrammaticMoreLikeThisSource
     catalog: str | None = Field(default=None, min_length=1)
@@ -366,14 +366,6 @@ class ProductEnrichment(_ResponseModel):
     brand_id: str | None = None
     canonical_brand: CanonicalBrand | None = None
     summary: str | None = None
-
-
-class MerchantCatalogSummary(_ResponseModel):
-    catalog: str
-    display_name: str = Field(alias="displayName")
-    source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
-    product_count: int = Field(alias="productCount")
-    last_indexed_at: datetime | None = Field(default=None, alias="lastIndexedAt")
 
 
 class MerchantProductListItem(_ResponseModel):

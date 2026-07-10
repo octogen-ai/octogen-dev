@@ -374,14 +374,6 @@ export interface ProductEnrichment {
   summary?: string | null;
 }
 
-export interface MerchantCatalogSummary {
-  catalog: string;
-  displayName: string;
-  sourceBaseUrl?: string | null;
-  productCount: number;
-  lastIndexedAt?: string | null;
-}
-
 export interface MerchantProductListItem {
   uuid: string;
   catalogKey?: string | null;

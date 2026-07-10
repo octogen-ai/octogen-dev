@@ -35,7 +35,6 @@ for (const product of results.items) {
 
 ## API
 
-- `listCatalogs()` lists active catalogs available to the API key's merchant.
 - `searchProducts(params)` searches all authorized catalogs by default, or one
   catalog when `catalog` is provided.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL

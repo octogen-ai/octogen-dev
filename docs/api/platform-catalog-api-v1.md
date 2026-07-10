@@ -1,10 +1,10 @@
 # Platform Catalog API v1 — Reference
 
 The Octogen Platform Catalog API v1 is the server-to-server surface for
-Catalog Partner organizations to search and look up products in the catalogs
-granted to them. It is the REST sibling of the
+Catalog Partner organizations to search and look up products in every active
+crawled catalog. It is the REST sibling of the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md); both enforce
-the same per-org catalog grants — pick the surface that fits your runtime.
+the same catalog access policy — pick the surface that fits your runtime.
 
 | Property | Value |
 | --- | --- |
@@ -27,43 +27,16 @@ Content-Type: application/json
 ```
 
 API keys are organization-scoped and currently usable only by Catalog Partner
-organizations. A key can only access catalogs granted to the organization that
-owns it. Rotate keys via the partner portal; deactivating a key revokes it
+organizations. Catalog-partner keys can search and browse every active crawled
+catalog, including catalogs activated later, and can never access merchant
+catalogs. Rotate keys via the partner portal; deactivating a key revokes it
 immediately on the next request.
 
 ## Endpoints
 
-Four endpoints are available. They use the same catalog grants as the
+Four endpoints are available. They use the same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
-
-### `GET /catalogs` — list catalogs
-
-Returns the active catalogs granted to your organization.
-
-```bash
-curl -sS https://api.octogen.ai/v1/catalogs \
-  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY"
-```
-
-Response:
-
-```json
-[
-  {
-    "catalog": "warrenlotas",
-    "displayName": "Warren Lotas",
-    "sourceBaseUrl": "https://warrenlotas.com",
-    "productCount": 1248,
-    "lastIndexedAt": "2026-05-19T18:04:10Z"
-  }
-]
-```
-
-Pass a `catalog` value to `/products/search` or `/products/more-like-this` when
-you want to restrict results to one catalog. Omit it to search all catalogs
-granted to your key. An organization with no active catalog grants gets an
-empty list — not an error.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -117,7 +90,7 @@ record has them.
 
 ### `POST /products/search` — search products
 
-Searches products across all catalogs granted to your API key. To restrict
+Searches products across all active crawled catalogs. To restrict
 the search to one catalog, include `catalog`; everything else is optional.
 
 ```bash
@@ -140,7 +113,7 @@ Request fields:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `catalog` | string | Optional. When omitted, searches all catalogs granted to your key. When provided, must be one granted catalog. |
+| `catalog` | string | Optional. When omitted, searches all active crawled catalogs. When provided, it must name one active crawled catalog. |
 | `q` | string | Free-text keyword query. Omit to browse without filtering. |
 | `facets` | array | Structured filters (brand, category, color, product attributes). |
 | `price_min` | number | Inclusive minimum price. |
@@ -208,7 +181,7 @@ Request fields:
 | --- | --- | --- |
 | `source.url` | string | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required. |
 | `source.uuid` | string | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required. |
-| `catalog` | string | Optional. If present, source resolution and search are limited to this granted catalog. |
+| `catalog` | string | Optional. If present, source resolution and search are limited to this active crawled catalog. |
 | `limit` | integer | Page size from 1 to 100. Defaults to 12. |
 | `cursor` | string | Opaque pagination cursor from the previous response. |
 | `include_facets` | array | Additional include facets appended after server-generated audience facets. |
@@ -254,7 +227,7 @@ The API returns JSON error bodies using a standard `detail` field.
 | Status | Meaning | Example `detail` |
 | --- | --- | --- |
 | `401` | Missing, malformed, or invalid Bearer API key. | `"Authorization Bearer token required"`, `"Invalid API key"` |
-| `403` | API key is valid but not allowed to access this resource. | `"api_key_forbidden"`, `"api_key_org_type_forbidden"` |
+| `403` | API key is valid but the operation is forbidden for its org type. | `"api_key_forbidden"`, `"api_key_org_type_forbidden"` |
 | `404` | Requested catalog or product is not visible for this API key. | `"catalog_not_found"`, `"product_not_found"` |
 | `422` | Request body or field validation failed. | Validation error array with `loc`, `msg`, and `type`. |
 
@@ -308,8 +281,8 @@ https://cdn.octogen.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- Operation IDs: `listCatalogs`, `searchProducts`, `moreLikeThisProducts`,
-  `lookupProduct`.
+- Operation IDs: `searchProducts`, `moreLikeThisProducts`, `lookupProduct`, and
+  `refreshProducts`.
 - Full request and response schemas for code generation.
 - Example error bodies for auth, authorization, missing-catalog,
   missing-product, and validation failures.

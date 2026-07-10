@@ -4,7 +4,7 @@ The Octogen Catalog Partner MCP server lets agents (Claude Code, Codex CLI,
 Claude Desktop, and any other [Model Context Protocol](https://modelcontextprotocol.io/)
 client) discover and query the product catalogs granted to your organization.
 It is the interactive sibling of [Platform Catalog API v1](../api/platform-catalog-api-v1.md);
-both share the same business logic and the same set of granted catalogs. MCP
+both share the same business logic and active crawled catalog policy. MCP
 also exposes BigQuery listing/subscriber helpers for organizations with
 BigQuery access.
 
@@ -133,26 +133,6 @@ The catalog read tools map to endpoints in the
 arguments and result shapes are the same on either surface. BigQuery tools are
 OAuth-only and help an agent coordinate Analytics Hub subscription setup.
 
-### `list_catalogs()`
-
-Returns the list of catalogs granted to your organization. Start here when you
-or your agent doesn't know what's available.
-
-```json
-[
-  {
-    "catalog": "warrenlotas",
-    "displayName": "Warren Lotas",
-    "sourceBaseUrl": "https://warrenlotas.com",
-    "productCount": 1248,
-    "lastIndexedAt": "2026-05-19T18:04:10Z"
-  }
-]
-```
-
-Pass the `catalog` value to `lookup_product` or `search_products`. An
-organization with no active catalog grants gets an empty list — not an error.
-
 ### `lookup_product(canonical_url, catalogs?)`
 
 Resolves a product URL to a canonical product record. Use when a user pastes a
@@ -161,7 +141,7 @@ specific product page URL and asks for canonical details.
 ```text
 canonical_url   string  required  The product page URL to resolve.
 catalogs        array   optional  Subset of catalog keys to search. Defaults
-                                  to all granted catalogs.
+                                  to all active crawled catalogs.
 ```
 
 Returns the matching product with title, description, prices, sizes, colors,
@@ -171,11 +151,11 @@ a transport-level failure — so your agent can recover.
 
 ### `search_products(catalog, query?, limit?, cursor?)`
 
-Searches products inside a single granted catalog. Use when the URL isn't
+Searches products inside a single active crawled catalog. Use when the URL isn't
 known and the user wants products by name, attribute, or keyword.
 
 ```text
-catalog   string   required  Catalog key (from list_catalogs). Single-catalog
+catalog   string   required  Known active crawled catalog key. Single-catalog
                              by design — cross-catalog search is not supported.
 query     string   optional  Free-text query. Omit to browse the catalog's
                              most relevant products without filtering.
@@ -351,7 +331,7 @@ failure. The codes you can see:
 
 | Tool | `error` | Meaning |
 | --- | --- | --- |
-| `lookup_product` | `product_not_found` | No active product matched the URL in your granted catalogs. |
+| `lookup_product` | `product_not_found` | No active product matched the URL in active crawled catalogs. |
 | `lookup_product` | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
 | `search_products` | `catalog_not_granted` | The `catalog` argument is not in your active grants. |
 | `search_products` | `invalid_limit` | `limit` was outside the 1..100 range. |
@@ -359,14 +339,14 @@ failure. The codes you can see:
 | BigQuery subscriber tools | `not_authorized` | Your user is not an owner/admin member of the target organization. |
 | BigQuery tools | `request_failed` | The backing Analytics Hub or subscriber operation failed. |
 
-If an agent encounters one of these, the right move is usually to call
-`list_catalogs` or `list_bigquery_listing_resources` again and retry with
-valid inputs.
+If an agent encounters one of these, retry with a known active crawled catalog
+or call `list_bigquery_listing_resources` for the explicitly granted BigQuery
+listing set.
 
 ## Coexistence with API keys
 
 If you also have a Platform Catalog API v1 key, both paths work concurrently
-against the same grants table — no migration needed.
+against the same catalog access policy — no migration needed.
 
 | | Platform Catalog API v1 (API keys) | MCP (OAuth) |
 | --- | --- | --- |
@@ -376,8 +356,8 @@ against the same grants table — no migration needed.
 | Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
 | Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
 
-Both surfaces enforce the same per-org catalog grants. A grant revoked on
-one path takes effect immediately on the other.
+Both surfaces give Catalog Partners search/browse access to all active crawled
+catalogs and exclude merchant catalogs.
 
 ## Next
 
