@@ -21,6 +21,9 @@ from octogen_ai_sdk import (
     OctogenConnectionError,
     OctogenNotFoundError,
     PricePreference,
+    ProductLookupCachePolicy,
+    ProductLookupResolutionMode,
+    ProductResolutionMetadata,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
     ProgrammaticProductRecrawlTarget,
@@ -38,6 +41,9 @@ def test_public_model_exports_are_available() -> None:
     assert octogen_ai_sdk.CanonicalBrandEnrichment is CanonicalBrandEnrichment
     assert octogen_ai_sdk.HTTPValidationError is HTTPValidationError
     assert octogen_ai_sdk.PricePreference is PricePreference
+    assert octogen_ai_sdk.ProductLookupCachePolicy is ProductLookupCachePolicy
+    assert octogen_ai_sdk.ProductLookupResolutionMode is ProductLookupResolutionMode
+    assert octogen_ai_sdk.ProductResolutionMetadata is ProductResolutionMetadata
     assert (
         octogen_ai_sdk.ProgrammaticMoreLikeThisSource is ProgrammaticMoreLikeThisSource
     )
@@ -51,6 +57,15 @@ def test_public_model_exports_are_available() -> None:
 def test_lookup_request_requires_url() -> None:
     with pytest.raises(ValueError):
         ProgrammaticProductLookupRequest.model_validate({})
+
+
+def test_lookup_request_rejects_refresh_for_index_only() -> None:
+    with pytest.raises(ValueError, match="does not apply to index_only"):
+        ProgrammaticProductLookupRequest(
+            url="https://example.com/products/linen-dress",
+            resolutionMode=ProductLookupResolutionMode.INDEX_ONLY,
+            onDemandCachePolicy=ProductLookupCachePolicy.REFRESH,
+        )
 
 
 def test_recrawl_target_requires_exactly_one_identifier() -> None:
@@ -296,10 +311,11 @@ async def test_more_like_this_products_sends_typed_request() -> None:
 
 @respx.mock
 async def test_lookup_product_parses_full_response() -> None:
-    respx.post(f"{BASE_URL}/products/lookup").mock(
+    route = respx.post(f"{BASE_URL}/products/lookup").mock(
         return_value=httpx.Response(
             200,
             json={
+                "source": "indexed",
                 "catalogKey": "acme",
                 "catalogDisplayName": "ACME",
                 "sourceBaseUrl": "https://example.com",
@@ -324,6 +340,69 @@ async def test_lookup_product_parses_full_response() -> None:
     assert result.product.details.materials == ["linen"]
     assert result.product.audience is not None
     assert result.product.audience.age_groups == ["adult"]
+    assert json.loads(route.calls.last.request.read()) == {
+        "url": "https://example.com/products/linen-dress",
+        "resolutionMode": "auto",
+        "onDemandCachePolicy": "prefer_cache",
+    }
+
+
+@respx.mock
+async def test_lookup_product_sends_controls_and_parses_on_demand_response() -> None:
+    route = respx.post(f"{BASE_URL}/products/lookup").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "requestId": "request-1",
+                "source": "on_demand",
+                "catalogKey": None,
+                "catalogDisplayName": None,
+                "sourceBaseUrl": None,
+                "requestedUrl": "https://example.com/products/linen-dress",
+                "resolvedUrl": "https://example.com/products/linen-dress",
+                "canonicalUrl": "https://example.com/products/linen-dress",
+                "product": {
+                    "uuid": None,
+                    "catalogKey": None,
+                    "productUrl": "https://example.com/products/linen-dress",
+                    "title": "Linen Dress",
+                    "currentPrice": 128,
+                    "currency": "USD",
+                    "isActive": None,
+                },
+                "resolution": {
+                    "completeness": "partial",
+                    "method": "json_ld",
+                    "rendered": False,
+                    "missingFields": ["brand"],
+                },
+                "cacheStatus": "refresh",
+                "warnings": ["missing_brand"],
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.lookup_product(
+            "https://example.com/products/linen-dress",
+            resolution_mode=ProductLookupResolutionMode.ON_DEMAND_ONLY,
+            on_demand_cache_policy=ProductLookupCachePolicy.REFRESH,
+        )
+
+    assert result.source == "on_demand"
+    assert result.catalog_key is None
+    assert result.product.uuid is None
+    assert result.product.is_active is None
+    assert result.product.currency == "USD"
+    assert result.resolution is not None
+    assert result.resolution.missing_fields == ["brand"]
+    assert result.cache_status == "refresh"
+    assert result.warnings == ["missing_brand"]
+    assert json.loads(route.calls.last.request.read()) == {
+        "url": "https://example.com/products/linen-dress",
+        "resolutionMode": "on_demand_only",
+        "onDemandCachePolicy": "refresh",
+    }
 
 
 @respx.mock

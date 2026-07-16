@@ -48,6 +48,28 @@ export const PricePreference = {
 
 export type PricePreference = (typeof PricePreference)[keyof typeof PricePreference];
 
+export const ProductLookupResolutionMode = {
+  AUTO: "auto",
+  INDEX_ONLY: "index_only",
+  ON_DEMAND_ONLY: "on_demand_only",
+} as const;
+
+export type ProductLookupResolutionMode =
+  (typeof ProductLookupResolutionMode)[keyof typeof ProductLookupResolutionMode];
+
+export const ProductLookupCachePolicy = {
+  PREFER_CACHE: "prefer_cache",
+  REFRESH: "refresh",
+} as const;
+
+export type ProductLookupCachePolicy =
+  (typeof ProductLookupCachePolicy)[keyof typeof ProductLookupCachePolicy];
+
+export interface LookupProductOptions {
+  resolutionMode?: ProductLookupResolutionMode;
+  onDemandCachePolicy?: ProductLookupCachePolicy;
+}
+
 export const FacetName = {
   BRAND_NAME: "brand_name",
   BRAND_SLUG: "brand_slug",
@@ -396,7 +418,13 @@ export interface MerchantProductListPage {
   nextCursor?: string | null;
 }
 
-export interface MerchantProductView extends MerchantProductListItem {
+export interface MerchantProductView extends Omit<
+  MerchantProductListItem,
+  "uuid" | "isActive"
+> {
+  uuid: string | null;
+  isActive?: boolean | null;
+  currency?: string | null;
   description?: string | null;
   inStock?: boolean | null;
   categories?: CategoryView[];
@@ -414,11 +442,26 @@ export interface MerchantProductView extends MerchantProductListItem {
   enrichment?: ProductEnrichment | null;
 }
 
+export interface ProductResolutionMetadata {
+  completeness: "complete" | "partial";
+  method: "json_ld" | "open_graph" | "html_meta" | "resolved_url";
+  rendered?: boolean;
+  missingFields?: string[];
+}
+
 export interface MerchantProductUrlLookupResponse {
-  catalogKey: string;
-  catalogDisplayName: string;
+  requestId?: string | null;
+  source: "indexed" | "on_demand";
+  catalogKey?: string | null;
+  catalogDisplayName?: string | null;
   sourceBaseUrl?: string | null;
   product: MerchantProductView;
+  requestedUrl?: string | null;
+  resolvedUrl?: string | null;
+  canonicalUrl?: string | null;
+  resolution?: ProductResolutionMetadata | null;
+  cacheStatus?: "hit" | "miss" | "refresh" | null;
+  warnings?: string[];
 }
 
 export interface ValidationErrorModel {

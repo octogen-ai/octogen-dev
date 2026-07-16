@@ -9,6 +9,8 @@ import {
   OctogenConnectionError,
   OctogenNotFoundError,
   PricePreference,
+  ProductLookupCachePolicy,
+  ProductLookupResolutionMode,
   USER_AGENT,
   type FetchLike,
 } from "../src/index.js";
@@ -294,7 +296,8 @@ describe("OctogenClient", () => {
   });
 
   it("parses product lookup responses", async () => {
-    const { fetchMock } = createFetchMock({
+    const { calls, fetchMock } = createFetchMock({
+      source: "indexed",
       catalogKey: "acme",
       catalogDisplayName: "ACME",
       sourceBaseUrl: "https://example.com",
@@ -318,6 +321,64 @@ describe("OctogenClient", () => {
     expect(result.product.inStock).toBe(true);
     expect(result.product.details?.materials).toEqual(["linen"]);
     expect(result.product.audience?.ageGroups).toEqual(["adult"]);
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      url: "https://example.com/products/linen-dress",
+      resolutionMode: "auto",
+      onDemandCachePolicy: "prefer_cache",
+    });
+  });
+
+  it("sends lookup controls and parses on-demand responses", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      requestId: "request-1",
+      source: "on_demand",
+      catalogKey: null,
+      catalogDisplayName: null,
+      sourceBaseUrl: null,
+      requestedUrl: "https://example.com/products/linen-dress",
+      resolvedUrl: "https://example.com/products/linen-dress",
+      canonicalUrl: "https://example.com/products/linen-dress",
+      product: {
+        uuid: null,
+        catalogKey: null,
+        productUrl: "https://example.com/products/linen-dress",
+        title: "Linen Dress",
+        currentPrice: 128,
+        currency: "USD",
+        isActive: null,
+      },
+      resolution: {
+        completeness: "partial",
+        method: "json_ld",
+        rendered: false,
+        missingFields: ["brand"],
+      },
+      cacheStatus: "refresh",
+      warnings: ["missing_brand"],
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.lookupProduct(
+      "https://example.com/products/linen-dress",
+      {
+        resolutionMode: ProductLookupResolutionMode.ON_DEMAND_ONLY,
+        onDemandCachePolicy: ProductLookupCachePolicy.REFRESH,
+      },
+    );
+
+    expect(result.source).toBe("on_demand");
+    expect(result.catalogKey).toBeNull();
+    expect(result.product.uuid).toBeNull();
+    expect(result.product.isActive).toBeNull();
+    expect(result.product.currency).toBe("USD");
+    expect(result.resolution?.missingFields).toEqual(["brand"]);
+    expect(result.cacheStatus).toBe("refresh");
+    expect(result.warnings).toEqual(["missing_brand"]);
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      url: "https://example.com/products/linen-dress",
+      resolutionMode: "on_demand_only",
+      onDemandCachePolicy: "refresh",
+    });
   });
 
   it("rejects empty lookup URLs before making a request", async () => {
@@ -325,6 +386,19 @@ describe("OctogenClient", () => {
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     await expect(client.lookupProduct("")).rejects.toThrow("url is required");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects refresh cache policy for index-only lookup", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(
+      client.lookupProduct("https://example.com/product", {
+        resolutionMode: ProductLookupResolutionMode.INDEX_ONLY,
+        onDemandCachePolicy: ProductLookupCachePolicy.REFRESH,
+      }),
+    ).rejects.toThrow("onDemandCachePolicy does not apply to index_only");
     expect(calls).toHaveLength(0);
   });
 

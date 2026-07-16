@@ -11,6 +11,7 @@ import type {
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
+  LookupProductOptions,
   MerchantProductListPage,
   MerchantProductUrlLookupResponse,
   ProgrammaticMoreLikeThisRequest,
@@ -58,9 +59,21 @@ export class OctogenClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  async lookupProduct(url: string): Promise<MerchantProductUrlLookupResponse> {
+  async lookupProduct(
+    url: string,
+    options: LookupProductOptions = {},
+  ): Promise<MerchantProductUrlLookupResponse> {
     assertNonEmptyString(url, "url");
-    const data = await this.request("POST", "/products/lookup", { url });
+    const resolutionMode = options.resolutionMode ?? "auto";
+    const onDemandCachePolicy = options.onDemandCachePolicy ?? "prefer_cache";
+    if (resolutionMode === "index_only" && onDemandCachePolicy !== "prefer_cache") {
+      throw new TypeError("onDemandCachePolicy does not apply to index_only");
+    }
+    const data = await this.request("POST", "/products/lookup", {
+      url,
+      resolutionMode,
+      onDemandCachePolicy,
+    });
     return data as MerchantProductUrlLookupResponse;
   }
 

@@ -47,7 +47,9 @@ asyncio.run(main())
   catalog when `catalog` is provided.
 - `more_like_this_products(...)` finds products similar to a source product URL
   or UUID, optionally within one catalog.
-- `lookup_product(url)` looks up a product by canonical URL.
+- `lookup_product(url, resolution_mode=..., on_demand_cache_policy=...)` resolves
+  a product URL from the index or on demand. The optional controls default to
+  `auto` and `prefer_cache`.
 - `recrawl_products(targets=[...])` schedules product URLs or UUIDs for recrawl.
 
 ```python
