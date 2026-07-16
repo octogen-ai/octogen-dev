@@ -61,6 +61,17 @@ class PricePreference(StrEnum):
     HIGHER = "higher"
 
 
+class ProductLookupResolutionMode(StrEnum):
+    AUTO = "auto"
+    INDEX_ONLY = "index_only"
+    ON_DEMAND_ONLY = "on_demand_only"
+
+
+class ProductLookupCachePolicy(StrEnum):
+    PREFER_CACHE = "prefer_cache"
+    REFRESH = "refresh"
+
+
 class FacetName(StrEnum):
     BRAND_NAME = "brand_name"
     BRAND_SLUG = "brand_slug"
@@ -132,6 +143,23 @@ class ProgrammaticProductLookupRequest(_RequestModel):
     """Product lookup request."""
 
     url: str = Field(min_length=1)
+    resolution_mode: ProductLookupResolutionMode = Field(
+        default=ProductLookupResolutionMode.AUTO,
+        alias="resolutionMode",
+    )
+    on_demand_cache_policy: ProductLookupCachePolicy = Field(
+        default=ProductLookupCachePolicy.PREFER_CACHE,
+        alias="onDemandCachePolicy",
+    )
+
+    @model_validator(mode="after")
+    def validate_cache_policy(self) -> ProgrammaticProductLookupRequest:
+        if (
+            self.resolution_mode == ProductLookupResolutionMode.INDEX_ONLY
+            and self.on_demand_cache_policy != ProductLookupCachePolicy.PREFER_CACHE
+        ):
+            raise ValueError("onDemandCachePolicy does not apply to index_only")
+        return self
 
 
 class ProgrammaticProductRecrawlTarget(_RequestModel):
@@ -391,6 +419,9 @@ class MerchantProductListPage(_ResponseModel):
 
 
 class MerchantProductView(MerchantProductListItem):
+    uuid: str | None
+    is_active: bool | None = Field(default=None, alias="isActive")
+    currency: str | None = None
     description: str | None = None
     in_stock: bool | None = Field(default=None, alias="inStock")
     categories: list[CategoryView] = Field(default_factory=list)
@@ -408,11 +439,29 @@ class MerchantProductView(MerchantProductListItem):
     enrichment: ProductEnrichment | None = None
 
 
+class ProductResolutionMetadata(_ResponseModel):
+    completeness: Literal["complete", "partial"]
+    method: Literal["json_ld", "open_graph", "html_meta", "resolved_url"]
+    rendered: bool = False
+    missing_fields: list[str] = Field(default_factory=list, alias="missingFields")
+
+
 class MerchantProductUrlLookupResponse(_ResponseModel):
-    catalog_key: str = Field(alias="catalogKey")
-    catalog_display_name: str = Field(alias="catalogDisplayName")
+    request_id: str | None = Field(default=None, alias="requestId")
+    source: Literal["indexed", "on_demand"]
+    catalog_key: str | None = Field(default=None, alias="catalogKey")
+    catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
     product: MerchantProductView
+    requested_url: str | None = Field(default=None, alias="requestedUrl")
+    resolved_url: str | None = Field(default=None, alias="resolvedUrl")
+    canonical_url: str | None = Field(default=None, alias="canonicalUrl")
+    resolution: ProductResolutionMetadata | None = None
+    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+        default=None,
+        alias="cacheStatus",
+    )
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ProgrammaticProductRecrawlAcceptedTarget(_ResponseModel):

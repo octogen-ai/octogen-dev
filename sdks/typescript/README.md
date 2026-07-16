@@ -39,7 +39,8 @@ for (const product of results.items) {
   catalog when `catalog` is provided.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
   or UUID, optionally within one catalog.
-- `lookupProduct(url)` looks up a product by canonical URL.
+- `lookupProduct(url, options?)` resolves a product URL from the index or on
+  demand. The optional controls default to `auto` and `prefer_cache`.
 - `recrawlProducts(params)` schedules product URLs or UUIDs for recrawl.
 
 Requests are authenticated with `Authorization: Bearer <api-key>`.

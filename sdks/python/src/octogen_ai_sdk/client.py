@@ -26,6 +26,8 @@ from octogen_ai_sdk.models import (
     MerchantProductListPage,
     MerchantProductUrlLookupResponse,
     PricePreference,
+    ProductLookupCachePolicy,
+    ProductLookupResolutionMode,
     ProgrammaticMoreLikeThisRequest,
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
@@ -94,9 +96,23 @@ class OctogenClient:
         if self._owns_client:
             await self._client.aclose()
 
-    async def lookup_product(self, url: str) -> MerchantProductUrlLookupResponse:
-        """Lookup a product by canonical URL across the merchant's catalogs."""
-        request = ProgrammaticProductLookupRequest(url=url)
+    async def lookup_product(
+        self,
+        url: str,
+        *,
+        resolution_mode: ProductLookupResolutionMode | str = (
+            ProductLookupResolutionMode.AUTO
+        ),
+        on_demand_cache_policy: ProductLookupCachePolicy | str = (
+            ProductLookupCachePolicy.PREFER_CACHE
+        ),
+    ) -> MerchantProductUrlLookupResponse:
+        """Resolve a product URL from the index or on demand."""
+        request = ProgrammaticProductLookupRequest(
+            url=url,
+            resolutionMode=ProductLookupResolutionMode(resolution_mode),
+            onDemandCachePolicy=ProductLookupCachePolicy(on_demand_cache_policy),
+        )
         data = await self._request(
             "POST",
             "/products/lookup",
