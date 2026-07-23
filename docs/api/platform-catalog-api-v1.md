@@ -63,6 +63,7 @@ Response:
   "catalogKey": "warrenlotas",
   "catalogDisplayName": "Warren Lotas",
   "sourceBaseUrl": "https://warrenlotas.com",
+  "canonicalUrl": "https://warrenlotas.com/products/black-hoodie",
   "product": {
     "uuid": "prod_01HX...",
     "title": "Black Hoodie",
@@ -87,6 +88,14 @@ The product view is fuller than a search hit and includes optional detail
 fields such as `variants`, `categories`, `breadcrumbs`, `colors`, `reviews`,
 `promotions`, `videos`, `identifiers`, and `enrichment` when the underlying
 record has them.
+
+`canonicalUrl` is the stable URL for the product: submit it on a follow-up
+lookup and it deterministically re-resolves the same product. For indexed
+results it is the matched product's stored canonical URL (falling back to its
+exact indexed URL); for on-demand results it is the canonical URL declared by
+the product page itself (JSON-LD `url`, `og:url`, or `link rel="canonical"`),
+falling back to the final fetched URL. Prefer storing it over the URL you
+originally submitted.
 
 ### `POST /products/search` — search products
 
