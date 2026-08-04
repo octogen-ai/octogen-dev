@@ -133,13 +133,15 @@ The catalog read tools map to endpoints in the
 arguments and result shapes are the same on either surface. BigQuery tools are
 OAuth-only and help an agent coordinate Analytics Hub subscription setup.
 
-### `lookup_product(canonical_url, catalogs?)`
+### `lookup_product(product_url, catalogs?)`
 
-Resolves a product URL to a canonical product record. Use when a user pastes a
-specific product page URL and asks for canonical details.
+Resolves a product URL to a full product record. Use when a user pastes a
+specific product page URL and asks for product details.
 
 ```text
-canonical_url   string  required  The product page URL to resolve.
+product_url     string  required  The product page URL to resolve — any real
+                                  product URL, not necessarily normalized or
+                                  canonical.
 catalogs        array   optional  Subset of catalog keys to search. Defaults
                                   to all active crawled catalogs.
 ```

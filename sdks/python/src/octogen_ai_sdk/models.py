@@ -455,6 +455,7 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     product: MerchantProductView
     requested_url: str | None = Field(default=None, alias="requestedUrl")
     resolved_url: str | None = Field(default=None, alias="resolvedUrl")
+    normalized_url: str | None = Field(default=None, alias="normalizedUrl")
     canonical_url: str | None = Field(default=None, alias="canonicalUrl")
     resolution: ProductResolutionMetadata | None = None
     cache_status: Literal["hit", "miss", "refresh"] | None = Field(

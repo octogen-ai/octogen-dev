@@ -319,6 +319,8 @@ async def test_lookup_product_parses_full_response() -> None:
                 "catalogKey": "acme",
                 "catalogDisplayName": "ACME",
                 "sourceBaseUrl": "https://example.com",
+                "requestedUrl": "https://example.com/products/linen-dress",
+                "normalizedUrl": "https://example.com/products/linen-dress",
                 "product": {
                     "uuid": "product-1",
                     "productUrl": "https://example.com/products/linen-dress",
@@ -336,6 +338,8 @@ async def test_lookup_product_parses_full_response() -> None:
         result = await client.lookup_product("https://example.com/products/linen-dress")
 
     assert result.catalog_key == "acme"
+    assert result.normalized_url == "https://example.com/products/linen-dress"
+    assert result.canonical_url is None
     assert result.product.in_stock is True
     assert result.product.details.materials == ["linen"]
     assert result.product.audience is not None
