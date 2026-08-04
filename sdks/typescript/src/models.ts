@@ -458,6 +458,7 @@ export interface MerchantProductUrlLookupResponse {
   product: MerchantProductView;
   requestedUrl?: string | null;
   resolvedUrl?: string | null;
+  normalizedUrl?: string | null;
   canonicalUrl?: string | null;
   resolution?: ProductResolutionMetadata | null;
   cacheStatus?: "hit" | "miss" | "refresh" | null;

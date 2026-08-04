@@ -301,6 +301,8 @@ describe("OctogenClient", () => {
       catalogKey: "acme",
       catalogDisplayName: "ACME",
       sourceBaseUrl: "https://example.com",
+      requestedUrl: "https://example.com/products/linen-dress",
+      normalizedUrl: "https://example.com/products/linen-dress",
       product: {
         uuid: "product-1",
         productUrl: "https://example.com/products/linen-dress",
@@ -318,6 +320,10 @@ describe("OctogenClient", () => {
     );
 
     expect(result.catalogKey).toBe("acme");
+    expect(result.normalizedUrl).toBe(
+      "https://example.com/products/linen-dress",
+    );
+    expect(result.canonicalUrl).toBeUndefined();
     expect(result.product.inStock).toBe(true);
     expect(result.product.details?.materials).toEqual(["linen"]);
     expect(result.product.audience?.ageGroups).toEqual(["adult"]);

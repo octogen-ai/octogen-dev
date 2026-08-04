@@ -54,7 +54,7 @@ Request fields:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `url` | string | Required. Canonical product page URL. |
+| `url` | string | Required. Any real product page URL — it does not need to be normalized or canonical. |
 
 Response:
 
@@ -63,7 +63,9 @@ Response:
   "catalogKey": "warrenlotas",
   "catalogDisplayName": "Warren Lotas",
   "sourceBaseUrl": "https://warrenlotas.com",
-  "canonicalUrl": "https://warrenlotas.com/products/black-hoodie",
+  "requestedUrl": "https://warrenlotas.com/products/black-hoodie",
+  "normalizedUrl": "https://warrenlotas.com/products/black-hoodie",
+  "canonicalUrl": null,
   "product": {
     "uuid": "prod_01HX...",
     "title": "Black Hoodie",
@@ -89,13 +91,22 @@ fields such as `variants`, `categories`, `breadcrumbs`, `colors`, `reviews`,
 `promotions`, `videos`, `identifiers`, and `enrichment` when the underlying
 record has them.
 
-`canonicalUrl` is the stable URL for the product: submit it on a follow-up
-lookup and it deterministically re-resolves the same product. For indexed
-results it is the matched product's stored canonical URL (falling back to its
-exact indexed URL); for on-demand results it is the canonical URL declared by
-the product page itself (JSON-LD `url`, `og:url`, or `link rel="canonical"`),
-falling back to the final fetched URL. Prefer storing it over the URL you
-originally submitted.
+Four URL fields describe how the result was reached, each with one meaning:
+
+- `requestedUrl` — the URL you submitted, echoed back on every successful
+  result.
+- `normalizedUrl` — the matched product's URL as normalized by Octogen
+  (HTTPS-forced, `www.`-stripped, tracking parameters removed, query sorted).
+  Populated for indexed results. This is the stable URL: submit it on a
+  follow-up lookup and it deterministically re-resolves the same product.
+  Prefer storing it over the URL you originally submitted.
+- `resolvedUrl` — the final URL after redirects. Populated for on-demand
+  results; use it for on-demand follow-up lookups.
+- `canonicalUrl` — the canonical URL the product page itself declares
+  (JSON-LD `url`, `og:url`, or `link rel="canonical"`). Populated only for
+  on-demand results; when the page declares none, the resolver currently
+  falls back to the final fetched URL, so a non-null value is not proof of a
+  declaration. `null` for indexed results.
 
 ### `POST /products/search` — search products
 
