@@ -14,20 +14,21 @@ BASE_URL = "https://api.octogen.ai/v1"
 LIST_ID = "cul_01HZY3WQ8K4V9P2M5X7R00AA"
 AUTH = ["--api-key", "key"]
 
-ACTIVE_LIST = {
+ACTIVE_BIGQUERY: dict[str, object] = {
+    "exchangeId": "catalogs_prod",
+    "listingId": f"coverage_{LIST_ID}_v1",
+    "sharedDatasetId": f"coverage_share_{LIST_ID}_v1",
+    "viewId": "products_current_v1",
+    "lastExportedAt": "2026-08-06T06:30:00Z",
+    "lastRowCount": 1128,
+    "readerCount": 1,
+}
+ACTIVE_LIST: dict[str, object] = {
     "urlListId": LIST_ID,
     "name": "q3-campaign",
     "status": "active",
     "urlCount": 2,
-    "bigQuery": {
-        "exchangeId": "catalogs_prod",
-        "listingId": f"coverage_{LIST_ID}_v1",
-        "sharedDatasetId": f"coverage_share_{LIST_ID}_v1",
-        "viewId": "products_current_v1",
-        "lastExportedAt": "2026-08-06T06:30:00Z",
-        "lastRowCount": 1128,
-        "readerCount": 1,
-    },
+    "bigQuery": ACTIVE_BIGQUERY,
     "createdAt": "2026-08-05T12:00:00Z",
     "updatedAt": "2026-08-06T06:30:00Z",
 }
@@ -135,7 +136,7 @@ class TestReads:
         never_exported = {
             **ACTIVE_LIST,
             "bigQuery": {
-                **ACTIVE_LIST["bigQuery"],  # type: ignore[dict-item]
+                **ACTIVE_BIGQUERY,
                 "lastExportedAt": None,
                 "lastRowCount": None,
             },
