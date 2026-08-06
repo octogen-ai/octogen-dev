@@ -343,12 +343,14 @@ async def _run_mutation(
     # Batching is ours, not the API's: one user intent becomes N requests, so
     # a mid-loop failure leaves earlier batches applied. Reporting that as a
     # clean failure would tell automation nothing changed when it did.
-    failure: OctogenAPIError | None = None
+    # Any SDK error, not just OctogenAPIError: a timeout partway through a
+    # long file loses exactly the same progress a 409 would.
+    failure: OctogenError | None = None
 
     for batch in batches:
         try:
             response = await call(args.url_list_id, urls=batch)
-        except OctogenAPIError as exc:
+        except OctogenError as exc:
             failure = exc
             break
         completed += 1
@@ -370,9 +372,15 @@ async def _run_mutation(
         "totalRequests": len(batches),
     }
     if failure is not None:
+        api_failure = failure if isinstance(failure, OctogenAPIError) else None
         payload["error"] = {
-            "detail": failure.detail if isinstance(failure.detail, str) else None,
-            "statusCode": failure.status_code,
+            "detail": (
+                api_failure.detail
+                if api_failure is not None and isinstance(api_failure.detail, str)
+                else None
+            ),
+            "statusCode": api_failure.status_code if api_failure is not None else None,
+            "message": str(failure),
         }
 
     def _text() -> None:
@@ -391,7 +399,7 @@ async def _run_mutation(
             else "No requests completed, so the list is unchanged."
         )
         print(
-            f"error: {_api_error_text(failure)}\n"
+            f"error: {_failure_text(failure)}\n"
             f"  stopped after {completed}/{len(batches)} request(s). "
             f"{applied_note}",
             file=sys.stderr,
@@ -561,6 +569,13 @@ def _emit(args: argparse.Namespace, payload: dict[str, Any], text: Any = None) -
         text()
 
 
+def _failure_text(exc: OctogenError) -> str:
+    """Errors reaching here may be transport-level, which carry no code."""
+    if isinstance(exc, OctogenAPIError):
+        return _api_error_text(exc)
+    return str(exc)
+
+
 def _api_error_text(exc: OctogenAPIError) -> str:
     detail = exc.detail if isinstance(exc.detail, str) else None
     hint = _ERROR_HINTS.get(detail or "")
@@ -580,8 +595,7 @@ _ERROR_HINTS = {
         "delete one first."
     ),
     "list_url_capacity_exceeded": (
-        "The add would exceed the per-list URL cap, so that request was "
-        "refused whole. Earlier requests in the same run still applied."
+        "The add would exceed the per-list URL cap, so that request was refused whole."
     ),
     "invalid_cursor": "The pagination cursor is stale; rerun without a cursor.",
     "url_lists_unavailable": "The feature is temporarily unavailable; retry later.",

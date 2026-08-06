@@ -288,6 +288,37 @@ class TestMutations:
         captured = capsys.readouterr()
         assert captured.out == ""
         assert "the list is unchanged" in captured.err.lower()
+        # The error hint must not assert run-level state that contradicts the
+        # stopped-after line (cursor[bot] finding).
+        assert "still applied" not in captured.err
+        assert "remain applied" not in captured.err
+
+    @respx.mock
+    def test_connection_error_midway_still_reports_progress(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A timeout partway through a long file loses the same progress an
+        API error would, so it needs the same reporting."""
+        respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+            side_effect=[
+                httpx.Response(200, json=_mutation_response(accepted=1, count=1000)),
+                httpx.ConnectTimeout("timed out"),
+            ]
+        )
+        urls = [f"--url=https://a.example/p/{i}" for i in range(1_001)]
+        rc = cli.main(["add-urls", LIST_ID, "--apply", "--json", *urls, *AUTH])
+
+        assert rc == cli.EXIT_FAILED
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["completedRequests"] == 1
+        assert payload["urlCount"] == 1000
+        # Transport failures carry no API code, but still report a message.
+        assert payload["error"]["detail"] is None
+        assert payload["error"]["statusCode"] is None
+        assert payload["error"]["message"]
+        assert "stopped after 1/2 request(s)" in captured.err
+        assert "remain applied" in captured.err
 
     @respx.mock
     def test_rejected_urls_exit_partial(
