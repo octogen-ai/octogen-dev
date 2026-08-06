@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pprint import pformat
 from types import TracebackType
 from typing import Any, Self
+from urllib.parse import quote
 
 import httpx
 
@@ -22,6 +23,13 @@ from octogen_ai_sdk.errors import (
     OctogenValidationError,
 )
 from octogen_ai_sdk.models import (
+    CoverageContainsResponse,
+    CoverageUrlList,
+    CoverageUrlListCreateRequest,
+    CoverageUrlListPage,
+    CoverageUrlListUrlsPage,
+    CoverageUrlMutationResponse,
+    CoverageUrlsRequest,
     Facet,
     MerchantProductListPage,
     MerchantProductUrlLookupResponse,
@@ -217,18 +225,126 @@ class OctogenClient:
         )
         return ProgrammaticMoreLikeThisResponse.model_validate(data)
 
+    async def create_coverage_url_list(self, *, name: str) -> CoverageUrlList:
+        """Create a coverage URL list (returns it in ``provisioning``)."""
+        request = CoverageUrlListCreateRequest(name=name)
+        data = await self._request(
+            "POST",
+            "/coverage/url-lists",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return CoverageUrlList.model_validate(data)
+
+    async def list_coverage_url_lists(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> CoverageUrlListPage:
+        """List your organization's coverage URL lists, newest first."""
+        data = await self._request(
+            "GET",
+            "/coverage/url-lists",
+            params={"cursor": cursor, "limit": limit},
+        )
+        return CoverageUrlListPage.model_validate(data)
+
+    async def get_coverage_url_list(self, url_list_id: str) -> CoverageUrlList:
+        """Get one coverage URL list by id."""
+        data = await self._request(
+            "GET",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}",
+        )
+        return CoverageUrlList.model_validate(data)
+
+    async def delete_coverage_url_list(self, url_list_id: str) -> CoverageUrlList:
+        """Delete a coverage URL list (returns it in ``delete_pending``).
+
+        Deletion is asynchronous and permanent: there is no grace window and
+        no restore. The name is released immediately.
+        """
+        data = await self._request(
+            "DELETE",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}",
+        )
+        return CoverageUrlList.model_validate(data)
+
+    async def add_coverage_url_list_urls(
+        self,
+        url_list_id: str,
+        *,
+        urls: Sequence[str],
+    ) -> CoverageUrlMutationResponse:
+        """Add URLs to a list — an idempotent set-add with per-URL outcomes."""
+        request = CoverageUrlsRequest(urls=list(urls))
+        data = await self._request(
+            "POST",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}/urls",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return CoverageUrlMutationResponse.model_validate(data)
+
+    async def remove_coverage_url_list_urls(
+        self,
+        url_list_id: str,
+        *,
+        urls: Sequence[str],
+    ) -> CoverageUrlMutationResponse:
+        """Remove URLs from a list — an idempotent set-remove."""
+        request = CoverageUrlsRequest(urls=list(urls))
+        data = await self._request(
+            "POST",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}/urls/remove",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return CoverageUrlMutationResponse.model_validate(data)
+
+    async def check_coverage_url_list_urls(
+        self,
+        url_list_id: str,
+        *,
+        urls: Sequence[str],
+    ) -> CoverageContainsResponse:
+        """Check which URLs are members of a list (normalized server-side)."""
+        request = CoverageUrlsRequest(urls=list(urls))
+        data = await self._request(
+            "POST",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}/urls/contains",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return CoverageContainsResponse.model_validate(data)
+
+    async def list_coverage_url_list_urls(
+        self,
+        url_list_id: str,
+        *,
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> CoverageUrlListUrlsPage:
+        """Enumerate a list's URLs in stable insertion order."""
+        data = await self._request(
+            "GET",
+            f"/coverage/url-lists/{_path_segment(url_list_id)}/urls",
+            params={"cursor": cursor, "limit": limit},
+        )
+        return CoverageUrlListUrlsPage.model_validate(data)
+
     async def _request(
         self,
         method: str,
         path: str,
         *,
         json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         headers = self._headers()
         content: str | None = None
         if json is not None:
             headers["Content-Type"] = "application/json"
             content = json_module.dumps(json, separators=(",", ":"))
+        query = {
+            key: value for key, value in (params or {}).items() if value is not None
+        }
 
         try:
             response = await self._client.request(
@@ -236,6 +352,7 @@ class OctogenClient:
                 self._url(path),
                 headers=headers,
                 content=content,
+                params=query or None,
             )
         except httpx.RequestError as exc:
             raise OctogenConnectionError(str(exc)) from exc
@@ -327,3 +444,10 @@ def _error_message(response: httpx.Response, detail: Any) -> str:
             f"{pformat(detail)}"
         )
     return f"Octogen API request failed with status {response.status_code}"
+
+
+def _path_segment(value: str) -> str:
+    """Percent-encode a caller-supplied path segment (e.g. a list id)."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("url_list_id must be a non-empty string")
+    return quote(value.strip(), safe="")

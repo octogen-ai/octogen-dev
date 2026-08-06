@@ -327,3 +327,4 @@ A grant change on one path takes effect immediately on the other.
 ## Next
 
 - [Catalog Partner MCP — getting started](../guides/catalog-partner-mcp.md)
+- [Coverage URL Lists API v1 — Reference](./coverage-url-lists-v1.md)

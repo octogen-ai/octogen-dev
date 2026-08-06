@@ -474,3 +474,77 @@ export interface ValidationErrorModel {
 export interface HTTPValidationError {
   detail?: ValidationErrorModel[] | null;
 }
+
+// ── Coverage URL Lists (/v1/coverage/url-lists) ─────────────────────────────
+
+export type CoverageUrlListStatus = "provisioning" | "active" | "delete_pending";
+
+export interface CoverageUrlListBigQuery {
+  exchangeId: string;
+  listingId: string;
+  sharedDatasetId: string;
+  viewId: string;
+  lastExportedAt?: string | null;
+  lastRowCount?: number | null;
+  readerCount: number;
+}
+
+export interface CoverageUrlList {
+  urlListId: string;
+  name: string;
+  status: CoverageUrlListStatus;
+  urlCount: number;
+  bigQuery?: CoverageUrlListBigQuery | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoverageUrlListPage {
+  items: CoverageUrlList[];
+  nextCursor?: string | null;
+}
+
+export interface CoveragePaginationParams {
+  cursor?: string;
+  limit?: number;
+}
+
+export interface CoverageAcceptedUrl {
+  url: string;
+  normalizedUrl: string;
+}
+
+export interface CoverageRejectedUrl {
+  url: string;
+  code: string;
+  message: string;
+}
+
+export interface CoverageUrlMutationResponse {
+  accepted: CoverageAcceptedUrl[];
+  rejected: CoverageRejectedUrl[];
+  urlCount: number;
+  requestId?: string | null;
+}
+
+export interface CoverageContainsResult {
+  url: string;
+  normalizedUrl: string;
+  present: boolean;
+  addedAt?: string | null;
+}
+
+export interface CoverageContainsResponse {
+  results: CoverageContainsResult[];
+}
+
+export interface CoverageUrlListUrl {
+  url: string;
+  normalizedUrl: string;
+  addedAt: string;
+}
+
+export interface CoverageUrlListUrlsPage {
+  items: CoverageUrlListUrl[];
+  nextCursor?: string | null;
+}

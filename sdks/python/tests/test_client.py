@@ -470,3 +470,207 @@ async def test_api_key_can_be_passed_without_mutating_env(
     async with OctogenClient(api_key="key") as client:
         assert os.getenv("OCTO_API_KEY") is None
         assert client._headers()["Authorization"] == "Bearer key"
+
+
+LIST_ID = "cul_01HZY3WQ8K4V9P2M5X7R00AA"
+LIST_JSON = {
+    "urlListId": LIST_ID,
+    "name": "q3-campaign",
+    "status": "active",
+    "urlCount": 2,
+    "bigQuery": {
+        "exchangeId": "catalogs_prod",
+        "listingId": f"coverage_{LIST_ID}_v1",
+        "sharedDatasetId": f"coverage_share_{LIST_ID}_v1",
+        "viewId": "products_current_v1",
+        "lastExportedAt": "2026-08-06T06:30:00Z",
+        "lastRowCount": 1128,
+        "readerCount": 1,
+    },
+    "createdAt": "2026-08-05T12:00:00Z",
+    "updatedAt": "2026-08-06T06:30:00Z",
+}
+
+
+@respx.mock
+async def test_create_coverage_url_list_sends_typed_request() -> None:
+    provisioning: dict[str, object] = {
+        **LIST_JSON,
+        "status": "provisioning",
+        "urlCount": 0,
+        "bigQuery": None,
+    }
+    route = respx.post(f"{BASE_URL}/coverage/url-lists").mock(
+        return_value=httpx.Response(201, json=provisioning)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        url_list = await client.create_coverage_url_list(name="q3-campaign")
+
+    assert route.calls.last.request.read() == b'{"name":"q3-campaign"}'
+    assert url_list.url_list_id == LIST_ID
+    assert url_list.status == "provisioning"
+    assert url_list.big_query is None
+
+
+@respx.mock
+async def test_list_coverage_url_lists_sends_pagination_params() -> None:
+    route = respx.get(f"{BASE_URL}/coverage/url-lists").mock(
+        return_value=httpx.Response(
+            200, json={"items": [LIST_JSON], "nextCursor": "cursor-2"}
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.list_coverage_url_lists(cursor="cursor-1", limit=10)
+
+    params = route.calls.last.request.url.params
+    assert params["cursor"] == "cursor-1"
+    assert params["limit"] == "10"
+    assert page.next_cursor == "cursor-2"
+    assert page.items[0].big_query is not None
+    assert page.items[0].big_query.reader_count == 1
+
+
+@respx.mock
+async def test_get_coverage_url_list_quotes_path_segment() -> None:
+    route = respx.get(f"{BASE_URL}/coverage/url-lists/{LIST_ID}").mock(
+        return_value=httpx.Response(200, json=LIST_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        url_list = await client.get_coverage_url_list(LIST_ID)
+
+    # No stray query string when no params are passed.
+    assert (
+        str(route.calls.last.request.url) == f"{BASE_URL}/coverage/url-lists/{LIST_ID}"
+    )
+    assert url_list.url_count == 2
+    assert url_list.big_query is not None
+    assert url_list.big_query.view_id == "products_current_v1"
+
+
+@respx.mock
+async def test_delete_coverage_url_list_returns_delete_pending() -> None:
+    respx.delete(f"{BASE_URL}/coverage/url-lists/{LIST_ID}").mock(
+        return_value=httpx.Response(202, json={**LIST_JSON, "status": "delete_pending"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        url_list = await client.delete_coverage_url_list(LIST_ID)
+
+    assert url_list.status == "delete_pending"
+
+
+@respx.mock
+async def test_add_coverage_url_list_urls_reports_per_url_outcomes() -> None:
+    route = respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "accepted": [
+                    {
+                        "url": "https://shop.example/products/dress?utm_source=x",
+                        "normalizedUrl": "https://shop.example/products/dress",
+                    }
+                ],
+                "rejected": [
+                    {
+                        "url": "not-a-url",
+                        "code": "invalid_url",
+                        "message": "URL must be absolute http(s).",
+                    }
+                ],
+                "urlCount": 3,
+                "requestId": "req-1",
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.add_coverage_url_list_urls(
+            LIST_ID,
+            urls=["https://shop.example/products/dress?utm_source=x", "not-a-url"],
+        )
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "urls": ["https://shop.example/products/dress?utm_source=x", "not-a-url"]
+    }
+    assert result.accepted[0].normalized_url == "https://shop.example/products/dress"
+    assert result.rejected[0].code == "invalid_url"
+    assert result.url_count == 3
+    assert result.request_id == "req-1"
+
+
+@respx.mock
+async def test_remove_and_check_coverage_url_list_urls() -> None:
+    respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls/remove").mock(
+        return_value=httpx.Response(
+            200,
+            json={"accepted": [], "rejected": [], "urlCount": 1, "requestId": "req-2"},
+        )
+    )
+    respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls/contains").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    {
+                        "url": "https://shop.example/products/dress",
+                        "normalizedUrl": "https://shop.example/products/dress",
+                        "present": True,
+                        "addedAt": "2026-08-05T12:00:00Z",
+                    },
+                    {
+                        "url": "https://shop.example/products/coat",
+                        "normalizedUrl": "https://shop.example/products/coat",
+                        "present": False,
+                        "addedAt": None,
+                    },
+                ]
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        removed = await client.remove_coverage_url_list_urls(
+            LIST_ID, urls=["https://shop.example/products/skirt"]
+        )
+        contains = await client.check_coverage_url_list_urls(
+            LIST_ID,
+            urls=[
+                "https://shop.example/products/dress",
+                "https://shop.example/products/coat",
+            ],
+        )
+
+    assert removed.url_count == 1
+    assert [r.present for r in contains.results] == [True, False]
+    assert contains.results[1].added_at is None
+
+
+@respx.mock
+async def test_list_coverage_url_list_urls_paginates() -> None:
+    route = respx.get(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "url": "https://shop.example/products/dress?utm_source=x",
+                        "normalizedUrl": "https://shop.example/products/dress",
+                        "addedAt": "2026-08-05T12:00:00Z",
+                    }
+                ],
+                "nextCursor": None,
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.list_coverage_url_list_urls(LIST_ID, limit=500)
+
+    assert route.calls.last.request.url.params["limit"] == "500"
+    assert "cursor" not in route.calls.last.request.url.params
+    assert page.items[0].normalized_url == "https://shop.example/products/dress"
+    assert page.next_cursor is None

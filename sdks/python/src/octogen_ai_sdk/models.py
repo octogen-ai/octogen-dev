@@ -497,3 +497,92 @@ class ValidationErrorModel(_ResponseModel):
 
 class HTTPValidationError(_ResponseModel):
     detail: list[ValidationErrorModel] | None = None
+
+
+# ── Coverage URL Lists (/v1/coverage/url-lists) ──────────────────────────────
+
+
+class CoverageUrlListCreateRequest(_RequestModel):
+    """Body for ``POST /v1/coverage/url-lists``."""
+
+    name: str = Field(min_length=1, max_length=80)
+
+
+class CoverageUrlsRequest(_RequestModel):
+    """Shared body for the URL mutations and the membership check."""
+
+    urls: list[str] = Field(min_length=1, max_length=1000)
+
+
+class CoverageUrlListBigQuery(_ResponseModel):
+    """BigQuery resources of an active URL list; ``last_exported_at`` /
+    ``last_row_count`` stay ``None`` until the first daily export lands."""
+
+    exchange_id: str = Field(alias="exchangeId")
+    listing_id: str = Field(alias="listingId")
+    shared_dataset_id: str = Field(alias="sharedDatasetId")
+    view_id: str = Field(alias="viewId")
+    last_exported_at: datetime | None = Field(default=None, alias="lastExportedAt")
+    last_row_count: int | None = Field(default=None, alias="lastRowCount")
+    reader_count: int = Field(alias="readerCount")
+
+
+class CoverageUrlList(_ResponseModel):
+    """The URL List object. ``big_query`` is ``None`` while the list is
+    provisioning."""
+
+    url_list_id: str = Field(alias="urlListId")
+    name: str
+    status: Literal["provisioning", "active", "delete_pending"]
+    url_count: int = Field(alias="urlCount")
+    big_query: CoverageUrlListBigQuery | None = Field(default=None, alias="bigQuery")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class CoverageUrlListPage(_ResponseModel):
+    items: list[CoverageUrlList]
+    next_cursor: str | None = Field(default=None, alias="nextCursor")
+
+
+class CoverageAcceptedUrl(_ResponseModel):
+    url: str
+    normalized_url: str = Field(alias="normalizedUrl")
+
+
+class CoverageRejectedUrl(_ResponseModel):
+    url: str
+    code: str
+    message: str
+
+
+class CoverageUrlMutationResponse(_ResponseModel):
+    """Per-URL outcomes of an add/remove call. ``url_count`` is the list's
+    total size after the mutation, not the size of the request."""
+
+    accepted: list[CoverageAcceptedUrl]
+    rejected: list[CoverageRejectedUrl]
+    url_count: int = Field(alias="urlCount")
+    request_id: str = Field(alias="requestId")
+
+
+class CoverageContainsResult(_ResponseModel):
+    url: str
+    normalized_url: str = Field(alias="normalizedUrl")
+    present: bool
+    added_at: datetime | None = Field(default=None, alias="addedAt")
+
+
+class CoverageContainsResponse(_ResponseModel):
+    results: list[CoverageContainsResult]
+
+
+class CoverageUrlListUrl(_ResponseModel):
+    url: str
+    normalized_url: str = Field(alias="normalizedUrl")
+    added_at: datetime = Field(alias="addedAt")
+
+
+class CoverageUrlListUrlsPage(_ResponseModel):
+    items: list[CoverageUrlListUrl]
+    next_cursor: str | None = Field(default=None, alias="nextCursor")

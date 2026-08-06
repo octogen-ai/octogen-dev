@@ -8,6 +8,12 @@ import {
   OctogenValidationError,
 } from "./errors.js";
 import type {
+  CoverageContainsResponse,
+  CoveragePaginationParams,
+  CoverageUrlList,
+  CoverageUrlListPage,
+  CoverageUrlListUrlsPage,
+  CoverageUrlMutationResponse,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
@@ -99,10 +105,106 @@ export class OctogenClient {
     return data as MoreLikeThisProductsResponse;
   }
 
+  /** Create a coverage URL list (returned in `provisioning`). */
+  async createCoverageUrlList(name: string): Promise<CoverageUrlList> {
+    assertNonEmptyString(name, "name");
+    const data = await this.request("POST", "/coverage/url-lists", { name });
+    return data as CoverageUrlList;
+  }
+
+  /** List your organization's coverage URL lists, newest first. */
+  async listCoverageUrlLists(
+    params: CoveragePaginationParams = {},
+  ): Promise<CoverageUrlListPage> {
+    const data = await this.request("GET", "/coverage/url-lists", undefined, {
+      cursor: params.cursor,
+      limit: params.limit,
+    });
+    return data as CoverageUrlListPage;
+  }
+
+  /** Get one coverage URL list by id. */
+  async getCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
+    const data = await this.request(
+      "GET",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}`,
+    );
+    return data as CoverageUrlList;
+  }
+
+  /**
+   * Delete a coverage URL list (returned in `delete_pending`). Deletion is
+   * asynchronous and permanent: there is no grace window and no restore.
+   */
+  async deleteCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
+    const data = await this.request(
+      "DELETE",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}`,
+    );
+    return data as CoverageUrlList;
+  }
+
+  /** Add URLs to a list — an idempotent set-add with per-URL outcomes. */
+  async addCoverageUrlListUrls(
+    urlListId: string,
+    urls: string[],
+  ): Promise<CoverageUrlMutationResponse> {
+    assertUrlBatch(urls);
+    const data = await this.request(
+      "POST",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls`,
+      { urls },
+    );
+    return data as CoverageUrlMutationResponse;
+  }
+
+  /** Remove URLs from a list — an idempotent set-remove. */
+  async removeCoverageUrlListUrls(
+    urlListId: string,
+    urls: string[],
+  ): Promise<CoverageUrlMutationResponse> {
+    assertUrlBatch(urls);
+    const data = await this.request(
+      "POST",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls/remove`,
+      { urls },
+    );
+    return data as CoverageUrlMutationResponse;
+  }
+
+  /** Check which URLs are members of a list (normalized server-side). */
+  async checkCoverageUrlListUrls(
+    urlListId: string,
+    urls: string[],
+  ): Promise<CoverageContainsResponse> {
+    assertUrlBatch(urls);
+    const data = await this.request(
+      "POST",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls/contains`,
+      { urls },
+    );
+    return data as CoverageContainsResponse;
+  }
+
+  /** Enumerate a list's URLs in stable insertion order. */
+  async listCoverageUrlListUrls(
+    urlListId: string,
+    params: CoveragePaginationParams = {},
+  ): Promise<CoverageUrlListUrlsPage> {
+    const data = await this.request(
+      "GET",
+      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls`,
+      undefined,
+      { cursor: params.cursor, limit: params.limit },
+    );
+    return data as CoverageUrlListUrlsPage;
+  }
+
   private async request(
     method: HttpMethod,
     path: string,
     json?: object,
+    query?: Record<string, string | number | undefined>,
   ): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
@@ -119,7 +221,7 @@ export class OctogenClient {
         init.body = JSON.stringify(json);
       }
 
-      const response = await this.fetchFn(this.url(path), init);
+      const response = await this.fetchFn(this.url(path, query), init);
 
       if (response.status >= 400) {
         throw await apiErrorFromResponse(response);
@@ -145,8 +247,19 @@ export class OctogenClient {
     }
   }
 
-  private url(path: string): string {
-    return `${this.baseUrl}/${path.replace(/^\/+/, "")}`;
+  private url(
+    path: string,
+    query?: Record<string, string | number | undefined>,
+  ): string {
+    const base = `${this.baseUrl}/${path.replace(/^\/+/, "")}`;
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query ?? {})) {
+      if (value !== undefined) {
+        params.set(key, String(value));
+      }
+    }
+    const search = params.toString();
+    return search ? `${base}?${search}` : base;
   }
 
   private headers(hasJsonBody: boolean): Record<string, string> {
@@ -173,6 +286,18 @@ function trimTrailingSlash(value: string): string {
 function assertNonEmptyString(value: string, fieldName: string): void {
   if (value.length === 0) {
     throw new TypeError(`${fieldName} is required`);
+  }
+}
+
+function encodePathSegment(value: string, fieldName: string): string {
+  const trimmed = value.trim();
+  assertNonEmptyString(trimmed, fieldName);
+  return encodeURIComponent(trimmed);
+}
+
+function assertUrlBatch(urls: string[]): void {
+  if (urls.length < 1 || urls.length > 1000) {
+    throw new TypeError("urls must contain between 1 and 1000 items");
   }
 }
 

@@ -51,6 +51,16 @@ asyncio.run(main())
   a product URL from the index or on demand. The optional controls default to
   `auto` and `prefer_cache`.
 - `recrawl_products(targets=[...])` schedules product URLs or UUIDs for recrawl.
+- `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
+  `get_coverage_url_list(url_list_id)`, and
+  `delete_coverage_url_list(url_list_id)` manage coverage URL lists — named
+  sets of product URLs that Octogen continuously joins against its crawled
+  index and shares back as a BigQuery listing.
+- `add_coverage_url_list_urls(url_list_id, urls=[...])`,
+  `remove_coverage_url_list_urls(url_list_id, urls=[...])`,
+  `check_coverage_url_list_urls(url_list_id, urls=[...])`, and
+  `list_coverage_url_list_urls(url_list_id, ...)` mutate and inspect a list's
+  membership with per-URL accepted/rejected outcomes.
 
 ```python
 async with OctogenClient() as client:
@@ -75,6 +85,16 @@ async with OctogenClient() as client:
         ],
     )
     print(recrawl.tasks_created, recrawl.task_ids)
+```
+
+```python
+async with OctogenClient() as client:
+    url_list = await client.create_coverage_url_list(name="q3-campaign")
+    result = await client.add_coverage_url_list_urls(
+        url_list.url_list_id,
+        urls=["https://warrenlotas.com/products/black-hoodie"],
+    )
+    print(result.url_count, [r.code for r in result.rejected])
 ```
 
 ## BigQuery subscribe (optional)

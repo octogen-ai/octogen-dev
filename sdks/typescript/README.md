@@ -42,6 +42,16 @@ for (const product of results.items) {
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. The optional controls default to `auto` and `prefer_cache`.
 - `recrawlProducts(params)` schedules product URLs or UUIDs for recrawl.
+- `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
+  `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`
+  manage coverage URL lists — named sets of product URLs that Octogen
+  continuously joins against its crawled index and shares back as a BigQuery
+  listing.
+- `addCoverageUrlListUrls(urlListId, urls)`,
+  `removeCoverageUrlListUrls(urlListId, urls)`,
+  `checkCoverageUrlListUrls(urlListId, urls)`, and
+  `listCoverageUrlListUrls(urlListId, params?)` mutate and inspect a list's
+  membership with per-URL accepted/rejected outcomes.
 
 Requests are authenticated with `Authorization: Bearer <api-key>`.
 
@@ -69,6 +79,18 @@ const recrawl = await client.recrawlProducts({
 });
 
 console.log(recrawl.tasksCreated, recrawl.taskIds);
+```
+
+```ts
+const urlList = await client.createCoverageUrlList("q3-campaign");
+const result = await client.addCoverageUrlListUrls(urlList.urlListId, [
+  "https://warrenlotas.com/products/black-hoodie",
+]);
+
+console.log(
+  result.urlCount,
+  result.rejected.map((r) => r.code),
+);
 ```
 
 ## Development
