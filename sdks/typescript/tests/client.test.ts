@@ -320,9 +320,7 @@ describe("OctogenClient", () => {
     );
 
     expect(result.catalogKey).toBe("acme");
-    expect(result.normalizedUrl).toBe(
-      "https://example.com/products/linen-dress",
-    );
+    expect(result.normalizedUrl).toBe("https://example.com/products/linen-dress");
     expect(result.canonicalUrl).toBeUndefined();
     expect(result.product.inStock).toBe(true);
     expect(result.product.details?.materials).toEqual(["linen"]);
@@ -463,6 +461,223 @@ describe("OctogenClient", () => {
     await expect(
       requestableClient.request("DELETE", "/products/lookup"),
     ).resolves.toBeUndefined();
+  });
+});
+
+const LIST_ID = "cul_01HZY3WQ8K4V9P2M5X7R00AA";
+const LIST_JSON = {
+  urlListId: LIST_ID,
+  name: "q3-campaign",
+  status: "active",
+  urlCount: 2,
+  bigQuery: {
+    exchangeId: "catalogs_prod",
+    listingId: `coverage_${LIST_ID}_v1`,
+    sharedDatasetId: `coverage_share_${LIST_ID}_v1`,
+    viewId: "products_current_v1",
+    lastExportedAt: "2026-08-06T06:30:00Z",
+    lastRowCount: 1128,
+    readerCount: 1,
+  },
+  createdAt: "2026-08-05T12:00:00Z",
+  updatedAt: "2026-08-06T06:30:00Z",
+};
+
+describe("OctogenClient coverage URL lists", () => {
+  it("creates a coverage URL list", async () => {
+    const { calls, fetchMock } = createFetchMock(
+      { ...LIST_JSON, status: "provisioning", urlCount: 0, bigQuery: null },
+      { status: 201 },
+    );
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const urlList = await client.createCoverageUrlList("q3-campaign");
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/coverage/url-lists`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({ name: "q3-campaign" });
+    expect(urlList.status).toBe("provisioning");
+    expect(urlList.bigQuery).toBeNull();
+  });
+
+  it("rejects an empty list name locally", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    await expect(client.createCoverageUrlList("")).rejects.toThrow(TypeError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("lists coverage URL lists with pagination params", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [LIST_JSON],
+      nextCursor: "cursor-2",
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.listCoverageUrlLists({
+      cursor: "cursor-1",
+      limit: 10,
+    });
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/coverage/url-lists?cursor=cursor-1&limit=10`);
+    expect(call.init?.method).toBe("GET");
+    expect(call.init?.body).toBeUndefined();
+    expect(page.nextCursor).toBe("cursor-2");
+    expect(page.items[0]?.bigQuery?.readerCount).toBe(1);
+  });
+
+  it("omits the query string when no pagination params are set", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.listCoverageUrlLists();
+
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/coverage/url-lists`);
+  });
+
+  it("gets and deletes a coverage URL list by id", async () => {
+    const { calls, fetchMock } = createFetchMock(LIST_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.getCoverageUrlList(LIST_ID);
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/coverage/url-lists/${LIST_ID}`);
+    expect(lastCall(calls).init?.method).toBe("GET");
+
+    const deleting = createFetchMock(
+      { ...LIST_JSON, status: "delete_pending" },
+      { status: 202 },
+    );
+    const deleter = new OctogenClient({ apiKey: "key", fetch: deleting.fetchMock });
+    const urlList = await deleter.deleteCoverageUrlList(LIST_ID);
+    expect(lastCall(deleting.calls).init?.method).toBe("DELETE");
+    expect(urlList.status).toBe("delete_pending");
+  });
+
+  it("adds URLs and surfaces per-URL outcomes", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      accepted: [
+        {
+          url: "https://shop.example/products/dress?utm_source=x",
+          normalizedUrl: "https://shop.example/products/dress",
+        },
+      ],
+      rejected: [
+        { url: "not-a-url", code: "invalid_url", message: "URL must be absolute." },
+      ],
+      urlCount: 3,
+      requestId: "req-1",
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.addCoverageUrlListUrls(LIST_ID, [
+      "https://shop.example/products/dress?utm_source=x",
+      "not-a-url",
+    ]);
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/coverage/url-lists/${LIST_ID}/urls`);
+    expect(requestBodyJson(call)).toEqual({
+      urls: ["https://shop.example/products/dress?utm_source=x", "not-a-url"],
+    });
+    expect(result.rejected[0]?.code).toBe("invalid_url");
+    expect(result.urlCount).toBe(3);
+  });
+
+  it("rejects an oversized URL batch locally", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    await expect(client.addCoverageUrlListUrls(LIST_ID, [])).rejects.toThrow(TypeError);
+    await expect(
+      client.removeCoverageUrlListUrls(
+        LIST_ID,
+        Array.from({ length: 1001 }, (_, i) => `https://a.example/p/${String(i)}`),
+      ),
+    ).rejects.toThrow(TypeError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("removes and checks URLs", async () => {
+    const removeMock = createFetchMock({
+      accepted: [],
+      rejected: [],
+      urlCount: 1,
+      requestId: "req-2",
+    });
+    const client = new OctogenClient({
+      apiKey: "key",
+      fetch: removeMock.fetchMock,
+    });
+    const removed = await client.removeCoverageUrlListUrls(LIST_ID, [
+      "https://shop.example/products/skirt",
+    ]);
+    expect(lastCall(removeMock.calls).input).toBe(
+      `${BASE_URL}/coverage/url-lists/${LIST_ID}/urls/remove`,
+    );
+    expect(removed.urlCount).toBe(1);
+
+    const containsMock = createFetchMock({
+      results: [
+        {
+          url: "https://shop.example/products/dress",
+          normalizedUrl: "https://shop.example/products/dress",
+          present: true,
+          addedAt: "2026-08-05T12:00:00Z",
+        },
+        {
+          url: "https://shop.example/products/coat",
+          normalizedUrl: "https://shop.example/products/coat",
+          present: false,
+          addedAt: null,
+        },
+      ],
+    });
+    const checker = new OctogenClient({
+      apiKey: "key",
+      fetch: containsMock.fetchMock,
+    });
+    const contains = await checker.checkCoverageUrlListUrls(LIST_ID, [
+      "https://shop.example/products/dress",
+      "https://shop.example/products/coat",
+    ]);
+    expect(lastCall(containsMock.calls).input).toBe(
+      `${BASE_URL}/coverage/url-lists/${LIST_ID}/urls/contains`,
+    );
+    expect(contains.results.map((r) => r.present)).toEqual([true, false]);
+  });
+
+  it("enumerates a list's URLs with pagination", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [
+        {
+          url: "https://shop.example/products/dress?utm_source=x",
+          normalizedUrl: "https://shop.example/products/dress",
+          addedAt: "2026-08-05T12:00:00Z",
+        },
+      ],
+      nextCursor: null,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.listCoverageUrlListUrls(LIST_ID, { limit: 500 });
+
+    expect(lastCall(calls).input).toBe(
+      `${BASE_URL}/coverage/url-lists/${LIST_ID}/urls?limit=500`,
+    );
+    expect(page.items[0]?.normalizedUrl).toBe("https://shop.example/products/dress");
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("percent-encodes the url list id path segment", async () => {
+    const { calls, fetchMock } = createFetchMock(LIST_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.getCoverageUrlList("cul/../weird id");
+
+    expect(lastCall(calls).input).toBe(
+      `${BASE_URL}/coverage/url-lists/cul%2F..%2Fweird%20id`,
+    );
   });
 });
 
