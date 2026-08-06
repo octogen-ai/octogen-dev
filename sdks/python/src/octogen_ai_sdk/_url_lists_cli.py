@@ -465,13 +465,22 @@ async def _cmd_delete(args: argparse.Namespace) -> int:
                 raise ValueError(
                     "refusing to delete without a TTY; pass --yes to confirm"
                 )
+            # The warning and prompt are UI, not output: keeping them off
+            # stdout leaves --json a single parseable document.
             print(
                 f"About to PERMANENTLY delete {url_list.url_list_id} "
                 f"({url_list.name}) holding {url_list.url_count} url(s), "
                 "along with its BigQuery listing and datasets. "
-                "There is no restore."
+                "There is no restore.",
+                file=sys.stderr,
             )
-            typed = input(f"Type the list name ({url_list.name}) to confirm: ")
+            print(
+                f"Type the list name ({url_list.name}) to confirm: ",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+            typed = input()
             if typed.strip() != url_list.name:
                 raise ValueError("confirmation did not match; nothing was deleted")
 

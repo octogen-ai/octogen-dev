@@ -456,6 +456,32 @@ class TestDelete:
         assert "delete_pending" in capsys.readouterr().out
 
     @respx.mock
+    def test_interactive_prompt_keeps_json_stdout_parseable(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The warning and prompt are UI; on stdout they would corrupt --json
+        into an unparseable document (cursor[bot] finding)."""
+        respx.get(f"{BASE_URL}/coverage/url-lists/{LIST_ID}").mock(
+            return_value=httpx.Response(200, json=ACTIVE_LIST)
+        )
+        respx.delete(f"{BASE_URL}/coverage/url-lists/{LIST_ID}").mock(
+            return_value=httpx.Response(
+                202, json={**ACTIVE_LIST, "status": "delete_pending"}
+            )
+        )
+        monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True, raising=False)
+        monkeypatch.setattr("builtins.input", lambda: "q3-campaign")
+
+        rc = cli.main(["delete", LIST_ID, "--apply", "--json", *AUTH])
+
+        assert rc == 0
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)  # would raise if the prompt leaked
+        assert payload["status"] == "delete_pending"
+        assert "PERMANENTLY" in captured.err
+        assert "Type the list name" in captured.err
+
+    @respx.mock
     def test_mistyped_confirmation_aborts(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -464,7 +490,7 @@ class TestDelete:
         )
         route = respx.delete(f"{BASE_URL}/coverage/url-lists/{LIST_ID}")
         monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True, raising=False)
-        monkeypatch.setattr("builtins.input", lambda _: "wrong-name")
+        monkeypatch.setattr("builtins.input", lambda: "wrong-name")
         rc = cli.main(["delete", LIST_ID, "--apply", *AUTH])
         assert rc == 2
         assert not route.called
