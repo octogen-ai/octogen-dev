@@ -162,6 +162,20 @@ matched rows for your list, refreshed daily. Each export replaces the prior
 snapshot; `lastExportedAt` and `lastRowCount` on the list object tell you
 what the view currently reflects.
 
+## Command line
+
+`octogen-url-lists` wraps every endpoint below, batching large URL files into
+1,000-URL requests and keeping mutations dry-run by default:
+
+```bash
+octogen-url-lists create --name q3-campaign --apply
+octogen-url-lists add-urls cul_01... --file urls.txt --apply
+octogen-url-lists get cul_01...
+```
+
+See the [Python SDK README](../../sdks/python/README.md#coverage-url-lists-cli)
+for the full command and exit-code tables.
+
 ## SDK equivalents
 
 Both SDKs in this repository expose all eight endpoints:

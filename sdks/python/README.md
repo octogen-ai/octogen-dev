@@ -97,6 +97,56 @@ async with OctogenClient() as client:
     print(result.url_count, [r.code for r in result.rejected])
 ```
 
+## Coverage URL lists CLI
+
+`octogen-url-lists` manages coverage URL lists from the terminal, so the whole
+workflow — build a list, then subscribe to its BigQuery listing with
+`octogen-bq-subscribe` — stays on the command line. It uses `OCTO_API_KEY`
+(or `--api-key`), not Google credentials.
+
+```bash
+export OCTO_API_KEY=octo_live_...
+uv run --project sdks/python octogen-url-lists create --name q3-campaign --apply
+```
+
+Mutating commands are **dry-run by default** — matching `octogen-bq-subscribe`
+and `octogen-bq-autosubscribe` — so nothing changes until you pass `--apply`:
+
+```bash
+uv run --project sdks/python octogen-url-lists add-urls cul_01... --file urls.txt
+uv run --project sdks/python octogen-url-lists add-urls cul_01... --file urls.txt --apply
+```
+
+`--file` reads one URL per line, skipping blank lines and `#` comments (pass
+`-` to read standard input), removes exact duplicates, and splits the result
+into requests of 1,000 URLs automatically. `--url` takes a single URL and can
+be repeated.
+
+| Command | Purpose |
+| --- | --- |
+| `create --name NAME` | Create a list |
+| `list` | Show every list, following pagination |
+| `get URL_LIST_ID` | Show one list, including its BigQuery listing and last export |
+| `urls URL_LIST_ID [--limit N]` | Print member URLs in insertion order |
+| `add-urls URL_LIST_ID` | Add URLs (batched) |
+| `remove-urls URL_LIST_ID` | Remove URLs (batched) |
+| `contains URL_LIST_ID` | Report which URLs are members |
+| `delete URL_LIST_ID` | Permanently delete the list and its BigQuery resources |
+
+Add `--json` to any command for machine-readable output; dry-run JSON uses the
+same keys as the applied output so automation can parse both with one schema.
+
+Deletion is permanent and has no restore, so `delete --apply` first shows what
+the list holds and then asks you to retype its name. Pass `--yes` to skip that
+prompt; without a TTY, `--yes` is required rather than assumed.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Success, or a dry run |
+| `1` | The API call failed |
+| `2` | Usage error, missing API key, or an unconfirmed delete |
+| `3` | The change was applied but some URLs were rejected |
+
 ## BigQuery subscribe (optional)
 
 Once Octogen grants your organization access to a catalog's BigQuery Analytics
