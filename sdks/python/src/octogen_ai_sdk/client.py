@@ -276,7 +276,7 @@ class OctogenClient:
         urls: Sequence[str],
     ) -> CoverageUrlMutationResponse:
         """Add URLs to a list — an idempotent set-add with per-URL outcomes."""
-        request = CoverageUrlsRequest(urls=list(urls))
+        request = CoverageUrlsRequest(urls=_url_batch(urls))
         data = await self._request(
             "POST",
             f"/coverage/url-lists/{_path_segment(url_list_id)}/urls",
@@ -291,7 +291,7 @@ class OctogenClient:
         urls: Sequence[str],
     ) -> CoverageUrlMutationResponse:
         """Remove URLs from a list — an idempotent set-remove."""
-        request = CoverageUrlsRequest(urls=list(urls))
+        request = CoverageUrlsRequest(urls=_url_batch(urls))
         data = await self._request(
             "POST",
             f"/coverage/url-lists/{_path_segment(url_list_id)}/urls/remove",
@@ -306,7 +306,7 @@ class OctogenClient:
         urls: Sequence[str],
     ) -> CoverageContainsResponse:
         """Check which URLs are members of a list (normalized server-side)."""
-        request = CoverageUrlsRequest(urls=list(urls))
+        request = CoverageUrlsRequest(urls=_url_batch(urls))
         data = await self._request(
             "POST",
             f"/coverage/url-lists/{_path_segment(url_list_id)}/urls/contains",
@@ -444,6 +444,14 @@ def _error_message(response: httpx.Response, detail: Any) -> str:
             f"{pformat(detail)}"
         )
     return f"Octogen API request failed with status {response.status_code}"
+
+
+def _url_batch(urls: Sequence[str]) -> list[str]:
+    """Reject a scalar string early: ``str`` satisfies ``Sequence[str]`` but
+    ``list("https://…")`` would silently become a character batch."""
+    if isinstance(urls, (str, bytes)):
+        raise TypeError("urls must be a sequence of URL strings, not a single string")
+    return list(urls)
 
 
 def _path_segment(value: str) -> str:

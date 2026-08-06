@@ -674,3 +674,25 @@ async def test_list_coverage_url_list_urls_paginates() -> None:
     assert "cursor" not in route.calls.last.request.url.params
     assert page.items[0].normalized_url == "https://shop.example/products/dress"
     assert page.next_cursor is None
+
+
+@respx.mock
+async def test_url_batch_rejects_scalar_string() -> None:
+    route = respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+        return_value=httpx.Response(
+            200, json={"accepted": [], "rejected": [], "urlCount": 0, "requestId": "r"}
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(TypeError, match="sequence of URL strings"):
+            await client.add_coverage_url_list_urls(
+                LIST_ID,
+                urls="https://shop.example/products/dress",  # type: ignore[arg-type]
+            )
+        with pytest.raises(TypeError, match="sequence of URL strings"):
+            await client.remove_coverage_url_list_urls(LIST_ID, urls="x")  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="sequence of URL strings"):
+            await client.check_coverage_url_list_urls(LIST_ID, urls="x")  # type: ignore[arg-type]
+
+    assert not route.called
