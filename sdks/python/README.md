@@ -147,6 +147,13 @@ prompt; without a TTY, `--yes` is required rather than assumed.
 | `2` | Usage error, missing API key, or an unconfirmed delete |
 | `3` | The change was applied but some URLs were rejected |
 
+Because a large file becomes several requests, a failure partway through
+leaves the earlier requests applied. In that case the command exits `1` but
+still reports how many URLs landed — `completedRequests` and `urlCount` in
+JSON, and a `stopped after N/M request(s)` line on stderr — so automation
+never reads a partial update as a no-op. Re-running the same input is safe:
+adds and removes are idempotent.
+
 ## BigQuery subscribe (optional)
 
 Once Octogen grants your organization access to a catalog's BigQuery Analytics

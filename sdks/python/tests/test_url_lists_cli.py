@@ -247,6 +247,49 @@ class TestMutations:
         assert len(json.loads(route.calls[1].request.read())["urls"]) == 1
 
     @respx.mock
+    def test_failure_midway_reports_what_already_applied(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Batching is the CLI's own invention, so a later batch failing after
+        earlier ones committed must not be reported as a clean no-op."""
+        respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+            side_effect=[
+                httpx.Response(200, json=_mutation_response(accepted=1, count=1000)),
+                httpx.Response(409, json={"detail": "list_url_capacity_exceeded"}),
+            ]
+        )
+        urls = [f"--url=https://a.example/p/{i}" for i in range(1_001)]
+        rc = cli.main(["add-urls", LIST_ID, "--apply", "--json", *urls, *AUTH])
+
+        assert rc == cli.EXIT_FAILED
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["applied"] is True
+        assert payload["completedRequests"] == 1
+        assert payload["totalRequests"] == 2
+        assert payload["urlCount"] == 1000
+        assert payload["error"]["detail"] == "list_url_capacity_exceeded"
+        assert "stopped after 1/2 request(s)" in captured.err
+        assert "remain applied" in captured.err
+        # The old hint claimed nothing was added, which is false here.
+        assert "nothing was added" not in captured.err
+
+    @respx.mock
+    def test_failure_on_first_batch_reports_no_change(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+            return_value=httpx.Response(409, json={"detail": "url_list_deleting"})
+        )
+        rc = cli.main(
+            ["add-urls", LIST_ID, "--url", "https://a.example/p/1", "--apply", *AUTH]
+        )
+        assert rc == cli.EXIT_FAILED
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "the list is unchanged" in captured.err.lower()
+
+    @respx.mock
     def test_rejected_urls_exit_partial(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:

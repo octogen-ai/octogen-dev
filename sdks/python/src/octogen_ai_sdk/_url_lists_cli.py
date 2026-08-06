@@ -338,9 +338,20 @@ async def _run_mutation(
     )
     accepted = 0
     rejected: list[dict[str, str]] = []
-    url_count = 0
+    url_count: int | None = None
+    completed = 0
+    # Batching is ours, not the API's: one user intent becomes N requests, so
+    # a mid-loop failure leaves earlier batches applied. Reporting that as a
+    # clean failure would tell automation nothing changed when it did.
+    failure: OctogenAPIError | None = None
+
     for batch in batches:
-        response = await call(args.url_list_id, urls=batch)
+        try:
+            response = await call(args.url_list_id, urls=batch)
+        except OctogenAPIError as exc:
+            failure = exc
+            break
+        completed += 1
         accepted += len(response.accepted)
         rejected.extend(
             {"url": item.url, "code": item.code, "message": item.message}
@@ -348,20 +359,44 @@ async def _run_mutation(
         )
         url_count = response.url_count
 
-    payload = {
-        "applied": True,
+    payload: dict[str, Any] = {
+        "applied": completed > 0,
         "action": verb,
         "urlListId": args.url_list_id,
         "accepted": accepted,
         "rejected": rejected,
         "urlCount": url_count,
+        "completedRequests": completed,
+        "totalRequests": len(batches),
     }
+    if failure is not None:
+        payload["error"] = {
+            "detail": failure.detail if isinstance(failure.detail, str) else None,
+            "statusCode": failure.status_code,
+        }
 
     def _text() -> None:
-        print(f"{past_tense} {accepted} url(s); list now holds {url_count}")
-        _print_rejected(rejected)
+        if completed:
+            print(f"{past_tense} {accepted} url(s); list now holds {url_count}")
+            _print_rejected(rejected)
 
     _emit(args, payload, _text)
+
+    if failure is not None:
+        applied_note = (
+            f"{accepted} url(s) from the first {completed} request(s) were "
+            f"already {past_tense} and remain applied. Re-running the same "
+            "input is safe — adds and removes are idempotent."
+            if completed
+            else "No requests completed, so the list is unchanged."
+        )
+        print(
+            f"error: {_api_error_text(failure)}\n"
+            f"  stopped after {completed}/{len(batches)} request(s). "
+            f"{applied_note}",
+            file=sys.stderr,
+        )
+        return EXIT_FAILED
     return EXIT_PARTIAL if rejected else EXIT_OK
 
 
@@ -545,7 +580,8 @@ _ERROR_HINTS = {
         "delete one first."
     ),
     "list_url_capacity_exceeded": (
-        "The add would exceed the per-list URL cap; nothing was added."
+        "The add would exceed the per-list URL cap, so that request was "
+        "refused whole. Earlier requests in the same run still applied."
     ),
     "invalid_cursor": "The pagination cursor is stale; rerun without a cursor.",
     "url_lists_unavailable": "The feature is temporarily unavailable; retry later.",
