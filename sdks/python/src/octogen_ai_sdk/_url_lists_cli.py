@@ -293,9 +293,11 @@ async def _cmd_urls(args: argparse.Namespace) -> int:
 async def _cmd_urls_operation(args: argparse.Namespace) -> int:
     urls = _load_urls(file=args.file, inline=args.url)
     batches = _batched(urls, MAX_URLS_PER_REQUEST)
-    verb = {"add-urls": "add", "remove-urls": "remove", "contains": "check"}[
-        args.command
-    ]
+    verb, past_tense = {
+        "add-urls": ("add", "added"),
+        "remove-urls": ("remove", "removed"),
+        "contains": ("check", "checked"),
+    }[args.command]
 
     if args.command != "contains" and not args.apply:
         plan = {
@@ -319,7 +321,7 @@ async def _cmd_urls_operation(args: argparse.Namespace) -> int:
     async with _client(args) as client:
         if args.command == "contains":
             return await _run_contains(args, client, batches)
-        return await _run_mutation(args, client, batches, verb)
+        return await _run_mutation(args, client, batches, verb, past_tense)
 
 
 async def _run_mutation(
@@ -327,6 +329,7 @@ async def _run_mutation(
     client: OctogenClient,
     batches: list[list[str]],
     verb: str,
+    past_tense: str,
 ) -> int:
     call = (
         client.add_coverage_url_list_urls
@@ -355,7 +358,7 @@ async def _run_mutation(
     }
 
     def _text() -> None:
-        print(f"{verb}ed {accepted} url(s); list now holds {url_count}")
+        print(f"{past_tense} {accepted} url(s); list now holds {url_count}")
         _print_rejected(rejected)
 
     _emit(args, payload, _text)
@@ -493,9 +496,15 @@ def _print_list(url_list: CoverageUrlList) -> None:
     big_query = url_list.big_query
     print(f"  listing  : {big_query.exchange_id}/{big_query.listing_id}")
     print(f"  dataset  : {big_query.shared_dataset_id}.{big_query.view_id}")
-    print(
-        f"  exported : {big_query.last_exported_at} ({big_query.last_row_count} rows)"
-    )
+    if big_query.last_exported_at is None:
+        # Freshly active lists have a listing but no snapshot until the first
+        # daily export lands.
+        print("  exported : never (waiting for the first daily export)")
+    else:
+        print(
+            f"  exported : {big_query.last_exported_at} "
+            f"({big_query.last_row_count} rows)"
+        )
     print(f"  readers  : {big_query.reader_count}")
 
 

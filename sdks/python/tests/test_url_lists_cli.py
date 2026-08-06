@@ -127,6 +127,29 @@ class TestReads:
         assert "1128 rows" in out
 
     @respx.mock
+    def test_get_reports_a_list_that_has_never_exported(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A list goes active before its first daily export, so the export
+        fields are null in exactly the state users check first."""
+        never_exported = {
+            **ACTIVE_LIST,
+            "bigQuery": {
+                **ACTIVE_LIST["bigQuery"],  # type: ignore[dict-item]
+                "lastExportedAt": None,
+                "lastRowCount": None,
+            },
+        }
+        respx.get(f"{BASE_URL}/coverage/url-lists/{LIST_ID}").mock(
+            return_value=httpx.Response(200, json=never_exported)
+        )
+        rc = cli.main(["get", LIST_ID, *AUTH])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "exported : never (waiting for the first daily export)" in out
+        assert "None" not in out
+
+    @respx.mock
     def test_urls_stops_at_limit(self, capsys: pytest.CaptureFixture[str]) -> None:
         entry = {
             "url": "https://a.example/p/1?utm_source=x",
@@ -245,7 +268,9 @@ class TestMutations:
         assert "invalid_url: not-a-url" in capsys.readouterr().out
 
     @respx.mock
-    def test_remove_targets_the_remove_route(self) -> None:
+    def test_remove_targets_the_remove_route(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         route = respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls/remove").mock(
             return_value=httpx.Response(200, json=_mutation_response(count=0))
         )
@@ -254,6 +279,24 @@ class TestMutations:
         )
         assert rc == 0
         assert route.called
+        # Past tense is looked up, not built by appending "ed" to the verb
+        # (which produced "removeed" — cursor[bot] finding).
+        out = capsys.readouterr().out
+        assert out.startswith("removed 1 url(s)")
+        assert "removeed" not in out
+
+    @respx.mock
+    def test_add_success_line_reads_added(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        respx.post(f"{BASE_URL}/coverage/url-lists/{LIST_ID}/urls").mock(
+            return_value=httpx.Response(200, json=_mutation_response())
+        )
+        rc = cli.main(
+            ["add-urls", LIST_ID, "--url", "https://a.example/p/1", "--apply", *AUTH]
+        )
+        assert rc == 0
+        assert capsys.readouterr().out.startswith("added 1 url(s)")
 
     @respx.mock
     def test_contains_needs_no_apply_and_counts_hits(
