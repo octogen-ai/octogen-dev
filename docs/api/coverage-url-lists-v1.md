@@ -157,10 +157,37 @@ organization's registered BigQuery Readers — the same Readers used for
 catalog listings — so subscribing works exactly like any other listing (see
 the [Python SDK's BigQuery subscribe helpers](../../sdks/python/README.md#bigquery-subscribe-optional)).
 
-The shared dataset exposes one view, `products_current_v1`: the current
-matched rows for your list, refreshed daily. Each export replaces the prior
-snapshot; `lastExportedAt` and `lastRowCount` on the list object tell you
-what the view currently reflects.
+The shared dataset exposes two views, both refreshed by the same daily
+export (each run replaces the prior snapshot; `lastExportedAt` on the list
+object tells you what they currently reflect):
+
+- **`products_current_v1`** — the currently matched products for your list,
+  in the same schema as catalog exports. `lastRowCount` is this view's row
+  count.
+- **`url_coverage_v1`** — one row per URL in your list, saying whether that
+  URL matched:
+
+  | column | meaning |
+  | --- | --- |
+  | `url` | The URL as you submitted it |
+  | `normalized_url` | Octogen's normalized form of it |
+  | `covered` | `TRUE` iff the export matched at least one product |
+  | `exported_at` | The snapshot timestamp |
+
+  The uncovered portion of your list is one query:
+
+  ```sql
+  SELECT url
+  FROM `my-gcp-project.<linked_dataset>.url_coverage_v1`
+  WHERE NOT covered
+  ```
+
+Don't infer coverage by comparing row counts across the two views: one URL
+can match several products and several URLs can match one product, so the
+counts are not ordered. `url_coverage_v1` is the per-URL ground truth.
+
+URLs added after the last export appear in `url_coverage_v1` on the next
+daily run.
 
 ## Command line
 
