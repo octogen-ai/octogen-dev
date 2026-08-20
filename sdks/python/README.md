@@ -12,13 +12,19 @@ uv sync
 
 ## Authentication
 
-The client reads the API key from `OCTO_API_KEY` by default and sends it as:
+The client reads the API key from **`OCTOGEN_PLATFORM_API_KEY`** by default —
+the same variable the Octogen agent-onboarding skill and CLI use — and sends it
+as:
 
 ```text
 Authorization: Bearer <api-key>
 ```
 
 You can also pass `api_key` explicitly when constructing the client.
+
+`OCTO_API_KEY` is still read as a **deprecated** fallback: it raises a
+`DeprecationWarning` once and will be removed. Set
+`OCTOGEN_PLATFORM_API_KEY`.
 
 ## Usage
 
@@ -30,10 +36,7 @@ from octogen_ai_sdk import OctogenClient
 
 async def main() -> None:
     async with OctogenClient() as client:
-        results = await client.search_products(
-            q="women's linen summer dresses",
-            limit=5,
-        )
+        results = await client.search_products(q="paisley jackets", limit=3)
         for product in results.items:
             print(product.title, product.product_url)
 
@@ -41,16 +44,75 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+### Start with coverage
+
+Octogen does not cover every merchant, and the coverage check is the cheapest
+call you can make. `GET /v1/domains` returns hosts **normalized by the
+server** — lowercased, with a leading `www.` stripped — so it reports
+`macys.com` and never `www.macys.com`. Real product URLs usually *do* carry
+`www.`, so comparing a raw URL host against that list reports covered merchants
+as uncovered. `fetch_domain_coverage` normalizes both sides for you:
+
+```python
+async with OctogenClient() as client:
+    coverage = await client.fetch_domain_coverage()
+
+    url = "https://www.macys.com/shop/product/some-dress"
+    if coverage.is_host_covered(url):
+        found = await client.lookup_product(url)
+        print(found.product.title)
+    else:
+        # Not covered yet — this is what `start_voyage` is for.
+        started = await client.start_voyage(url)
+        print(started.task.task_id, "dispatched" if started.created else "joined")
+```
+
+The endpoint is `Cache-Control: max-age=300` behind a strong `ETag`, and clients
+are expected to revalidate rather than refetch. Pass the previous snapshot back
+and a `304` returns it untouched:
+
+```python
+coverage = await client.fetch_domain_coverage()
+# …later…
+coverage = await client.fetch_domain_coverage(coverage)  # sends If-None-Match
+
+print(len(coverage.hosts), "covered hosts")
+print(coverage.catalogs_for("https://www.macys.com/x"))  # ("macys",)
+```
+
+Use `list_domains(if_none_match=...)` directly if you manage the cache
+yourself; it reports `not_modified`, `etag`, and `max_age_seconds` and leaves
+the decision to you. `normalize_host` and `is_host_covered` are exported for
+callers with their own storage.
+
 ## API
 
+Every published `/v1` operation has a method. `tests/contract` fails the build
+if that stops being true — see
+[Contract conformance](../../tests/contract/README.md).
+
+- `get_me()` returns the calling organization, key id and provenance, quotas,
+  and rate-limit posture. Read-only and side-effect free: safe on startup and
+  in CI.
+- `list_domains(...)` and `fetch_domain_coverage(previous=None)` return the
+  covered hosts, with `ETag` revalidation and host normalization.
 - `search_products(...)` searches all authorized catalogs by default, or one
-  catalog when `catalog` is provided.
+  catalog when `catalog` is provided. The query field is `q`; results come back
+  as `items` + `next_cursor`, each item carrying `product_url`.
 - `more_like_this_products(...)` finds products similar to a source product URL
   or UUID, optionally within one catalog.
-- `lookup_product(url, resolution_mode=..., on_demand_cache_policy=...)` resolves
-  a product URL from the index or on demand. The optional controls default to
-  `auto` and `prefer_cache`.
-- `recrawl_products(targets=[...])` schedules product URLs or UUIDs for recrawl.
+- `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
+  resolves a product URL from the index or on demand. `resolution_mode` and
+  `on_demand_cache_policy` default to `auto` and `prefer_cache`; omitting
+  `match_mode` leaves the server on its own default (`loose`).
+- `resolve_product_from_html(html=..., url=...)` resolves a product from page
+  HTML you already have — no index read, no outbound fetch.
+- `refresh_products(targets=[...])` schedules product URLs or UUIDs for refresh
+  (`POST /v1/products/refresh`).
+- `start_voyage(domain)`, `list_voyages(...)`, and `get_voyage(task_id)` build a
+  catalog for a merchant Octogen does not cover yet. Voyages are shared per
+  domain: `StartVoyageResult.created` is `False` when you joined one already
+  running, which consumes no quota.
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
   `delete_coverage_url_list(url_list_id)` manage coverage URL lists — named
@@ -75,7 +137,7 @@ async with OctogenClient() as client:
 
 ```python
 async with OctogenClient() as client:
-    recrawl = await client.recrawl_products(
+    refresh = await client.refresh_products(
         targets=[
             {
                 "catalog": "warrenlotas",
@@ -84,7 +146,18 @@ async with OctogenClient() as client:
             {"uuid": "product-uuid"},
         ],
     )
-    print(recrawl.tasks_created, recrawl.task_ids)
+    # 202: the targets were accepted and a workflow was dispatched — not that
+    # the products have been re-crawled yet.
+    print(refresh.submitted, refresh.workflow_status)
+    print([target.code for target in refresh.rejected])
+```
+
+```python
+async with OctogenClient() as client:
+    # Poll a voyage until its catalog is live. Voyages run for hours to days.
+    started = await client.start_voyage("shop.example")
+    progress = await client.get_voyage(started.task.task_id)
+    print(progress.phase_label, progress.progress_percent)
 ```
 
 ```python
@@ -101,11 +174,11 @@ async with OctogenClient() as client:
 
 `octogen-url-lists` manages coverage URL lists from the terminal, so the whole
 workflow — build a list, then subscribe to its BigQuery listing with
-`octogen-bq-subscribe` — stays on the command line. It uses `OCTO_API_KEY`
-(or `--api-key`), not Google credentials.
+`octogen-bq-subscribe` — stays on the command line. It uses
+`OCTOGEN_PLATFORM_API_KEY` (or `--api-key`), not Google credentials.
 
 ```bash
-export OCTO_API_KEY=octo_live_...
+export OCTOGEN_PLATFORM_API_KEY=octo_live_...
 uv run --project sdks/python octogen-url-lists create --name q3-campaign --apply
 ```
 
@@ -261,5 +334,21 @@ uv run --project sdks/python prek run --all-files
 From the repository root:
 
 ```bash
-OCTO_API_KEY=... uv run --project sdks/python python examples/python/search_clothes.py
+OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python/search_clothes.py
 ```
+
+## Generated versus hand-written
+
+`src/octogen_ai_sdk/generated/models.py` is emitted from the published contract
+by `npm run codegen` (at the repository root) and committed, so a contract
+change arrives as a reviewable diff. **Response** models are re-exported from it
+under the contract's own names.
+
+**Request** models stay hand-written in `models.py`, for two reasons: rules the
+contract cannot express (`extra="forbid"` catches a misspelled key, but not
+"exactly one of `url` or `uuid`"), and constructor ergonomics — the generator
+turns a length-constrained string into a root-model alias, so a generated
+request body would not accept a plain `str`.
+
+`operations.py` is the routing table; `tests/contract` fails when it and the
+published contract disagree in either direction.

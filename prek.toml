@@ -18,24 +18,24 @@ hooks = [
     id = "python-sdk-ruff-check",
     name = "Python SDK Ruff lint",
     language = "system",
-    entry = "uv run --project sdks/python ruff check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python",
-    files = "^(sdks/python|examples/python)/",
+    entry = "uv run --project sdks/python ruff check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python tests/contract tools",
+    files = "^(sdks/python|examples/python|tests/contract|tools)/",
     pass_filenames = false,
   },
   {
     id = "python-sdk-ruff-format-check",
     name = "Python SDK Ruff format check",
     language = "system",
-    entry = "uv run --project sdks/python ruff format --check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python",
-    files = "^(sdks/python|examples/python)/",
+    entry = "uv run --project sdks/python ruff format --check --config sdks/python/pyproject.toml sdks/python/src sdks/python/tests examples/python tests/contract tools",
+    files = "^(sdks/python|examples/python|tests/contract|tools)/",
     pass_filenames = false,
   },
   {
     id = "python-sdk-ty-check",
     name = "Python SDK ty typecheck",
     language = "system",
-    entry = "uv run --project sdks/python ty check --project sdks/python sdks/python/src sdks/python/tests examples/python",
-    files = "^(sdks/python|examples/python)/",
+    entry = "uv run --project sdks/python ty check --project sdks/python sdks/python/src sdks/python/tests examples/python tests/contract",
+    files = "^(sdks/python|examples/python|tests/contract)/",
     pass_filenames = false,
   },
   {
@@ -66,6 +66,34 @@ hooks = [
     exclude = "^sdks/python/",
     pass_filenames = false,
   },
+  # Contract conformance is cross-language, so it runs on a change to either
+  # SDK's routing table, to the shared assertions, or to the committed contract
+  # snapshot. `test:contract` is hermetic; the network-dependent
+  # `test:published-contract` drift alarm is CI-only on purpose.
+  {
+    id = "contract-conformance",
+    name = "Contract conformance (both SDKs)",
+    language = "system",
+    entry = "npm run test:contract",
+    files = "^(tests/(contract|fixtures)/|sdks/typescript/src/(operations|generated)|sdks/python/src/octogen_ai_sdk/operations|vitest\\.config\\.ts$|tsconfig\\.contract\\.json$)",
+    pass_filenames = false,
+  },
+  {
+    id = "contract-conformance-python",
+    name = "Contract conformance (Python runner)",
+    language = "system",
+    entry = "uv run --project sdks/python pytest -c sdks/python/pyproject.toml tests/contract",
+    files = "^(tests/(contract|fixtures)/|sdks/python/src/octogen_ai_sdk/operations)",
+    pass_filenames = false,
+  },
+  {
+    id = "codegen-up-to-date",
+    name = "Generated types match the contract snapshot",
+    language = "system",
+    entry = "npm run codegen:check",
+    files = "^(tests/fixtures/openapi/|tools/codegen/|sdks/typescript/src/generated/|sdks/python/src/octogen_ai_sdk/generated/)",
+    pass_filenames = false,
+  },
   # Per-package typecheck/test/build stay gated on that package's own paths, so
   # a CLI-only change does not run the SDK suite and vice versa.
   {
@@ -74,6 +102,14 @@ hooks = [
     language = "system",
     entry = "npm run typecheck --workspace sdks/typescript",
     files = "^(sdks/typescript|examples/typescript)/|^tsconfig\\.base\\.json$",
+    pass_filenames = false,
+  },
+  {
+    id = "contract-typecheck",
+    name = "Contract tests typecheck",
+    language = "system",
+    entry = "npm run typecheck:contract",
+    files = "^(tests/contract|sdks/typescript/src)/|^(tsconfig\\.base|tsconfig\\.contract)\\.json$|^vitest(\\.published)?\\.config\\.ts$",
     pass_filenames = false,
   },
   {

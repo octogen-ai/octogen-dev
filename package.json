@@ -25,20 +25,31 @@
     "build": "npm run build --workspaces --if-present",
     "check": "npm run lint && npm run format && npm run typecheck && npm run test && npm run build",
     "clean": "npm run clean --workspaces --if-present",
+    "codegen": "uv run --project sdks/python --frozen python tools/codegen/generate.py",
+    "codegen:check": "uv run --project sdks/python --frozen python tools/codegen/generate.py --check",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "eslint .",
-    "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present && npm run test:contract",
+    "test:contract": "vitest run --config vitest.config.ts",
+    "test:published-contract": "vitest run --config vitest.published.config.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:contract",
+    "typecheck:contract": "tsc -p tsconfig.contract.json --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.6.0",
     "eslint": "^10.3.0",
+    "openapi-typescript": "7.13.0",
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2",
     "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }

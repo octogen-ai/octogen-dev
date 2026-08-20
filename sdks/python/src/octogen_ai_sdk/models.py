@@ -1,4 +1,12 @@
-"""Pydantic models for the Octogen merchant programmatic API."""
+"""Pydantic models for the Octogen merchant programmatic API.
+
+Response models for the newer operations are **re-exported from**
+:mod:`octogen_ai_sdk.generated.models`, which ``npm run codegen`` emits from the
+published OpenAPI document: a field the server adds shows up as a reviewable
+diff rather than as a runtime surprise. Request models with a rule the contract
+cannot express — "exactly one of ``url`` or ``uuid``", say — stay hand-written
+here so a bad call fails locally instead of as a server ``422``.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +15,41 @@ from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from octogen_ai_sdk.generated import models as _contract
+
+# ── Contract mirror ─────────────────────────────────────────────────────────
+#
+# **Response** models come straight from the generated mirror of the published
+# OpenAPI document, so a field the server adds arrives as a reviewable
+# `npm run codegen` diff instead of being silently dropped. They are re-bound
+# here, under the contract's own names, because `octogen_ai_sdk.models` is the
+# public home for every model this SDK returns.
+#
+# **Request** models stay hand-written below. Two reasons: rules the contract
+# cannot express (`extra="forbid"` catches a bad key, but not "exactly one of
+# `url` or `uuid`"), and constructor ergonomics — the generator turns a
+# `minLength`/`maxLength` string into a constrained root-model alias, so a
+# generated request body would not accept a plain `str`.
+DomainEntry = _contract.DomainEntry
+ListDomainsResponse = _contract.ListDomainsResponse
+MeKey = _contract.MeKey
+MeOrganization = _contract.MeOrganization
+MeQuotas = _contract.MeQuotas
+MeRateLimit = _contract.MeRateLimit
+MeResponse = _contract.MeResponse
+ProgrammaticProductRefreshAcceptedTarget = (
+    _contract.ProgrammaticProductRefreshAcceptedTarget
+)
+ProgrammaticProductRefreshRejectedTarget = (
+    _contract.ProgrammaticProductRefreshRejectedTarget
+)
+ProgrammaticProductRefreshResponse = _contract.ProgrammaticProductRefreshResponse
+VoyageError = _contract.VoyageError
+VoyageListResponse = _contract.VoyageListResponse
+VoyageQuotas = _contract.VoyageQuotas
+VoyageResult = _contract.VoyageResult
+VoyageTask = _contract.VoyageTask
 
 
 class _ResponseModel(BaseModel):
@@ -70,6 +113,18 @@ class ProductLookupResolutionMode(StrEnum):
 class ProductLookupCachePolicy(StrEnum):
     PREFER_CACHE = "prefer_cache"
     REFRESH = "refresh"
+
+
+class ProductLookupMatchMode(StrEnum):
+    """Index match strictness for ``POST /v1/products/lookup``.
+
+    ``LOOSE`` is the server default: it also resolves URLs differing from the
+    indexed product only by path case, a non-indexed query parameter, or a
+    Shopify collection-scoped path.
+    """
+
+    STRICT = "strict"
+    LOOSE = "loose"
 
 
 class FacetName(StrEnum):
@@ -143,6 +198,10 @@ class ProgrammaticProductLookupRequest(_RequestModel):
     """Product lookup request."""
 
     url: str = Field(min_length=1)
+    match_mode: ProductLookupMatchMode | None = Field(
+        default=None,
+        alias="matchMode",
+    )
     resolution_mode: ProductLookupResolutionMode = Field(
         default=ProductLookupResolutionMode.AUTO,
         alias="resolutionMode",
@@ -162,25 +221,48 @@ class ProgrammaticProductLookupRequest(_RequestModel):
         return self
 
 
-class ProgrammaticProductRecrawlTarget(_RequestModel):
-    """One product identifier to schedule for recrawl."""
+class ProgrammaticResolveFromHtmlRequest(_RequestModel):
+    """Body for ``POST /v1/products/resolve-from-html``."""
+
+    html: str = Field(min_length=1, max_length=5_242_880)
+    url: str | None = Field(default=None, min_length=1)
+
+
+class VoyageStartRequest(_RequestModel):
+    """Body for ``POST /v1/voyage``.
+
+    ``domain`` accepts a registrable domain or a full URL; the server
+    normalizes it (lowercase, with scheme, path, port, and leading ``www.``
+    stripped) and echoes the normalized form back.
+    """
+
+    domain: str = Field(min_length=1, max_length=2048)
+
+
+class ProgrammaticProductRefreshTarget(_RequestModel):
+    """One product identifier to schedule for refresh.
+
+    Hand-written rather than re-exported from the generated mirror: the
+    contract cannot express "exactly one of ``url`` or ``uuid``", and catching
+    that here beats a server ``422``.
+    """
 
     url: str | None = Field(default=None, min_length=1)
     uuid: str | None = Field(default=None, min_length=1)
     catalog: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def require_exactly_one_identifier(self) -> ProgrammaticProductRecrawlTarget:
+    def require_exactly_one_identifier(self) -> ProgrammaticProductRefreshTarget:
         identifiers = [self.url is not None, self.uuid is not None]
         if sum(identifiers) != 1:
             raise ValueError("Exactly one of url or uuid is required")
         return self
 
 
-class ProgrammaticProductRecrawlRequest(_RequestModel):
-    """Product recrawl request."""
+class ProgrammaticProductRefreshRequest(_RequestModel):
+    """Product refresh request."""
 
-    targets: list[ProgrammaticProductRecrawlTarget] = Field(
+    targets: list[ProgrammaticProductRefreshTarget] = Field(
         min_length=1,
         max_length=500,
     )
@@ -465,30 +547,6 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-class ProgrammaticProductRecrawlAcceptedTarget(_ResponseModel):
-    catalog: str
-    url: str
-
-
-class ProgrammaticProductRecrawlRejectedTarget(_ResponseModel):
-    target: ProgrammaticProductRecrawlTarget
-    code: str
-    message: str
-
-
-class ProgrammaticProductRecrawlResponse(_ResponseModel):
-    request_id: str = Field(alias="requestId")
-    submitted: int
-    tasks_created: int = Field(alias="tasksCreated")
-    task_ids: list[str] = Field(default_factory=list, alias="taskIds")
-    accepted: list[ProgrammaticProductRecrawlAcceptedTarget] = Field(
-        default_factory=list,
-    )
-    rejected: list[ProgrammaticProductRecrawlRejectedTarget] = Field(
-        default_factory=list,
-    )
-
-
 class ValidationErrorModel(_ResponseModel):
     loc: list[str | int]
     msg: str
@@ -586,3 +644,39 @@ class CoverageUrlListUrl(_ResponseModel):
 class CoverageUrlListUrlsPage(_ResponseModel):
     items: list[CoverageUrlListUrl]
     next_cursor: str | None = Field(default=None, alias="nextCursor")
+
+
+# ── Voyages (/v1/voyage) ─────────────────────────────────────────────────────
+
+VoyageStatus = Literal[
+    "queued", "running", "in_review", "completed", "failed", "cancelled"
+]
+
+
+class StartVoyageResult(_ResponseModel):
+    """The outcome of ``POST /v1/voyage``.
+
+    ``created`` is ``True`` when this call dispatched a new voyage (``202``,
+    quota consumed) and ``False`` when it joined one already running for the
+    domain (``200``, no quota consumed). Voyages are shared per domain, so
+    joining is the common case for a popular merchant.
+    """
+
+    task: VoyageTask
+    created: bool
+
+
+class ListDomainsResult(_ResponseModel):
+    """The outcome of ``GET /v1/domains``, including the revalidation case."""
+
+    not_modified: bool
+    """``True`` when the server answered ``304`` — reuse the cached snapshot."""
+
+    domains: list[DomainEntry] | None = None
+    """The covered-domain set; ``None`` on a ``304``."""
+
+    etag: str | None = None
+    """The strong ``ETag`` to revalidate with next time."""
+
+    max_age_seconds: int | None = None
+    """``max-age`` from ``Cache-Control``, in seconds, when the server sent one."""

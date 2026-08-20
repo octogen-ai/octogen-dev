@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "tests/contract/**/*.ts",
+    "vitest.config.ts",
+    "vitest.published.config.ts"
+  ]
+}

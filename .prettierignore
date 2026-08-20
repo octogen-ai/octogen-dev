@@ -12,3 +12,6 @@ sdks/python
 
 # Generated SDK types are emitted by `npm run codegen`, not hand-formatted
 **/src/generated
+
+# The published contract snapshot is fetched verbatim, not hand-formatted
+tests/fixtures/openapi

@@ -1,6 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  API_KEY_ENV_VAR,
+  DEPRECATED_API_KEY_ENV_VAR,
   EmbeddingColumn,
   FacetName,
   MissingAPIKeyError,
@@ -13,6 +15,7 @@ import {
   ProductLookupResolutionMode,
   USER_AGENT,
   type FetchLike,
+  type OperationId,
 } from "../src/index.js";
 
 const BASE_URL = "https://api.octogen.ai/v1";
@@ -24,25 +27,27 @@ interface FetchCall {
 
 interface RequestableOctogenClient {
   request(
-    method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT",
-    path: string,
-    json?: object,
-  ): Promise<unknown>;
+    operationId: OperationId,
+    options?: {
+      body?: object;
+      headers?: Record<string, string>;
+      pathParams?: Record<string, string>;
+      query?: Record<string, string | number | undefined>;
+    },
+  ): Promise<{ data: unknown; response: Response }>;
 }
 
-let originalApiKey: string | undefined;
-
+// `vi.stubEnv(name, undefined)` unsets the variable and `vi.unstubAllEnvs()`
+// puts the developer's own environment back, so a stray `OCTOGEN_PLATFORM_API_KEY`
+// on the machine running the suite cannot make these tests pass for the wrong
+// reason.
 beforeEach(() => {
-  originalApiKey = process.env["OCTO_API_KEY"];
-  delete process.env["OCTO_API_KEY"];
+  vi.stubEnv(API_KEY_ENV_VAR, undefined);
+  vi.stubEnv(DEPRECATED_API_KEY_ENV_VAR, undefined);
 });
 
 afterEach(() => {
-  if (originalApiKey === undefined) {
-    delete process.env["OCTO_API_KEY"];
-  } else {
-    process.env["OCTO_API_KEY"] = originalApiKey;
-  }
+  vi.unstubAllEnvs();
 });
 
 describe("OctogenClient", () => {
@@ -52,8 +57,8 @@ describe("OctogenClient", () => {
     );
   });
 
-  it("uses OCTO_API_KEY from the environment", async () => {
-    process.env["OCTO_API_KEY"] = "octo_test_key";
+  it("uses OCTOGEN_PLATFORM_API_KEY from the environment", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
 
     const client = new OctogenClient({ fetch: fetchMock });
@@ -113,13 +118,14 @@ describe("OctogenClient", () => {
     expect(page.items[0]?.brand?.name).toBe("ACME");
   });
 
-  it("sends a typed product recrawl request", async () => {
+  it("sends a typed product refresh request", async () => {
     const { calls, fetchMock } = createFetchMock(
       {
         requestId: "request-1",
         submitted: 2,
-        tasksCreated: 1,
-        taskIds: ["recrawl-request-1-acme-0001-products"],
+        workflowId: "refresh-request-1-acme-0001-products",
+        workflowStatus: "launched",
+        workflowAttempts: 1,
         accepted: [
           {
             catalog: "acme",
@@ -138,7 +144,7 @@ describe("OctogenClient", () => {
     );
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    const response = await client.recrawlProducts({
+    const response = await client.refreshProducts({
       targets: [
         {
           catalog: "acme",
@@ -149,7 +155,7 @@ describe("OctogenClient", () => {
     });
 
     const call = lastCall(calls);
-    expect(call.input).toBe(`${BASE_URL}/products/recrawl`);
+    expect(call.input).toBe(`${BASE_URL}/products/refresh`);
     expect(call.init?.method).toBe("POST");
     expect(requestBodyJson(call)).toEqual({
       targets: [
@@ -161,26 +167,26 @@ describe("OctogenClient", () => {
       ],
     });
     expect(response.requestId).toBe("request-1");
-    expect(response.tasksCreated).toBe(1);
-    expect(response.taskIds).toEqual(["recrawl-request-1-acme-0001-products"]);
+    expect(response.workflowId).toBe("refresh-request-1-acme-0001-products");
+    expect(response.workflowStatus).toBe("launched");
     expect(response.accepted[0]?.catalog).toBe("acme");
     expect(response.rejected[0]?.code).toBe("product_not_found");
   });
 
-  it("rejects invalid product recrawl targets before making a request", async () => {
+  it("rejects invalid product refresh targets before making a request", async () => {
     const { calls, fetchMock } = createFetchMock();
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    await expect(client.recrawlProducts({ targets: [] })).rejects.toThrow(
+    await expect(client.refreshProducts({ targets: [] })).rejects.toThrow(
       "targets must contain between 1 and 500 items",
     );
     await expect(
-      client.recrawlProducts({
+      client.refreshProducts({
         targets: [{ url: "https://example.com/p", uuid: "product-1" }],
       }),
     ).rejects.toThrow("Exactly one of targets[0].url or targets[0].uuid is required");
     await expect(
-      client.recrawlProducts({
+      client.refreshProducts({
         targets: [{ catalog: "", uuid: "product-1" }],
       }),
     ).rejects.toThrow("targets[0].catalog is required");
@@ -453,14 +459,15 @@ describe("OctogenClient", () => {
     );
   });
 
-  it("returns undefined for 204 responses", async () => {
+  it("returns no body for 204 responses", async () => {
     const { fetchMock } = createFetchMock(undefined, { status: 204 });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
     const requestableClient = client as unknown as RequestableOctogenClient;
 
-    await expect(
-      requestableClient.request("DELETE", "/products/lookup"),
-    ).resolves.toBeUndefined();
+    const { data } = await requestableClient.request("deleteUrlList", {
+      pathParams: { urlListId: "cul_1" },
+    });
+    expect(data).toBeUndefined();
   });
 });
 

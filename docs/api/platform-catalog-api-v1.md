@@ -34,9 +34,33 @@ immediately on the next request.
 
 ## Endpoints
 
-Four endpoints are available. They use the same access policy as the
+The published contract carries **18 operations across 14 paths**. They use the
+same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
+
+The three product endpoints below are documented in full here. The rest are
+covered by the [published OpenAPI document](#openapi) and by a method in each
+SDK — `getMe`, `listDomains`, `refreshProducts`, `resolveProductFromHtml`,
+`startVoyage`, `listVoyages`, `getVoyage`, and the eight
+[Coverage URL Lists](./coverage-url-lists-v1.md) operations:
+
+| Operation                                      | What it is for                                                        |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| `GET /domains`                                 | Every covered host. Check this before `lookup` — see the note below.  |
+| `GET /me`                                      | Your organization, key id and provenance, quotas, rate-limit posture. |
+| `POST /products/refresh`                       | Schedule indexed products for a re-crawl.                             |
+| `POST /products/resolve-from-html`             | Resolve a product from HTML you already have. No index, no fetch.     |
+| `POST /voyage`, `GET /voyage`, `GET /voyage/…` | Build a catalog for a merchant not covered yet.                       |
+
+> **`GET /domains` returns hosts normalized by the server** — lowercased, with a
+> leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
+> Product URLs in the wild usually _do_ carry `www.`, so comparing a raw URL
+> host against that list reports covered merchants as uncovered. Normalize your
+> side the same way, or use the SDK helpers (`isHostCovered` /
+> `is_host_covered`), which do it for you. The endpoint carries a strong `ETag`
+> and `Cache-Control: max-age=300`: revalidate with `If-None-Match` rather than
+> refetching.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -301,14 +325,18 @@ https://cdn.octogen.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- Operation IDs: `searchProducts`, `moreLikeThisProducts`, `lookupProduct`, and
-  `refreshProducts`.
+- All 18 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
+  `moreLikeThisProducts`, `lookupProduct`, `refreshProducts`,
+  `resolveProductFromHtml`, `startVoyage`, `listVoyages`, and `getVoyage`.
 - Full request and response schemas for code generation.
 - Example error bodies for auth, authorization, missing-catalog,
   missing-product, and validation failures.
 
 Most language ecosystems can generate a typed client from this JSON
-(e.g. `openapi-generator`, `openapi-typescript`, `oapi-codegen`).
+(e.g. `openapi-generator`, `openapi-typescript`, `oapi-codegen`). Both Octogen
+SDKs in this repository generate their types from it and are held to it by
+[contract conformance tests](../../tests/contract/README.md), so a published
+operation cannot go missing from an SDK without CI failing.
 
 ## Choosing between REST and MCP
 

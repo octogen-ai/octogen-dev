@@ -57,7 +57,10 @@ def _build_parser() -> argparse.ArgumentParser:
     common.add_argument(
         "--api-key",
         default=None,
-        help="Platform API key. Defaults to the OCTO_API_KEY environment variable.",
+        help=(
+            "Platform API key. Defaults to the "
+            "OCTOGEN_PLATFORM_API_KEY environment variable."
+        ),
     )
     common.add_argument(
         "--base-url",
