@@ -1,0 +1,44 @@
+{
+  "name": "octogen-dev",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Developer tools, SDKs, examples, and agent skills for the Octogen AI commerce platform",
+  "license": "Apache-2.0",
+  "author": "Octogen AI",
+  "homepage": "https://github.com/octogen-ai/octogen-dev#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/octogen-ai/octogen-dev.git"
+  },
+  "bugs": {
+    "url": "https://github.com/octogen-ai/octogen-dev/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "sdks/typescript",
+    "cli"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "check": "npm run lint && npm run format && npm run typecheck && npm run test && npm run build",
+    "clean": "npm run clean --workspaces --if-present",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.1.5"
+  }
+}

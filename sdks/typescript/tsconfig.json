@@ -1,23 +1,4 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "exactOptionalPropertyTypes": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "skipLibCheck": true,
-    "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true,
-    "types": ["node"]
-  },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*.ts", "tests/**/*.ts", "../../examples/typescript/**/*.ts"]
 }

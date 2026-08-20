@@ -6,11 +6,11 @@ crawled catalog. It is the REST sibling of the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md); both enforce
 the same catalog access policy — pick the surface that fits your runtime.
 
-| Property | Value |
-| --- | --- |
-| Base URL | `https://api.octogen.ai/v1` |
-| Authentication | Bearer Platform API key (`octo_live_...`) |
-| Content type | `application/json` |
+| Property         | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Base URL         | `https://api.octogen.ai/v1`                               |
+| Authentication   | Bearer Platform API key (`octo_live_...`)                 |
+| Content type     | `application/json`                                        |
 | OpenAPI contract | `https://cdn.octogen.ai/openapi/platform/v1/openapi.json` |
 
 The OpenAPI document is the source of truth for complete schemas, enum values,
@@ -52,8 +52,8 @@ curl -sS https://api.octogen.ai/v1/products/lookup \
 
 Request fields:
 
-| Field | Type | Notes |
-| --- | --- | --- |
+| Field | Type   | Notes                                                                                 |
+| ----- | ------ | ------------------------------------------------------------------------------------- |
 | `url` | string | Required. Any real product page URL — it does not need to be normalized or canonical. |
 
 Response:
@@ -77,9 +77,9 @@ Response:
     "originalPrice": null,
     "inStock": true,
     "sizes": ["s", "m", "l", "xl"],
-    "colors": [{"label": "Black", "hexCode": "#000000"}],
+    "colors": [{ "label": "Black", "hexCode": "#000000" }],
     "tags": ["hoodie", "black"],
-    "identifiers": {"productId": "WL-BH-001", "gtin": null, "productGroupId": null},
+    "identifiers": { "productId": "WL-BH-001", "gtin": null, "productGroupId": null },
     "isActive": true,
     "updatedAt": "2026-05-19T18:04:10Z"
   }
@@ -131,16 +131,16 @@ curl -sS https://api.octogen.ai/v1/products/search \
 
 Request fields:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `catalog` | string | Optional. When omitted, searches all active crawled catalogs. When provided, it must name one active crawled catalog. |
-| `q` | string | Free-text keyword query. Omit to browse without filtering. |
-| `facets` | array | Structured filters (brand, category, color, product attributes). |
-| `price_min` | number | Inclusive minimum price. |
-| `price_max` | number | Inclusive maximum price. |
-| `cursor` | string | Opaque pagination cursor from a previous response's `nextCursor`. |
-| `limit` | integer | Page size, 1..100. Defaults to 50. |
-| `text_search_query` | object | Pre-generated semantic query. Prefer `q` unless an upstream workflow already produced this object. |
+| Field               | Type    | Notes                                                                                                                 |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
+| `catalog`           | string  | Optional. When omitted, searches all active crawled catalogs. When provided, it must name one active crawled catalog. |
+| `q`                 | string  | Free-text keyword query. Omit to browse without filtering.                                                            |
+| `facets`            | array   | Structured filters (brand, category, color, product attributes).                                                      |
+| `price_min`         | number  | Inclusive minimum price.                                                                                              |
+| `price_max`         | number  | Inclusive maximum price.                                                                                              |
+| `cursor`            | string  | Opaque pagination cursor from a previous response's `nextCursor`.                                                     |
+| `limit`             | integer | Page size, 1..100. Defaults to 50.                                                                                    |
+| `text_search_query` | object  | Pre-generated semantic query. Prefer `q` unless an upstream workflow already produced this object.                    |
 
 Response:
 
@@ -197,17 +197,17 @@ curl -sS https://api.octogen.ai/v1/products/more-like-this \
 
 Request fields:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `source.url` | string | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required. |
-| `source.uuid` | string | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required. |
-| `catalog` | string | Optional. If present, source resolution and search are limited to this active crawled catalog. |
-| `limit` | integer | Page size from 1 to 100. Defaults to 12. |
-| `cursor` | string | Opaque pagination cursor from the previous response. |
-| `include_facets` | array | Additional include facets appended after server-generated audience facets. |
-| `exclude_facets` | array | Facets to exclude from results. |
-| `price_preference` | string | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`. |
-| `debug` | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval. |
+| Field              | Type    | Notes                                                                                                 |
+| ------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| `source.url`       | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.               |
+| `source.uuid`      | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                |
+| `catalog`          | string  | Optional. If present, source resolution and search are limited to this active crawled catalog.        |
+| `limit`            | integer | Page size from 1 to 100. Defaults to 12.                                                              |
+| `cursor`           | string  | Opaque pagination cursor from the previous response.                                                  |
+| `include_facets`   | array   | Additional include facets appended after server-generated audience facets.                            |
+| `exclude_facets`   | array   | Facets to exclude from results.                                                                       |
+| `price_preference` | string  | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`.        |
+| `debug`            | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval. |
 
 Response:
 
@@ -244,12 +244,12 @@ server-derived fields intended for public inspection: `text`,
 
 The API returns JSON error bodies using a standard `detail` field.
 
-| Status | Meaning | Example `detail` |
-| --- | --- | --- |
-| `401` | Missing, malformed, or invalid Bearer API key. | `"Authorization Bearer token required"`, `"Invalid API key"` |
-| `403` | API key is valid but the operation is forbidden for its org type. | `"api_key_forbidden"`, `"api_key_org_type_forbidden"` |
-| `404` | Requested catalog or product is not visible for this API key. | `"catalog_not_found"`, `"product_not_found"` |
-| `422` | Request body or field validation failed. | Validation error array with `loc`, `msg`, and `type`. |
+| Status | Meaning                                                           | Example `detail`                                             |
+| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| `401`  | Missing, malformed, or invalid Bearer API key.                    | `"Authorization Bearer token required"`, `"Invalid API key"` |
+| `403`  | API key is valid but the operation is forbidden for its org type. | `"api_key_forbidden"`, `"api_key_org_type_forbidden"`        |
+| `404`  | Requested catalog or product is not visible for this API key.     | `"catalog_not_found"`, `"product_not_found"`                 |
+| `422`  | Request body or field validation failed.                          | Validation error array with `loc`, `msg`, and `type`.        |
 
 Example `422` body:
 
@@ -261,7 +261,7 @@ Example `422` body:
       "msg": "Input should be less than or equal to 100",
       "type": "less_than_equal",
       "input": 500,
-      "ctx": {"le": 100}
+      "ctx": { "le": 100 }
     }
   ]
 }
@@ -314,13 +314,13 @@ Most language ecosystems can generate a typed client from this JSON
 
 Both surfaces are equally supported and run against the same grants table.
 
-| | REST (`/v1`, API keys) | MCP (OAuth) |
-| --- | --- | --- |
-| Best for | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop) |
-| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound Octogen access token |
-| Caller identity | (api_key_id, org_id) | (user_sub, org_id, oauth_client_id) |
-| Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
-| Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
+|                 | REST (`/v1`, API keys)                 | MCP (OAuth)                                                               |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| Best for        | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop)                   |
+| Auth            | Bearer `octo_live_...` key             | OAuth 2.1 + PKCE → audience-bound Octogen access token                    |
+| Caller identity | (api_key_id, org_id)                   | (user_sub, org_id, oauth_client_id)                                       |
+| Token lifetime  | Until manually revoked                 | ~5 minutes access; refresh until session expiry                           |
+| Revocation      | Revoke the API key                     | Sign out of the Octogen Platform or remove the user from the organization |
 
 A grant change on one path takes effect immediately on the other.
 
