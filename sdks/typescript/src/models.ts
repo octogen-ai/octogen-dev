@@ -166,38 +166,206 @@ export interface ProgrammaticProductLookupRequest {
   url: string;
 }
 
-export interface ProductRecrawlTarget {
+export interface ProductRefreshTarget {
   url?: string;
   uuid?: string;
   catalog?: string;
 }
 
-export interface RecrawlProductsParams {
-  targets: ProductRecrawlTarget[];
+export interface RefreshProductsParams {
+  targets: ProductRefreshTarget[];
 }
 
-export interface ProgrammaticProductRecrawlRequest {
-  targets: ProductRecrawlTarget[];
+export interface ProgrammaticProductRefreshRequest {
+  targets: ProductRefreshTarget[];
 }
 
-export interface ProductRecrawlAcceptedTarget {
+export interface ProductRefreshAcceptedTarget {
   catalog: string;
   url: string;
 }
 
-export interface ProductRecrawlRejectedTarget {
-  target: ProductRecrawlTarget;
+export interface ProductRefreshRejectedTarget {
+  target: ProductRefreshTarget;
   code: string;
   message: string;
 }
 
-export interface ProductRecrawlResponse {
+export const ProductRefreshWorkflowStatus = {
+  PENDING: "pending",
+  LAUNCHING: "launching",
+  LAUNCHED: "launched",
+  RETRY_PENDING: "retry_pending",
+} as const;
+
+export type ProductRefreshWorkflowStatus =
+  (typeof ProductRefreshWorkflowStatus)[keyof typeof ProductRefreshWorkflowStatus];
+
+export interface ProductRefreshResponse {
   requestId: string;
   submitted: number;
-  tasksCreated: number;
-  taskIds: string[];
-  accepted: ProductRecrawlAcceptedTarget[];
-  rejected: ProductRecrawlRejectedTarget[];
+  accepted: ProductRefreshAcceptedTarget[];
+  rejected: ProductRefreshRejectedTarget[];
+  workflowId?: string | null;
+  workflowStatus?: ProductRefreshWorkflowStatus | null;
+  workflowAttempts?: number;
+  workflowError?: string | null;
+}
+
+export interface DomainEntry {
+  /** Catalog key covering the host. */
+  catalog: string;
+  /** Human-readable display name for the catalog. */
+  catalogDisplayName: string;
+  /** Normalized covered host, e.g. `allbirds.com` or `www.allbirds.com`. */
+  host: string;
+}
+
+export interface ListDomainsResponse {
+  domains: DomainEntry[];
+}
+
+export interface ListDomainsOptions {
+  /**
+   * A previously returned `etag`. When it still matches, the server answers
+   * `304` and the result's `notModified` is `true`.
+   */
+  ifNoneMatch?: string;
+}
+
+export interface ListDomainsFresh {
+  notModified: false;
+  /** Every covered host, one entry per `(host, catalog)` pair. */
+  domains: DomainEntry[];
+  /** Strong `ETag` for this set. Pass it back as `ifNoneMatch` to revalidate. */
+  etag: string | null;
+}
+
+export interface ListDomainsNotModified {
+  notModified: true;
+  /** The server answered `304`: reuse the set you already cached. */
+  domains: null;
+  etag: string | null;
+}
+
+/**
+ * Discriminated on `notModified` so a caller who sends `ifNoneMatch` cannot
+ * read `domains` without first handling the `304` case.
+ */
+export type ListDomainsResult = ListDomainsFresh | ListDomainsNotModified;
+
+export interface ResolveProductFromHtmlParams {
+  /** Product page HTML. The API caps this at 5 MiB. */
+  html: string;
+  /**
+   * Strongly recommended: the page's source URL, ideally `location.href` read
+   * at the instant the DOM was serialized. Anchors relative image URLs and
+   * JSON-LD candidate selection, and is echoed back as `requestedUrl`. When
+   * absent the page must declare its own canonical URL or resolution fails.
+   */
+  url?: string;
+}
+
+export interface ProgrammaticResolveFromHtmlRequest {
+  html: string;
+  url?: string;
+}
+
+export const VoyageStatus = {
+  QUEUED: "queued",
+  RUNNING: "running",
+  IN_REVIEW: "in_review",
+  COMPLETED: "completed",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+} as const;
+
+export type VoyageStatus = (typeof VoyageStatus)[keyof typeof VoyageStatus];
+
+export const VoyagePhase = {
+  DISCOVERING_SITE: "discovering_site",
+  SAMPLING_PRODUCTS: "sampling_products",
+  BUILDING_EXTRACTION: "building_extraction",
+  IN_REVIEW: "in_review",
+  PUBLISHING_CATALOG: "publishing_catalog",
+  COMPLETE: "complete",
+  FAILED: "failed",
+} as const;
+
+export type VoyagePhase = (typeof VoyagePhase)[keyof typeof VoyagePhase];
+
+export interface VoyageError {
+  code: string;
+  message: string;
+}
+
+export interface VoyageResultEndpoints {
+  lookup?: string;
+  search?: string;
+}
+
+export interface VoyageResult {
+  catalog: string;
+  endpoints?: VoyageResultEndpoints;
+  productCount?: number | null;
+}
+
+export interface VoyageTask {
+  taskId: string;
+  domain: string;
+  status: VoyageStatus;
+  phase: VoyagePhase;
+  phaseLabel: string;
+  progressPercent: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  completedAt?: string | null;
+  error?: VoyageError | null;
+  result?: VoyageResult | null;
+}
+
+export interface VoyageStartRequest {
+  domain: string;
+}
+
+export interface StartVoyageResult {
+  task: VoyageTask;
+  /**
+   * `true` when this call joined a voyage that was already running (or a
+   * domain that already has a live catalog) — HTTP `200`, no quota consumed.
+   * `false` when it dispatched a fresh voyage — HTTP `202`, quota consumed.
+   */
+  joined: boolean;
+}
+
+export interface VoyageQuotaConcurrent {
+  limit?: number | null;
+  used?: number | null;
+}
+
+export interface VoyageQuotaMonthly {
+  limit?: number | null;
+  used?: number | null;
+  periodStart?: string | null;
+  resetsAt?: string | null;
+}
+
+export interface VoyageQuotas {
+  concurrent: VoyageQuotaConcurrent;
+  monthly: VoyageQuotaMonthly;
+}
+
+export interface VoyageListResponse {
+  items: VoyageTask[];
+  nextCursor?: string | null;
+  /** `null` for super-admin callers, who have no org quota. */
+  quotas?: VoyageQuotas | null;
+}
+
+export interface ListVoyagesParams {
+  status?: VoyageStatus;
+  cursor?: string;
+  limit?: number;
 }
 
 export interface MoreLikeThisSource {
@@ -451,7 +619,12 @@ export interface ProductResolutionMetadata {
 
 export interface MerchantProductUrlLookupResponse {
   requestId?: string | null;
-  source: "indexed" | "on_demand";
+  /**
+   * How the product was resolved. `client_html` is what
+   * {@link OctogenClient.resolveProductFromHtml} always returns; `lookupProduct`
+   * returns `indexed` or `on_demand`.
+   */
+  source: "indexed" | "on_demand" | "client_html";
   catalogKey?: string | null;
   catalogDisplayName?: string | null;
   sourceBaseUrl?: string | null;

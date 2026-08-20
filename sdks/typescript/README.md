@@ -8,16 +8,19 @@ Async TypeScript SDK for the Octogen AI commerce API.
 npm install @octogen-ai/sdk
 ```
 
-During local repo development, install dependencies from this package directory:
+During local repo development this package is an npm workspace member. Install
+once from the repository root:
 
 ```bash
-npm --prefix sdks/typescript install
+npm install
 ```
 
 ## Usage
 
-The client reads `OCTO_API_KEY` from the environment by default. You can also
-pass `apiKey` explicitly.
+The client reads `OCTOGEN_PLATFORM_API_KEY` from the environment by default,
+which is the name every Octogen document uses. You can also pass `apiKey`
+explicitly. `OCTO_API_KEY` is still read as a fallback, with a deprecation
+warning on stderr, and will be removed in a future release.
 
 ```ts
 import { OctogenClient } from "@octogen-ai/sdk";
@@ -41,7 +44,15 @@ for (const product of results.items) {
   or UUID, optionally within one catalog.
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. The optional controls default to `auto` and `prefer_cache`.
-- `recrawlProducts(params)` schedules product URLs or UUIDs for recrawl.
+- `listDomains(options?)` lists every host covered by an active crawled
+  catalog. This is the coverage gate — match a page's host against this set
+  before calling `lookupProduct`. Supports `ETag` revalidation; see below.
+- `refreshProducts(params)` schedules product URLs or UUIDs for a refresh crawl.
+- `resolveProductFromHtml(params)` resolves a product from HTML you already
+  have: no index read, no outbound fetch.
+- `startVoyage(domain)`, `listVoyages(params?)`, and `getVoyage(taskId)` drive
+  Voyager, which crawls and builds an extraction for a domain Octogen does not
+  cover yet.
 - `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
   `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`
   manage coverage URL lists — named sets of product URLs that Octogen
@@ -67,8 +78,42 @@ for (const product of similar.items) {
 }
 ```
 
+Check coverage before looking a URL up. The domain set is stable and large, so
+cache it and revalidate with the `ETag` the API returns:
+
 ```ts
-const recrawl = await client.recrawlProducts({
+let coverage = await client.listDomains();
+const covered = new Set(coverage.domains?.map((entry) => entry.host));
+
+if (covered.has(new URL(productUrl).host)) {
+  const product = await client.lookupProduct(productUrl);
+  console.log(product.product.title);
+}
+
+// Later: one round trip that usually comes back `304`.
+const revalidated = await client.listDomains({
+  ifNoneMatch: coverage.etag ?? undefined,
+});
+if (!revalidated.notModified) {
+  coverage = revalidated;
+}
+```
+
+If Octogen does not cover the host yet, start a voyage. Voyages are shared per
+domain, so `joined` tells you whether this call dispatched a new one — which
+consumes quota — or attached to one already running, which does not:
+
+```ts
+const { task, joined } = await client.startVoyage("shop.example");
+console.log(task.taskId, task.phaseLabel, joined ? "joined" : "dispatched");
+
+// Voyages run for hours to days. Poll no faster than every five minutes.
+const progress = await client.getVoyage(task.taskId);
+console.log(progress.progressPercent, progress.result?.catalog);
+```
+
+```ts
+const refresh = await client.refreshProducts({
   targets: [
     {
       catalog: "warrenlotas",
@@ -78,7 +123,17 @@ const recrawl = await client.recrawlProducts({
   ],
 });
 
-console.log(recrawl.tasksCreated, recrawl.taskIds);
+console.log(refresh.submitted, refresh.workflowStatus);
+```
+
+Resolve a page you already fetched yourself — useful in a browser extension or
+a crawler that has the DOM in hand:
+
+```ts
+const resolved = await client.resolveProductFromHtml({
+  html: document.documentElement.outerHTML,
+  url: location.href,
+});
 ```
 
 ```ts
@@ -95,22 +150,35 @@ console.log(
 
 ## Development
 
-```bash
-npm --prefix sdks/typescript run lint
-npm --prefix sdks/typescript run format
-npm --prefix sdks/typescript run typecheck
-npm --prefix sdks/typescript run test
-npm --prefix sdks/typescript run build
-```
-
-Run the complete TypeScript SDK quality suite:
+Every command runs from the repository root, across all workspaces:
 
 ```bash
-npm --prefix sdks/typescript run check
+npm run lint
+npm run format
+npm run typecheck
+npm run test
+npm run build
 ```
+
+Or the whole quality suite, which is what CI runs:
+
+```bash
+npm run check
+```
+
+To scope a command to this package:
+
+```bash
+npm run test --workspace sdks/typescript
+```
+
+Request and response types under `src/generated/` are emitted from the
+published OpenAPI contract by `npm run codegen` and committed, so a contract
+change lands as a reviewable diff. The method layer is hand-written;
+[`tests/contract`](../../tests/contract) is what keeps the two in agreement.
 
 Run the live example:
 
 ```bash
-OCTO_API_KEY=... npm --prefix sdks/typescript run example:search-clothes
+OCTOGEN_PLATFORM_API_KEY=... npm run example:search-clothes --workspace sdks/typescript
 ```

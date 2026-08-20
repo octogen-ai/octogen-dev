@@ -1,6 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  API_KEY_ENV_VAR,
+  DEPRECATED_API_KEY_ENV_VAR,
   EmbeddingColumn,
   FacetName,
   MissingAPIKeyError,
@@ -17,9 +23,24 @@ import {
 
 const BASE_URL = "https://api.octogen.ai/v1";
 
+const FIXTURES = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../tests/fixtures/platform-v1",
+);
+
+/** Load a fixture shared with the Python suite and the conformance tests. */
+function fixture(name: string): unknown {
+  return JSON.parse(readFileSync(path.join(FIXTURES, `${name}.json`), "utf8"));
+}
+
 interface FetchCall {
   input: string;
   init: RequestInit | undefined;
+}
+
+/** `ResponseInit`, but with `headers` narrowed so it is spreadable. */
+interface MockResponseInit extends Omit<ResponseInit, "headers"> {
+  headers?: Record<string, string>;
 }
 
 interface RequestableOctogenClient {
@@ -30,18 +51,27 @@ interface RequestableOctogenClient {
   ): Promise<unknown>;
 }
 
-let originalApiKey: string | undefined;
+const API_KEY_ENV_VARS = [API_KEY_ENV_VAR, DEPRECATED_API_KEY_ENV_VAR];
+
+let originalApiKeys: Record<string, string | undefined> = {};
 
 beforeEach(() => {
-  originalApiKey = process.env["OCTO_API_KEY"];
-  delete process.env["OCTO_API_KEY"];
+  originalApiKeys = {};
+  for (const name of API_KEY_ENV_VARS) {
+    originalApiKeys[name] = process.env[name];
+    Reflect.deleteProperty(process.env, name);
+  }
 });
 
 afterEach(() => {
-  if (originalApiKey === undefined) {
-    delete process.env["OCTO_API_KEY"];
-  } else {
-    process.env["OCTO_API_KEY"] = originalApiKey;
+  vi.restoreAllMocks();
+  for (const name of API_KEY_ENV_VARS) {
+    const original = originalApiKeys[name];
+    if (original === undefined) {
+      Reflect.deleteProperty(process.env, name);
+    } else {
+      process.env[name] = original;
+    }
   }
 });
 
@@ -52,8 +82,8 @@ describe("OctogenClient", () => {
     );
   });
 
-  it("uses OCTO_API_KEY from the environment", async () => {
-    process.env["OCTO_API_KEY"] = "octo_test_key";
+  it("uses OCTOGEN_PLATFORM_API_KEY from the environment", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
 
     const client = new OctogenClient({ fetch: fetchMock });
@@ -113,74 +143,219 @@ describe("OctogenClient", () => {
     expect(page.items[0]?.brand?.name).toBe("ACME");
   });
 
-  it("sends a typed product recrawl request", async () => {
-    const { calls, fetchMock } = createFetchMock(
-      {
-        requestId: "request-1",
-        submitted: 2,
-        tasksCreated: 1,
-        taskIds: ["recrawl-request-1-acme-0001-products"],
-        accepted: [
-          {
-            catalog: "acme",
-            url: "https://example.com/products/linen-dress",
-          },
-        ],
-        rejected: [
-          {
-            target: { uuid: "missing-product" },
-            code: "product_not_found",
-            message: "No active product matched that UUID.",
-          },
-        ],
-      },
-      { status: 202 },
+  it("falls back to OCTO_API_KEY with a deprecation warning", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    process.env[DEPRECATED_API_KEY_ENV_VAR] = "octo_legacy_key";
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+
+    const client = new OctogenClient({ fetch: fetchMock });
+    await client.searchProducts({ q: "shirt", limit: 1 });
+
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      Authorization: "Bearer octo_legacy_key",
+    });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(DEPRECATED_API_KEY_ENV_VAR),
     );
+    expect(warn.mock.calls[0]?.[0]).toContain(API_KEY_ENV_VAR);
+  });
+
+  it("prefers OCTOGEN_PLATFORM_API_KEY over the deprecated name", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    process.env[API_KEY_ENV_VAR] = "octo_current_key";
+    process.env[DEPRECATED_API_KEY_ENV_VAR] = "octo_legacy_key";
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+
+    const client = new OctogenClient({ fetch: fetchMock });
+    await client.searchProducts({ q: "shirt", limit: 1 });
+
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      Authorization: "Bearer octo_current_key",
+    });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("lists covered domains and returns the ETag", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("list-domains"), {
+      headers: { ETag: '"domains-v1"' },
+    });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    const response = await client.recrawlProducts({
+    const result = await client.listDomains();
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/domains`);
+    expect(call.init?.method).toBe("GET");
+    expect(result.notModified).toBe(false);
+    expect(result.etag).toBe('"domains-v1"');
+    expect(result.domains?.map((entry) => entry.host)).toEqual([
+      "allbirds.com",
+      "www.allbirds.com",
+      "shop.acme.example",
+    ]);
+  });
+
+  it("revalidates covered domains with If-None-Match and handles 304", async () => {
+    const { calls, fetchMock } = createFetchMock(null, {
+      headers: { ETag: '"domains-v1"' },
+      status: 304,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.listDomains({ ifNoneMatch: '"domains-v1"' });
+
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      "If-None-Match": '"domains-v1"',
+    });
+    expect(result.notModified).toBe(true);
+    expect(result.domains).toBeNull();
+    expect(result.etag).toBe('"domains-v1"');
+  });
+
+  it("resolves a product from supplied HTML", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("resolve-from-html"));
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const response = await client.resolveProductFromHtml({
+      html: "<html><body>…</body></html>",
+      url: "https://shop.acme.example/products/linen-dress?variant=blue",
+    });
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/products/resolve-from-html`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({
+      html: "<html><body>…</body></html>",
+      url: "https://shop.acme.example/products/linen-dress?variant=blue",
+    });
+    expect(response.product.title).toBe("Linen Dress");
+    // The discriminant this path — and only this path — returns.
+    expect(response.source).toBe("client_html");
+    // On a storefront that records the variant only in the query string, the
+    // echoed request URL is the sole variant-qualified identity in the response.
+    expect(response.requestedUrl).toBe(
+      "https://shop.acme.example/products/linen-dress?variant=blue",
+    );
+  });
+
+  it("omits url from a resolve-from-html request when not supplied", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("resolve-from-html"));
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.resolveProductFromHtml({ html: "<html></html>" });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({ html: "<html></html>" });
+  });
+
+  it("rejects an empty resolve-from-html body before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.resolveProductFromHtml({ html: "" })).rejects.toThrow(
+      "html is required",
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("reports a dispatched voyage as not joined", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("voyage-task-running"), {
+      status: 202,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.startVoyage("shop.acme.example");
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/voyage`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({ domain: "shop.acme.example" });
+    expect(result.joined).toBe(false);
+    expect(result.task.status).toBe("running");
+  });
+
+  it("reports a joined voyage, which consumes no quota", async () => {
+    const { fetchMock } = createFetchMock(fixture("voyage-task-completed"), {
+      status: 200,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.startVoyage("https://allbirds.com/collections/all");
+
+    expect(result.joined).toBe(true);
+    expect(result.task.result?.catalog).toBe("allbirds");
+  });
+
+  it("lists voyages with filters and reports quotas", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("voyage-list"));
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.listVoyages({ status: "running", limit: 10 });
+
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/voyage?status=running&limit=10`);
+    expect(page.items).toHaveLength(2);
+    expect(page.quotas?.monthly.used).toBe(4);
+  });
+
+  it("polls one voyage by task id", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("voyage-task-completed"));
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const task = await client.getVoyage("voyage_01J8Z4M0000000000000000001");
+
+    expect(lastCall(calls).input).toBe(
+      `${BASE_URL}/voyage/voyage_01J8Z4M0000000000000000001`,
+    );
+    expect(task.progressPercent).toBe(100);
+  });
+
+  it("sends a typed product refresh request", async () => {
+    const { calls, fetchMock } = createFetchMock(fixture("product-refresh"), {
+      status: 202,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const response = await client.refreshProducts({
       targets: [
         {
           catalog: "acme",
-          url: "https://example.com/products/linen-dress",
+          url: "https://shop.acme.example/products/linen-dress",
         },
         { uuid: "missing-product" },
       ],
     });
 
     const call = lastCall(calls);
-    expect(call.input).toBe(`${BASE_URL}/products/recrawl`);
+    expect(call.input).toBe(`${BASE_URL}/products/refresh`);
     expect(call.init?.method).toBe("POST");
     expect(requestBodyJson(call)).toEqual({
       targets: [
         {
           catalog: "acme",
-          url: "https://example.com/products/linen-dress",
+          url: "https://shop.acme.example/products/linen-dress",
         },
         { uuid: "missing-product" },
       ],
     });
-    expect(response.requestId).toBe("request-1");
-    expect(response.tasksCreated).toBe(1);
-    expect(response.taskIds).toEqual(["recrawl-request-1-acme-0001-products"]);
+    expect(response.submitted).toBe(2);
+    expect(response.workflowStatus).toBe("launched");
     expect(response.accepted[0]?.catalog).toBe("acme");
     expect(response.rejected[0]?.code).toBe("product_not_found");
   });
 
-  it("rejects invalid product recrawl targets before making a request", async () => {
+  it("rejects invalid product refresh targets before making a request", async () => {
     const { calls, fetchMock } = createFetchMock();
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    await expect(client.recrawlProducts({ targets: [] })).rejects.toThrow(
+    await expect(client.refreshProducts({ targets: [] })).rejects.toThrow(
       "targets must contain between 1 and 500 items",
     );
     await expect(
-      client.recrawlProducts({
+      client.refreshProducts({
         targets: [{ url: "https://example.com/p", uuid: "product-1" }],
       }),
     ).rejects.toThrow("Exactly one of targets[0].url or targets[0].uuid is required");
     await expect(
-      client.recrawlProducts({
+      client.refreshProducts({
         targets: [{ catalog: "", uuid: "product-1" }],
       }),
     ).rejects.toThrow("targets[0].catalog is required");
@@ -683,19 +858,19 @@ describe("OctogenClient coverage URL lists", () => {
 
 function createFetchMock(
   body: unknown = {},
-  init: ResponseInit = {},
+  init: MockResponseInit = {},
 ): { calls: FetchCall[]; fetchMock: FetchLike } {
   const calls: FetchCall[] = [];
   const fetchMock: FetchLike = (input, requestInit) => {
     calls.push({ input, init: requestInit });
-    if (init.status === 204) {
+    if (init.status === 204 || init.status === 304) {
       return Promise.resolve(new Response(null, init));
     }
     return Promise.resolve(
       new Response(JSON.stringify(body), {
-        headers: { "Content-Type": "application/json" },
         status: 200,
         ...init,
+        headers: { "Content-Type": "application/json", ...init.headers },
       }),
     );
   };

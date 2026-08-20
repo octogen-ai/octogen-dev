@@ -12,13 +12,17 @@ uv sync
 
 ## Authentication
 
-The client reads the API key from `OCTO_API_KEY` by default and sends it as:
+The client reads the API key from `OCTOGEN_PLATFORM_API_KEY` by default — the
+name every Octogen document uses — and sends it as:
 
 ```text
 Authorization: Bearer <api-key>
 ```
 
 You can also pass `api_key` explicitly when constructing the client.
+
+`OCTO_API_KEY` is still read as a fallback, with a `DeprecationWarning`, and
+will be removed in a future release.
 
 ## Usage
 
@@ -50,7 +54,16 @@ asyncio.run(main())
 - `lookup_product(url, resolution_mode=..., on_demand_cache_policy=...)` resolves
   a product URL from the index or on demand. The optional controls default to
   `auto` and `prefer_cache`.
-- `recrawl_products(targets=[...])` schedules product URLs or UUIDs for recrawl.
+- `list_domains(if_none_match=None)` lists every host covered by an active
+  crawled catalog. This is the coverage gate — match a page's host against this
+  set before calling `lookup_product`. Supports `ETag` revalidation; see below.
+- `refresh_products(targets=[...])` schedules product URLs or UUIDs for a
+  refresh crawl.
+- `resolve_product_from_html(html=..., url=None)` resolves a product from HTML
+  you already have: no index read, no outbound fetch.
+- `start_voyage(domain)`, `list_voyages(...)`, and `get_voyage(task_id)` drive
+  Voyager, which crawls and builds an extraction for a domain Octogen does not
+  cover yet.
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
   `delete_coverage_url_list(url_list_id)` manage coverage URL lists — named
@@ -73,9 +86,43 @@ async with OctogenClient() as client:
         print(product.title, product.product_url)
 ```
 
+Check coverage before looking a URL up. The domain set is stable and large, so
+cache it and revalidate with the `ETag` the API returns:
+
+```python
+from urllib.parse import urlparse
+
+async with OctogenClient() as client:
+    coverage = await client.list_domains()
+    covered = {entry.host for entry in coverage.domains or []}
+
+    if urlparse(product_url).netloc in covered:
+        result = await client.lookup_product(product_url)
+        print(result.product.title)
+
+    # Later: one round trip that usually comes back `304`.
+    revalidated = await client.list_domains(if_none_match=coverage.etag)
+    if not revalidated.not_modified:
+        coverage = revalidated
+```
+
+If Octogen does not cover the host yet, start a voyage. Voyages are shared per
+domain, so `joined` tells you whether this call dispatched a new one — which
+consumes quota — or attached to one already running, which does not:
+
 ```python
 async with OctogenClient() as client:
-    recrawl = await client.recrawl_products(
+    started = await client.start_voyage("shop.example")
+    print(started.task.task_id, started.task.phase_label, started.joined)
+
+    # Voyages run for hours to days. Poll no faster than every five minutes.
+    progress = await client.get_voyage(started.task.task_id)
+    print(progress.progress_percent, progress.result and progress.result.catalog)
+```
+
+```python
+async with OctogenClient() as client:
+    refresh = await client.refresh_products(
         targets=[
             {
                 "catalog": "warrenlotas",
@@ -84,7 +131,15 @@ async with OctogenClient() as client:
             {"uuid": "product-uuid"},
         ],
     )
-    print(recrawl.tasks_created, recrawl.task_ids)
+    print(refresh.submitted, refresh.workflow_status)
+```
+
+Resolve a page you already fetched yourself — useful in a crawler that has the
+document in hand:
+
+```python
+async with OctogenClient() as client:
+    resolved = await client.resolve_product_from_html(html=html, url=page_url)
 ```
 
 ```python
@@ -101,11 +156,11 @@ async with OctogenClient() as client:
 
 `octogen-url-lists` manages coverage URL lists from the terminal, so the whole
 workflow — build a list, then subscribe to its BigQuery listing with
-`octogen-bq-subscribe` — stays on the command line. It uses `OCTO_API_KEY`
-(or `--api-key`), not Google credentials.
+`octogen-bq-subscribe` — stays on the command line. It uses
+`OCTOGEN_PLATFORM_API_KEY` (or `--api-key`), not Google credentials.
 
 ```bash
-export OCTO_API_KEY=octo_live_...
+export OCTOGEN_PLATFORM_API_KEY=octo_live_...
 uv run --project sdks/python octogen-url-lists create --name q3-campaign --apply
 ```
 
@@ -256,10 +311,22 @@ Run all configured git hooks:
 uv run --project sdks/python prek run --all-files
 ```
 
+Run the cross-language contract conformance suite:
+
+```bash
+uv run --project sdks/python pytest -c sdks/python/pyproject.toml tests/contract/python
+```
+
+Request and response models under `src/octogen_ai_sdk/generated/` are emitted
+from the published OpenAPI contract by `npm run codegen` (from the repository
+root) and committed, so a contract change lands as a reviewable diff. The method
+layer is hand-written; [`tests/contract`](../../tests/contract) is what keeps the
+two in agreement.
+
 ## Example
 
 From the repository root:
 
 ```bash
-OCTO_API_KEY=... uv run --project sdks/python python examples/python/search_clothes.py
+OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python/search_clothes.py
 ```

@@ -1,0 +1,19 @@
+{
+  "domains": [
+    {
+      "catalog": "allbirds",
+      "catalogDisplayName": "Allbirds",
+      "host": "allbirds.com"
+    },
+    {
+      "catalog": "allbirds",
+      "catalogDisplayName": "Allbirds",
+      "host": "www.allbirds.com"
+    },
+    {
+      "catalog": "acme",
+      "catalogDisplayName": "ACME",
+      "host": "shop.acme.example"
+    }
+  ]
+}

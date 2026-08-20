@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -53,6 +53,32 @@ class EmbeddingColumn(StrEnum):
     STYLE_EMBEDDING = "style_embedding"
     TAGS_EMBEDDING = "tags_embedding"
     ATTRIBUTES_EMBEDDING = "attributes_embedding"
+
+
+class ProductRefreshWorkflowStatus(StrEnum):
+    PENDING = "pending"
+    LAUNCHING = "launching"
+    LAUNCHED = "launched"
+    RETRY_PENDING = "retry_pending"
+
+
+class VoyageStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    IN_REVIEW = "in_review"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class VoyagePhase(StrEnum):
+    DISCOVERING_SITE = "discovering_site"
+    SAMPLING_PRODUCTS = "sampling_products"
+    BUILDING_EXTRACTION = "building_extraction"
+    IN_REVIEW = "in_review"
+    PUBLISHING_CATALOG = "publishing_catalog"
+    COMPLETE = "complete"
+    FAILED = "failed"
 
 
 class PricePreference(StrEnum):
@@ -162,28 +188,41 @@ class ProgrammaticProductLookupRequest(_RequestModel):
         return self
 
 
-class ProgrammaticProductRecrawlTarget(_RequestModel):
-    """One product identifier to schedule for recrawl."""
+class ProgrammaticProductRefreshTarget(_RequestModel):
+    """One product identifier to schedule for refresh."""
 
     url: str | None = Field(default=None, min_length=1)
     uuid: str | None = Field(default=None, min_length=1)
     catalog: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def require_exactly_one_identifier(self) -> ProgrammaticProductRecrawlTarget:
+    def require_exactly_one_identifier(self) -> ProgrammaticProductRefreshTarget:
         identifiers = [self.url is not None, self.uuid is not None]
         if sum(identifiers) != 1:
             raise ValueError("Exactly one of url or uuid is required")
         return self
 
 
-class ProgrammaticProductRecrawlRequest(_RequestModel):
-    """Product recrawl request."""
+class ProgrammaticProductRefreshRequest(_RequestModel):
+    """Product refresh request."""
 
-    targets: list[ProgrammaticProductRecrawlTarget] = Field(
+    targets: list[ProgrammaticProductRefreshTarget] = Field(
         min_length=1,
         max_length=500,
     )
+
+
+class ProgrammaticResolveFromHtmlRequest(_RequestModel):
+    """Resolve a product from caller-supplied HTML."""
+
+    html: str = Field(min_length=1, max_length=5_242_880)
+    url: str | None = Field(default=None, min_length=1)
+
+
+class VoyageStartRequest(_RequestModel):
+    """Body for ``POST /v1/voyage``: a registrable domain or a full URL."""
+
+    domain: str = Field(min_length=1, max_length=2048)
 
 
 class ProgrammaticMoreLikeThisSource(_RequestModel):
@@ -448,7 +487,10 @@ class ProductResolutionMetadata(_ResponseModel):
 
 class MerchantProductUrlLookupResponse(_ResponseModel):
     request_id: str | None = Field(default=None, alias="requestId")
-    source: Literal["indexed", "on_demand"]
+    #: How the product was resolved. ``client_html`` is what
+    #: :meth:`~octogen_ai_sdk.OctogenClient.resolve_product_from_html` always
+    #: returns; ``lookup_product`` returns ``indexed`` or ``on_demand``.
+    source: Literal["indexed", "on_demand", "client_html"]
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
@@ -465,28 +507,136 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-class ProgrammaticProductRecrawlAcceptedTarget(_ResponseModel):
+class ProgrammaticProductRefreshAcceptedTarget(_ResponseModel):
     catalog: str
     url: str
 
 
-class ProgrammaticProductRecrawlRejectedTarget(_ResponseModel):
-    target: ProgrammaticProductRecrawlTarget
+class ProgrammaticProductRefreshRejectedTarget(_ResponseModel):
+    target: ProgrammaticProductRefreshTarget
     code: str
     message: str
 
 
-class ProgrammaticProductRecrawlResponse(_ResponseModel):
+class ProgrammaticProductRefreshResponse(_ResponseModel):
     request_id: str = Field(alias="requestId")
     submitted: int
-    tasks_created: int = Field(alias="tasksCreated")
-    task_ids: list[str] = Field(default_factory=list, alias="taskIds")
-    accepted: list[ProgrammaticProductRecrawlAcceptedTarget] = Field(
+    accepted: list[ProgrammaticProductRefreshAcceptedTarget] = Field(
         default_factory=list,
     )
-    rejected: list[ProgrammaticProductRecrawlRejectedTarget] = Field(
+    rejected: list[ProgrammaticProductRefreshRejectedTarget] = Field(
         default_factory=list,
     )
+    workflow_id: str | None = Field(default=None, alias="workflowId")
+    workflow_status: ProductRefreshWorkflowStatus | None = Field(
+        default=None,
+        alias="workflowStatus",
+    )
+    workflow_attempts: int = Field(default=0, alias="workflowAttempts")
+    workflow_error: str | None = Field(default=None, alias="workflowError")
+
+
+class DomainEntry(_ResponseModel):
+    """One covered host and the catalog that claims it."""
+
+    catalog: str
+    catalog_display_name: str = Field(alias="catalogDisplayName")
+    host: str
+
+
+class ListDomainsResponse(_ResponseModel):
+    """The full covered-domain set."""
+
+    domains: list[DomainEntry] = Field(default_factory=list)
+
+
+class ListDomainsResult(_ResponseModel):
+    """``list_domains`` with its cache metadata.
+
+    ``domains`` is ``None`` exactly when ``not_modified`` is true — the server
+    answered ``304`` to an ``If-None-Match`` and the caller should reuse the set
+    it already cached.
+    """
+
+    domains: list[DomainEntry] | None = None
+    etag: str | None = None
+    not_modified: bool = False
+
+
+class VoyageError(_ResponseModel):
+    """Redacted failure info: a stable snake_case code plus safe text."""
+
+    code: str
+    message: str
+
+
+class VoyageResultEndpoints(_ResponseModel):
+    lookup: str = "/v1/products/lookup"
+    search: str = "/v1/products/search"
+
+
+class VoyageResult(_ResponseModel):
+    """Populated once the voyage completes and the catalog is live."""
+
+    catalog: str
+    endpoints: VoyageResultEndpoints | None = None
+    product_count: int | None = Field(default=None, alias="productCount")
+
+
+class VoyageTask(_ResponseModel):
+    """The shared, org-anonymous public view of a voyage."""
+
+    task_id: str = Field(alias="taskId")
+    domain: str
+    status: VoyageStatus
+    phase: VoyagePhase
+    phase_label: str = Field(alias="phaseLabel")
+    progress_percent: int = Field(alias="progressPercent")
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+    updated_at: datetime | None = Field(default=None, alias="updatedAt")
+    completed_at: datetime | None = Field(default=None, alias="completedAt")
+    error: VoyageError | None = None
+    result: VoyageResult | None = None
+
+
+class StartVoyageResult(_ResponseModel):
+    """``start_voyage`` plus whether it joined an existing voyage.
+
+    ``joined`` is true when the API answered ``200`` — a voyage for this domain
+    was already running, or the domain already has a live catalog — and no
+    quota was consumed. It is false when the API answered ``202`` and
+    dispatched a fresh voyage, which does consume quota.
+    """
+
+    task: VoyageTask
+    joined: bool
+
+
+class VoyageQuotaConcurrent(_ResponseModel):
+    """Concurrent-slot usage: clears when voyages finish, no fixed reset."""
+
+    limit: int | None = None
+    used: int | None = None
+
+
+class VoyageQuotaMonthly(_ResponseModel):
+    limit: int | None = None
+    used: int | None = None
+    period_start: date | None = Field(default=None, alias="periodStart")
+    resets_at: datetime | None = Field(default=None, alias="resetsAt")
+
+
+class VoyageQuotas(_ResponseModel):
+    concurrent: VoyageQuotaConcurrent
+    monthly: VoyageQuotaMonthly
+
+
+class VoyageListResponse(_ResponseModel):
+    """``GET /v1/voyage`` page. ``quotas`` is null for super-admin callers."""
+
+    items: list[VoyageTask] = Field(default_factory=list)
+    next_cursor: str | None = Field(default=None, alias="nextCursor")
+    quotas: VoyageQuotas | None = None
 
 
 class ValidationErrorModel(_ResponseModel):

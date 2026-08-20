@@ -1,0 +1,18 @@
+{
+  "source": "client_html",
+  "requestId": "req_01J8Z4M0000000000000000002",
+  "requestedUrl": "https://shop.acme.example/products/linen-dress?variant=blue",
+  "canonicalUrl": "https://shop.acme.example/products/linen-dress",
+  "normalizedUrl": "https://shop.acme.example/products/linen-dress",
+  "warnings": [],
+  "product": {
+    "uuid": "00000000-0000-4000-8000-000000000001",
+    "productUrl": "https://shop.acme.example/products/linen-dress",
+    "title": "Linen Dress",
+    "brand": {
+      "name": "ACME",
+      "slug": "acme"
+    },
+    "currentPrice": 128
+  }
+}

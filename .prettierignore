@@ -10,5 +10,6 @@ uv.lock
 # Python tooling owns its own formatting (ruff)
 sdks/python
 
-# Generated SDK types are emitted by `npm run codegen`, not hand-formatted
+# Emitted by `npm run codegen`, not hand-formatted
 **/src/generated
+tests/contract/openapi

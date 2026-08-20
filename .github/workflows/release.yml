@@ -1,0 +1,131 @@
+# Tag-driven publish for the SDKs.
+#
+# NOT YET ARMED. Every publish step is gated on `vars.PUBLISHING_ENABLED`, which
+# does not exist, so a tag pushed today runs the full build and verification and
+# then stops before touching a registry. Arming it needs a human first:
+#
+#   1. Someone owns the `@octogen-ai` organization on npm. It is unclaimed, as
+#      are `octogen` and `octogen-cli`; `octogen-ai-sdk` is unclaimed on PyPI.
+#   2. 2FA is enabled on that organization.
+#   3. The OIDC trusted publisher relationship is configured for this repository
+#      on both npm (for provenance) and PyPI, so neither needs a long-lived
+#      token in repository secrets.
+#   4. A repository variable `PUBLISHING_ENABLED` is set to `true`.
+#
+# Until then this file is the reviewed, tested description of how a release will
+# happen — not a thing that can fire by accident.
+#
+# Versioning is independent and tag-driven, per D5 of the CLI design:
+#
+#   sdk-ts-v0.2.0   ->  @octogen-ai/sdk 0.2.0
+#   sdk-py-v0.2.0   ->  octogen-ai-sdk 0.2.0
+#   cli-v1.0.0      ->  @octogen-ai/cli 1.0.0  (added with the CLI, design P4/P8)
+#
+# The tag never edits the tree: the version is bumped in the PR, and the tag is
+# pushed at the merged commit. A mismatch fails the job below rather than
+# publishing something the tag does not name.
+name: Release
+
+on:
+  push:
+    tags:
+      - "sdk-ts-v*"
+      - "sdk-py-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    name: "@octogen-ai/sdk"
+    if: startsWith(github.ref_name, 'sdk-ts-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for npm provenance via OIDC.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+
+      - name: Tag must match the package version
+        run: |
+          tag_version="${GITHUB_REF_NAME#sdk-ts-v}"
+          package_version="$(node -p "require('./sdks/typescript/package.json').version")"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME names $tag_version but" \
+                 "sdks/typescript/package.json is $package_version."
+            exit 1
+          fi
+
+      - name: Full check
+        run: npm run check
+
+      - name: Pack and inspect
+        run: |
+          npm pack --workspace sdks/typescript --pack-destination /tmp
+          tar -tzf /tmp/octogen-ai-sdk-*.tgz
+
+      - name: Publish
+        if: vars.PUBLISHING_ENABLED == 'true'
+        run: npm publish --workspace sdks/typescript --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publishing is not armed
+        if: vars.PUBLISHING_ENABLED != 'true'
+        run: |
+          echo "::notice title=Not published::Built and verified" \
+               "@octogen-ai/sdk $GITHUB_REF_NAME but did not publish:" \
+               "the PUBLISHING_ENABLED repository variable is not set to true." \
+               "See the header of .github/workflows/release.yml."
+
+  python:
+    name: octogen-ai-sdk
+    if: startsWith(github.ref_name, 'sdk-py-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for PyPI trusted publishing via OIDC.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      - name: Tag must match the project version
+        run: |
+          tag_version="${GITHUB_REF_NAME#sdk-py-v}"
+          project_version="$(uv version --project sdks/python --short)"
+          if [ "$tag_version" != "$project_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME names $tag_version but" \
+                 "sdks/python/pyproject.toml is $project_version."
+            exit 1
+          fi
+
+      - name: Tests
+        run: >-
+          uv run --project sdks/python --frozen
+          pytest -c sdks/python/pyproject.toml sdks/python/tests tests/contract/python
+
+      - name: Build
+        run: uv build --project sdks/python --out-dir /tmp/dist
+
+      - name: Publish
+        if: vars.PUBLISHING_ENABLED == 'true'
+        run: uv publish /tmp/dist/*
+
+      - name: Publishing is not armed
+        if: vars.PUBLISHING_ENABLED != 'true'
+        run: |
+          echo "::notice title=Not published::Built and verified" \
+               "octogen-ai-sdk $GITHUB_REF_NAME but did not publish:" \
+               "the PUBLISHING_ENABLED repository variable is not set to true." \
+               "See the header of .github/workflows/release.yml."

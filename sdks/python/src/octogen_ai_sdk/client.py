@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.metadata as metadata
 import json as json_module
 import os
+import warnings
 from collections.abc import Sequence
 from pprint import pformat
 from types import TracebackType
@@ -31,6 +32,8 @@ from octogen_ai_sdk.models import (
     CoverageUrlMutationResponse,
     CoverageUrlsRequest,
     Facet,
+    ListDomainsResponse,
+    ListDomainsResult,
     MerchantProductListPage,
     MerchantProductUrlLookupResponse,
     PricePreference,
@@ -40,23 +43,55 @@ from octogen_ai_sdk.models import (
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
-    ProgrammaticProductRecrawlRequest,
-    ProgrammaticProductRecrawlResponse,
-    ProgrammaticProductRecrawlTarget,
+    ProgrammaticProductRefreshRequest,
+    ProgrammaticProductRefreshResponse,
+    ProgrammaticProductRefreshTarget,
     ProgrammaticProductSearchRequest,
+    ProgrammaticResolveFromHtmlRequest,
+    StartVoyageResult,
     TextSearchQuery,
+    VoyageListResponse,
+    VoyageStartRequest,
+    VoyageStatus,
+    VoyageTask,
 )
 
 DEFAULT_BASE_URL = "https://api.octogen.ai/v1"
 DEFAULT_TIMEOUT = 30.0
 PACKAGE_NAME = "octogen-ai-sdk"
 
+#: The environment variable every Octogen document names.
+API_KEY_ENV_VAR = "OCTOGEN_PLATFORM_API_KEY"
+
+#: The name this SDK read before 0.2.0. Still honored so an existing checkout
+#: keeps working, but it warns once per process and will be removed.
+DEPRECATED_API_KEY_ENV_VAR = "OCTO_API_KEY"
+
 
 def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.1.0"
+        return "0.2.0"
+
+
+def _read_env_api_key() -> str | None:
+    primary = os.getenv(API_KEY_ENV_VAR)
+    if primary:
+        return primary
+
+    deprecated = os.getenv(DEPRECATED_API_KEY_ENV_VAR)
+    if deprecated:
+        warnings.warn(
+            f"{DEPRECATED_API_KEY_ENV_VAR} is deprecated and will be removed in "
+            f"a future release. Rename it to {API_KEY_ENV_VAR}, which is the "
+            f"name used by every Octogen document and by the Octogen CLI.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return deprecated
+
+    return None
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -65,7 +100,8 @@ USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
 class OctogenClient:
     """Async client for the Octogen AI commerce API.
 
-    The API key defaults to the ``OCTO_API_KEY`` environment variable.
+    The API key defaults to the ``OCTOGEN_PLATFORM_API_KEY`` environment
+    variable, falling back to the deprecated ``OCTO_API_KEY`` with a warning.
     Requests are authenticated with ``Authorization: Bearer <api-key>``.
     """
 
@@ -77,10 +113,10 @@ class OctogenClient:
         timeout: float | httpx.Timeout = DEFAULT_TIMEOUT,
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
-        resolved_api_key = api_key or os.getenv("OCTO_API_KEY")
+        resolved_api_key = api_key or _read_env_api_key()
         if not resolved_api_key:
             raise MissingAPIKeyError(
-                "Octogen API key required. Set OCTO_API_KEY or pass api_key."
+                f"Octogen API key required. Set {API_KEY_ENV_VAR} or pass api_key."
             )
 
         self._api_key = resolved_api_key
@@ -128,21 +164,109 @@ class OctogenClient:
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
 
-    async def recrawl_products(
+    async def refresh_products(
         self,
         *,
-        targets: Sequence[ProgrammaticProductRecrawlTarget | dict[str, Any]],
-    ) -> ProgrammaticProductRecrawlResponse:
-        """Schedule product URLs or UUIDs for recrawl."""
-        request = ProgrammaticProductRecrawlRequest(
-            targets=[_coerce_recrawl_target(target) for target in targets],
+        targets: Sequence[ProgrammaticProductRefreshTarget | dict[str, Any]],
+    ) -> ProgrammaticProductRefreshResponse:
+        """Schedule product URLs or UUIDs for a refresh crawl."""
+        request = ProgrammaticProductRefreshRequest(
+            targets=[_coerce_refresh_target(target) for target in targets],
         )
         data = await self._request(
             "POST",
-            "/products/recrawl",
+            "/products/refresh",
             json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
-        return ProgrammaticProductRecrawlResponse.model_validate(data)
+        return ProgrammaticProductRefreshResponse.model_validate(data)
+
+    async def list_domains(
+        self, *, if_none_match: str | None = None
+    ) -> ListDomainsResult:
+        """List every host covered by an active crawled catalog.
+
+        This is the coverage gate: match a page's host against this set before
+        sending its URL to :meth:`lookup_product`. The set is stable and large,
+        so cache it and revalidate with the returned ``etag``::
+
+            cached = await client.list_domains()
+            # ...later...
+            fresh = await client.list_domains(if_none_match=cached.etag)
+            if not fresh.not_modified:
+                cached = fresh
+        """
+        headers = None if if_none_match is None else {"If-None-Match": if_none_match}
+        response = await self._send("GET", "/domains", headers=headers)
+        etag = response.headers.get("ETag")
+
+        if response.status_code == 304:
+            return ListDomainsResult(domains=None, etag=etag, not_modified=True)
+
+        page = ListDomainsResponse.model_validate(_response_json(response))
+        return ListDomainsResult(domains=page.domains, etag=etag, not_modified=False)
+
+    async def resolve_product_from_html(
+        self,
+        *,
+        html: str,
+        url: str | None = None,
+    ) -> MerchantProductUrlLookupResponse:
+        """Resolve a product from HTML you already have — no index, no fetch.
+
+        Pass ``url`` whenever you know it. Without it the document must declare
+        its own canonical URL, and storefronts that encode a variant selection
+        only in the query string lose that identity.
+        """
+        request = ProgrammaticResolveFromHtmlRequest(html=html, url=url)
+        data = await self._request(
+            "POST",
+            "/products/resolve-from-html",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return MerchantProductUrlLookupResponse.model_validate(data)
+
+    async def start_voyage(self, domain: str) -> StartVoyageResult:
+        """Start — or join — a Voyager crawl and extraction run for a domain.
+
+        Voyages are shared per domain: if one is already running for ``domain``
+        (or the domain already has a live catalog) this joins it, consumes no
+        quota, and returns ``joined=True``. Voyages take hours to days; poll
+        :meth:`get_voyage` every five minutes or slower.
+        """
+        request = VoyageStartRequest(domain=domain)
+        response = await self._send(
+            "POST",
+            "/voyage",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        task = VoyageTask.model_validate(_response_json(response))
+        return StartVoyageResult(task=task, joined=response.status_code == 200)
+
+    async def list_voyages(
+        self,
+        *,
+        status: VoyageStatus | str | None = None,
+        cursor: str | None = None,
+        limit: int | None = None,
+    ) -> VoyageListResponse:
+        """List your organization's voyages, newest first, with quota usage."""
+        resolved_status = None if status is None else VoyageStatus(status).value
+        data = await self._request(
+            "GET",
+            "/voyage",
+            params={"status": resolved_status, "cursor": cursor, "limit": limit},
+        )
+        return VoyageListResponse.model_validate(data)
+
+    async def get_voyage(self, task_id: str) -> VoyageTask:
+        """Poll one voyage.
+
+        A task that does not exist and a task belonging to another organization
+        are deliberately indistinguishable: both raise
+        :class:`~octogen_ai_sdk.errors.OctogenNotFoundError`.
+        """
+        data = await self._request("GET", f"/voyage/{_path_segment(task_id)}")
+        return VoyageTask.model_validate(data)
 
     async def search_products(
         self,
@@ -337,10 +461,33 @@ class OctogenClient:
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
     ) -> Any:
-        headers = self._headers()
+        response = await self._send(method, path, json=json, params=params)
+        if response.status_code in (204, 304):
+            return None
+        return _response_json(response)
+
+    async def _send(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """Issue one request and return the raw response.
+
+        ``list_domains`` needs the ``ETag`` header and the ``304`` status, and
+        ``start_voyage`` needs to tell ``200`` (joined) from ``202``
+        (dispatched), so the status line is part of those contracts rather than
+        an implementation detail ``_request`` can flatten away.
+        """
+        request_headers = self._headers()
+        if headers:
+            request_headers.update(headers)
         content: str | None = None
         if json is not None:
-            headers["Content-Type"] = "application/json"
+            request_headers["Content-Type"] = "application/json"
             content = json_module.dumps(json, separators=(",", ":"))
         query = {
             key: value for key, value in (params or {}).items() if value is not None
@@ -350,7 +497,7 @@ class OctogenClient:
             response = await self._client.request(
                 method,
                 self._url(path),
-                headers=headers,
+                headers=request_headers,
                 content=content,
                 params=query or None,
             )
@@ -360,17 +507,7 @@ class OctogenClient:
         if response.status_code >= 400:
             raise _api_error_from_response(response)
 
-        if response.status_code == 204:
-            return None
-
-        try:
-            return response.json()
-        except ValueError as exc:
-            raise OctogenAPIError(
-                "Octogen API returned a non-JSON response",
-                status_code=response.status_code,
-                response=response,
-            ) from exc
+        return response
 
     def _url(self, path: str) -> str:
         return f"{self._base_url}/{path.lstrip('/')}"
@@ -397,12 +534,23 @@ def _coerce_facet(value: Facet | dict[str, Any]) -> Facet:
     return Facet.model_validate(value)
 
 
-def _coerce_recrawl_target(
-    value: ProgrammaticProductRecrawlTarget | dict[str, Any],
-) -> ProgrammaticProductRecrawlTarget:
-    if isinstance(value, ProgrammaticProductRecrawlTarget):
+def _coerce_refresh_target(
+    value: ProgrammaticProductRefreshTarget | dict[str, Any],
+) -> ProgrammaticProductRefreshTarget:
+    if isinstance(value, ProgrammaticProductRefreshTarget):
         return value
-    return ProgrammaticProductRecrawlTarget.model_validate(value)
+    return ProgrammaticProductRefreshTarget.model_validate(value)
+
+
+def _response_json(response: httpx.Response) -> Any:
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise OctogenAPIError(
+            "Octogen API returned a non-JSON response",
+            status_code=response.status_code,
+            response=response,
+        ) from exc
 
 
 def _api_error_from_response(response: httpx.Response) -> OctogenAPIError:
@@ -455,7 +603,7 @@ def _url_batch(urls: Sequence[str]) -> list[str]:
 
 
 def _path_segment(value: str) -> str:
-    """Percent-encode a caller-supplied path segment (e.g. a list id)."""
+    """Percent-encode a caller-supplied path segment (e.g. a list or task id)."""
     if not isinstance(value, str) or not value.strip():
-        raise ValueError("url_list_id must be a non-empty string")
+        raise ValueError("path segment must be a non-empty string")
     return quote(value.strip(), safe="")
