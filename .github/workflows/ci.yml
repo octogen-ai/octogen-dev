@@ -1,0 +1,102 @@
+# Continuous integration for octogen-dev.
+#
+# Every command here is a command `prek.toml` also runs locally, so a green PR
+# and a clean `prek run --all-files` mean the same thing. Hooks only protect the
+# machines they are installed on; this workflow is what protects `main`.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      # The `builtin` prek hooks only. The `local` hooks are language-specific
+      # and run in the matrix jobs below against every supported toolchain
+      # rather than once here.
+      - name: prek builtin hooks
+        run: |
+          for hook in check-toml check-yaml end-of-file-fixer trailing-whitespace \
+                      check-merge-conflict detect-private-key; do
+            echo "::group::$hook"
+            uv run --project sdks/python prek run --all-files "$hook"
+            echo "::endgroup::"
+          done
+
+  typescript:
+    name: TypeScript SDK (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      # Mirrors `typescript-sdk-{lint,format,typecheck,tests,build}` in prek.toml.
+      - name: ESLint
+        run: npm run lint
+      - name: Prettier check
+        run: npm run format
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+
+  python:
+    name: Python SDK (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      # Mirrors `python-sdk-{ruff-check,ruff-format-check,ty-check,tests}` in
+      # prek.toml. `--frozen` fails rather than silently resolving a different
+      # dependency set than `uv.lock` pins.
+      - name: Ruff lint
+        run: >-
+          uv run --project sdks/python --frozen
+          ruff check --config sdks/python/pyproject.toml
+          sdks/python/src sdks/python/tests examples/python
+      - name: Ruff format check
+        run: >-
+          uv run --project sdks/python --frozen
+          ruff format --check --config sdks/python/pyproject.toml
+          sdks/python/src sdks/python/tests examples/python
+      - name: ty typecheck
+        run: >-
+          uv run --project sdks/python --frozen
+          ty check --project sdks/python
+          sdks/python/src sdks/python/tests examples/python
+      - name: Tests
+        run: >-
+          uv run --project sdks/python --frozen
+          pytest -c sdks/python/pyproject.toml sdks/python/tests

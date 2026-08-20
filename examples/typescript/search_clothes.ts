@@ -1,9 +1,6 @@
 import { inspect } from "node:util";
 
-import {
-  OctogenAPIError,
-  OctogenClient,
-} from "../../sdks/typescript/src/index.js";
+import { OctogenAPIError, OctogenClient } from "../../sdks/typescript/src/index.js";
 
 async function main(): Promise<void> {
   try {

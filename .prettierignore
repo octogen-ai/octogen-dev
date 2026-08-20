@@ -1,0 +1,14 @@
+# Build output and dependencies
+coverage
+dist
+node_modules
+
+# Lockfiles are tool-owned
+package-lock.json
+uv.lock
+
+# Python tooling owns its own formatting (ruff)
+sdks/python
+
+# Generated SDK types are emitted by `npm run codegen`, not hand-formatted
+**/src/generated

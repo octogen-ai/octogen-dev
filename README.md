@@ -32,9 +32,15 @@ This repository is public-facing and is intended to become the canonical home fo
 |   +-- contract/            # Shared API contract tests used by SDKs
 |   +-- fixtures/            # Stable mocked API payloads and commerce scenarios
 |   +-- integration/         # Live or sandbox integration tests
++-- .github/workflows/       # CI
 +-- .gitignore
++-- .prettierrc.json         # Repo-wide Prettier config
++-- eslint.config.mjs        # Repo-wide ESLint config
 +-- LICENSE
++-- package.json             # npm workspace root
++-- prek.toml                # Local hooks
 +-- README.md
++-- tsconfig.base.json       # Shared TypeScript compiler options
 ```
 
 ## SDK Strategy
@@ -49,22 +55,47 @@ Each SDK should be independently buildable and releasable while sharing API expe
 
 Planned package names and release targets should be finalized before the first public SDK release.
 
-The Python SDK is initialized in `sdks/python` as an async `uv` project using
-`httpx` and Pydantic. Run its tests with:
+## Development
+
+### JavaScript and TypeScript
+
+The repository is one **npm workspace**. `sdks/typescript` is a member, and so
+is `cli` once it exists. There is a single root `package-lock.json`, a single
+root `eslint.config.mjs`, a single root `.prettierrc.json`, and a shared
+`tsconfig.base.json` that each package extends. Install once at the root and
+every workspace resolves the same toolchain:
 
 ```bash
-cd sdks/python
-uv run pytest
+npm install
 ```
 
-The TypeScript SDK is initialized in `sdks/typescript` as an ESM package using
-the platform `fetch`, strict TypeScript, ESLint, Prettier, and Vitest. Run its
-quality suite with:
+Root scripts run across every workspace:
+
+| Command             | What it does                                   |
+| ------------------- | ---------------------------------------------- |
+| `npm run lint`      | ESLint over the whole repository, one config   |
+| `npm run format`    | Prettier check over the whole repository       |
+| `npm run typecheck` | `tsc --noEmit` in each workspace               |
+| `npm run test`      | Each workspace's test suite                    |
+| `npm run build`     | Each workspace's build                         |
+| `npm run check`     | All of the above, in that order — what CI runs |
+
+To work on one package, scope the script:
 
 ```bash
-npm --prefix sdks/typescript install
-npm --prefix sdks/typescript run check
+npm run test --workspace sdks/typescript
 ```
+
+### Python
+
+`sdks/python` is deliberately **not** an npm workspace member. It stays a
+standalone `uv` project:
+
+```bash
+uv run --project sdks/python pytest -c sdks/python/pyproject.toml sdks/python/tests
+```
+
+### Hooks and CI
 
 Install the repo hooks with `prek`:
 
@@ -77,6 +108,10 @@ Run all hooks manually:
 ```bash
 uv run --project sdks/python prek run --all-files
 ```
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the same commands on
+every pull request, across Node 20/22 and Python 3.11/3.12. Hooks protect only
+the machines they are installed on; CI is what protects `main`.
 
 ## Skills Strategy
 
