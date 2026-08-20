@@ -487,7 +487,10 @@ class ProductResolutionMetadata(_ResponseModel):
 
 class MerchantProductUrlLookupResponse(_ResponseModel):
     request_id: str | None = Field(default=None, alias="requestId")
-    source: Literal["indexed", "on_demand"]
+    #: How the product was resolved. ``client_html`` is what
+    #: :meth:`~octogen_ai_sdk.OctogenClient.resolve_product_from_html` always
+    #: returns; ``lookup_product`` returns ``indexed`` or ``on_demand``.
+    source: Literal["indexed", "on_demand", "client_html"]
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")

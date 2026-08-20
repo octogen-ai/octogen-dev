@@ -619,7 +619,12 @@ export interface ProductResolutionMetadata {
 
 export interface MerchantProductUrlLookupResponse {
   requestId?: string | null;
-  source: "indexed" | "on_demand";
+  /**
+   * How the product was resolved. `client_html` is what
+   * {@link OctogenClient.resolveProductFromHtml} always returns; `lookupProduct`
+   * returns `indexed` or `on_demand`.
+   */
+  source: "indexed" | "on_demand" | "client_html";
   catalogKey?: string | null;
   catalogDisplayName?: string | null;
   sourceBaseUrl?: string | null;

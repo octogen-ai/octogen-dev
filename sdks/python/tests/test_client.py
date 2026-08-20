@@ -244,6 +244,14 @@ async def test_resolve_product_from_html_sends_html_and_url() -> None:
         "url": "https://shop.acme.example/products/linen-dress?variant=blue",
     }
     assert response.product.title == "Linen Dress"
+    # The discriminant this path — and only this path — returns. A model that
+    # rejects it makes every successful resolve raise a ValidationError.
+    assert response.source == "client_html"
+    # On a storefront that records the variant only in the query string, the
+    # echoed request URL is the sole variant-qualified identity in the response.
+    assert response.requested_url == (
+        "https://shop.acme.example/products/linen-dress?variant=blue"
+    )
 
 
 @respx.mock

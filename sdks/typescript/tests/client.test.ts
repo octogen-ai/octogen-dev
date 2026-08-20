@@ -229,6 +229,13 @@ describe("OctogenClient", () => {
       url: "https://shop.acme.example/products/linen-dress?variant=blue",
     });
     expect(response.product.title).toBe("Linen Dress");
+    // The discriminant this path — and only this path — returns.
+    expect(response.source).toBe("client_html");
+    // On a storefront that records the variant only in the query string, the
+    // echoed request URL is the sole variant-qualified identity in the response.
+    expect(response.requestedUrl).toBe(
+      "https://shop.acme.example/products/linen-dress?variant=blue",
+    );
   });
 
   it("omits url from a resolve-from-html request when not supplied", async () => {

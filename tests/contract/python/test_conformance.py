@@ -206,3 +206,120 @@ def test_every_request_issuing_client_method_is_contract_checked() -> None:
         f"{', '.join(unchecked)}. Add each to INVOCATIONS, or to NOT_A_REQUEST "
         f"if it issues no request."
     )
+
+
+# ---------------------------------------------------------------------------
+# Response-shape conformance.
+#
+# The assertions above check that each SDK method calls the right method and
+# path. They say nothing about what comes back — and
+# `MerchantProductUrlLookupResponse.source` sat at `Literal["indexed",
+# "on_demand"]` while the contract had carried a third member, "client_html",
+# since `POST /products/resolve-from-html` shipped. Every successful resolve
+# raised a ValidationError.
+#
+# Enumerated fields are the ones where being wrong is expensive: Pydantic
+# rejects an unknown member outright, so a narrow Literal turns a valid response
+# into a crash. This walks the hand-written models rather than listing fields,
+# so an enum added to the contract later is covered without anyone remembering
+# to add it here.
+# ---------------------------------------------------------------------------
+
+SCHEMAS: dict[str, Any] = CONTRACT["components"]["schemas"]
+
+#: Hand-written fields that deliberately differ from the contract. Empty, and
+#: worth keeping that way: an entry here is a response the SDK cannot parse.
+ENUM_DRIFT_ALLOWED: set[tuple[str, str]] = set()
+
+
+def _contract_enum(schema: Any) -> set[str] | None:
+    """The permitted values of a property schema, following one `$ref` hop."""
+    if not isinstance(schema, dict):
+        return None
+    if "enum" in schema:
+        return set(schema["enum"])
+    if "$ref" in schema:
+        return _contract_enum(SCHEMAS.get(schema["$ref"].rsplit("/", 1)[-1], {}))
+    for branch in schema.get("anyOf", []):
+        values = _contract_enum(branch)
+        if values is not None:
+            return values
+    return None
+
+
+def _sdk_enum(annotation: Any) -> set[str] | None:
+    """The permitted values of a model field: a ``Literal``, or a ``StrEnum``."""
+    import enum
+    import typing
+
+    origin = typing.get_origin(annotation)
+    if origin is typing.Literal:
+        args = typing.get_args(annotation)
+        return {a for a in args if isinstance(a, str)} or None
+    if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+        return {str(member.value) for member in annotation}
+    # `X | None`, `Optional[X]`: recurse into the non-None branches.
+    args = [a for a in typing.get_args(annotation) if a is not type(None)]
+    if origin is not None and args:
+        for arg in args:
+            values = _sdk_enum(arg)
+            if values is not None:
+                return values
+    return None
+
+
+def _enum_fields() -> list[tuple[str, str, set[str], set[str]]]:
+    """Every hand-written enumerated field that the contract also enumerates."""
+    import inspect
+
+    from pydantic import BaseModel
+
+    import octogen_ai_sdk.models as sdk_models
+
+    found: list[tuple[str, str, set[str], set[str]]] = []
+    for name, model in inspect.getmembers(sdk_models, inspect.isclass):
+        if not issubclass(model, BaseModel) or name not in SCHEMAS:
+            continue
+        properties = SCHEMAS[name].get("properties", {})
+        for field_name, field in model.model_fields.items():
+            wire_name = field.alias or field_name
+            contract_values = _contract_enum(properties.get(wire_name))
+            sdk_values = _sdk_enum(field.annotation)
+            if contract_values is not None and sdk_values is not None:
+                found.append((name, wire_name, sdk_values, contract_values))
+    return found
+
+
+def test_the_enum_walk_finds_something() -> None:
+    """A silent zero here would make every assertion below vacuously pass."""
+    fields = _enum_fields()
+    assert len(fields) >= 4, f"only found {len(fields)} enumerated fields"
+    assert ("MerchantProductUrlLookupResponse", "source") in {
+        (model, field) for model, field, _, _ in fields
+    }
+
+
+@pytest.mark.parametrize(
+    ("model", "field", "sdk_values", "contract_values"),
+    [pytest.param(*row, id=f"{row[0]}.{row[1]}") for row in _enum_fields()],
+)
+def test_model_enums_accept_everything_the_contract_returns(
+    model: str,
+    field: str,
+    sdk_values: set[str],
+    contract_values: set[str],
+) -> None:
+    if (model, field) in ENUM_DRIFT_ALLOWED:
+        pytest.skip("explicitly allowed drift")
+    missing = contract_values - sdk_values
+    assert not missing, (
+        f"{model}.{field} rejects {sorted(missing)}, which the contract permits. "
+        f"Pydantic raises a ValidationError on an unknown member, so a response "
+        f"carrying one of these cannot be parsed at all."
+    )
+    extra = sdk_values - contract_values
+    assert not extra, (
+        f"{model}.{field} permits {sorted(extra)}, which the contract does not "
+        f"define. Either the contract moved and `npm run codegen` has not been "
+        f"run, or the model is inventing values callers will never see."
+    )
