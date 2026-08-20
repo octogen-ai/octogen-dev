@@ -1,6 +1,6 @@
 [project]
 name = "octogen-ai-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Async Python SDK for the Octogen AI commerce API"
 readme = "README.md"
 authors = [
@@ -32,6 +32,9 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    # Pinned exactly: `tools/codegen/generate.py --check` compares generated
+    # output byte-for-byte, so a minor bump in the generator reads as drift.
+    "datamodel-code-generator==0.40.0",
     "google-cloud-bigquery-analyticshub>=0.9.0",
     "prek>=0.3.13",
     "pytest>=9.0.3",
@@ -57,8 +60,27 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# The generated contract mirror carries the API's own field descriptions
+# verbatim, and several run past 88 columns. `ruff format` (which the generator
+# runs) cannot split a string literal, and rewrapping them by hand would be
+# undone by the next `npm run codegen`. Import order and the generator's fixed
+# import list are its business too.
+"**/octogen_ai_sdk/generated/*.py" = ["E501", "F401", "I001"]
+
 [tool.ty.src]
 include = ["src", "tests"]
 
 [tool.ty.environment]
 python-version = "3.11"
+
+# The generated contract mirror is not hand-editable, so a diagnostic in it
+# cannot be fixed here. One survives: `datamodel-code-generator` renders a
+# schema's `default: {}` literally, so an object-typed field reads as
+# `IdentifiersView | None = {}`. Pydantic coerces it at validation time;
+# `ty` sees a `dict` assigned to a model. Everything hand-written stays checked.
+[[tool.ty.overrides]]
+include = ["src/octogen_ai_sdk/generated/**"]
+
+[tool.ty.overrides.rules]
+invalid-assignment = "ignore"

@@ -14,8 +14,10 @@ const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Every tsconfig that provides type information for linting. `examples/typescript`
  * has no tsconfig of its own — it is included by the TypeScript SDK's.
+ * `tsconfig.contract.json` covers the root-level cross-language contract tests
+ * and the root Vitest configs.
  */
-const projects = ["./sdks/typescript/tsconfig.json"];
+const projects = ["./sdks/typescript/tsconfig.json", "./tsconfig.contract.json"];
 
 export default tseslint.config(
   {

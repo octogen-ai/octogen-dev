@@ -1,0 +1,3327 @@
+/**
+ * Generated from the published Octogen `/v1` OpenAPI contract. Do not edit.
+ *
+ * Regenerate with `npm run codegen` (the snapshot lives in
+ * `tests/fixtures/openapi/platform-v1.json`). Only types are generated; the
+ * method layer in `../client.ts` is hand-written.
+ */
+export interface paths {
+    "/coverage/url-lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List your organization's URL lists
+         * @description List the calling organization's URL lists, newest first.
+         */
+        get: operations["listUrlLists"];
+        put?: never;
+        /**
+         * Create a URL list
+         * @description Create a URL list.
+         *
+         *     Returns `201` with the list in `provisioning`: the list exists
+         *     synchronously — a stable `urlListId` you can immediately `GET` and add
+         *     URLs to — while its BigQuery resources are provisioned asynchronously
+         *     (`status` flips to `active` when they exist).
+         */
+        post: operations["createUrlList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coverage/url-lists/{urlListId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a URL list
+         * @description Get one URL list by id.
+         */
+        get: operations["getUrlList"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a URL list
+         * @description Delete a URL list.
+         *
+         *     Returns `202` with the list in `delete_pending`: access revocation and
+         *     resource teardown are asynchronous. There is no grace window and no
+         *     restore — the name is released immediately. Idempotent.
+         */
+        delete: operations["deleteUrlList"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coverage/url-lists/{urlListId}/urls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Enumerate a list's URLs
+         * @description Enumerate the list's URLs in stable insertion order.
+         */
+        get: operations["listUrlListUrls"];
+        put?: never;
+        /**
+         * Add URLs to a list
+         * @description Add URLs to the list — an idempotent set-add.
+         *
+         *     Each URL is normalized server-side; the normalized form is the
+         *     membership key. Invalid URLs come back per-URL in `rejected[]` on a
+         *     `200`. Adding a URL already present is an accepted no-op, so blind
+         *     re-syncs are safe. Capacity is batch-atomic: a batch that would cross
+         *     the 100,000-URL cap fails whole with `409`.
+         */
+        post: operations["addUrlListUrls"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coverage/url-lists/{urlListId}/urls/contains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check whether URLs are in a list
+         * @description Batched membership check.
+         *
+         *     Each input is normalized server-side before checking. A miss is
+         *     `present: false` — membership of your own list is not an error.
+         */
+        post: operations["checkUrlListUrls"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coverage/url-lists/{urlListId}/urls/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove URLs from a list
+         * @description Remove URLs from the list — an idempotent set-remove.
+         *
+         *     Removing a URL that is not present is an accepted no-op.
+         */
+        post: operations["removeUrlListUrls"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List covered domains
+         * @description List every host covered by an active crawled catalog.
+         *
+         *     A client caches this set (revalidating with ``If-None-Match``) and only
+         *     sends a URL to ``/products/lookup`` when its host is present, so
+         *     client-side coverage matching never disagrees with the server's own
+         *     coverage classification. Read-only and full-corpus, like search/lookup.
+         */
+        get: operations["listDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the calling credential's identity and limits
+         * @description Return the caller's own organization, key, quotas, and rate limit.
+         *
+         *     Read-only and side-effect free: safe to call on startup, in CI, and in a
+         *     health loop (subject to the ``/v1`` rate limit it reports). Never includes
+         *     key material — only the key id and its non-secret display prefix.
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lookup product by URL
+         * @description Resolve a product by URL with an index-first, globally gated fallback.
+         */
+        post: operations["lookupProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/more-like-this": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find products similar to a source product
+         * @description Find products similar to a source product with a Catalog partner API key.
+         *
+         *     Full corpus by default: a ``catalogs`` allowlist in the request restricts
+         *     the RETRIEVAL to those catalogs, while source resolution always spans
+         *     every catalog the caller's resolved scope permits (the source may live
+         *     outside the allowlist). Every branch carries the scope, so a
+         *     ``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``.
+         */
+        post: operations["moreLikeThisProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh products
+         * @description Schedule product refreshes with a Catalog partner API key.
+         */
+        post: operations["refreshProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/resolve-from-html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve product from supplied HTML
+         * @description Resolve a product from caller-supplied page HTML — no index, no fetch.
+         *
+         *     Same shallow deterministic extraction as lookup's on-demand path
+         *     (JSON-LD → Open Graph → HTML meta), run over the submitted document
+         *     instead of a fetched one. Stateless: nothing is read from or written to
+         *     the index or the resolver cache.
+         */
+        post: operations["resolveProductFromHtml"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search products
+         * @description Search catalog products with a Catalog partner API key.
+         *
+         *     Full corpus by default: a ``catalog`` in the request narrows to one
+         *     catalog and a ``catalogs`` allowlist restricts results to those catalogs
+         *     (more-like-this semantics, #8505); otherwise the search spans every
+         *     catalog the caller's resolved scope permits (no per-org grant
+         *     *enumeration* — see ``require_programmatic_product_search_authorization``
+         *     — but a ``catalog_partner`` caller is still bounded to
+         *     ``catalog_type = 'CRAWLED'`` per OCT-3674).
+         *
+         *     **All** branches carry the resolved scope (OCT-3675). The named-catalog
+         *     branch was already refused at the dependency, so the predicate here is the
+         *     backstop that keeps the two enforcing independently — and on the allowlist
+         *     branch the predicate is the *only* per-key enforcement, by design.
+         */
+        post: operations["searchProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voyage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List your organization's voyages
+         * @description List the calling organization's voyages, newest first, with the org's
+         *     voyage quota usage (`quotas`).
+         */
+        get: operations["listVoyages"];
+        put?: never;
+        /**
+         * Request coverage of a new ecommerce domain
+         * @description Start (or join) a Voyager crawl+extraction run for a domain.
+         *
+         *     Voyages are fully automated and are executed by our "Vasco de Gama" agent. It is a one-time operation. Success rate is usually around 90%.
+         *
+         *     Voyages are shared per domain: if the domain is already being voyaged (or
+         *     already has a live catalog) the caller joins the existing task — `200`,
+         *     no quota consumed. A fresh dispatch returns `202` and consumes quota.
+         *     Voyages run hours to a few days; poll `GET /v1/voyage/{taskId}` every 5
+         *     minutes or slower.
+         */
+        post: operations["startVoyage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voyage/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll a voyage
+         * @description Poll voyage progress.
+         *
+         *     Returns `404 voyage_not_found` when the task does not exist **or** was
+         *     never requested by the caller's organization — deliberately
+         *     indistinguishable, so task IDs cannot be used to probe other tenants'
+         *     activity. Super admins see every task.
+         */
+        get: operations["getVoyage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
+export type webhooks = Record<string, never>;
+export interface components {
+    schemas: {
+        /**
+         * AgeGroup
+         * @enum {string}
+         */
+        AgeGroup: "infant" | "toddler" | "kids" | "adult";
+        /**
+         * Attribute
+         * @description Represents an attribute with its metadata and values.
+         */
+        Attribute: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+            /** Values */
+            values?: components["schemas"]["AttributeValue"][];
+        };
+        /**
+         * AttributeValue
+         * @description Represents a single value for a taxonomy attribute.
+         */
+        AttributeValue: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+        };
+        /** AudienceView */
+        AudienceView: {
+            /**
+             * Agegroups
+             * @default []
+             */
+            ageGroups: string[];
+            /**
+             * Genders
+             * @default []
+             */
+            genders: string[];
+        };
+        /** BrandView */
+        BrandView: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** BreadcrumbView */
+        BreadcrumbView: {
+            /** Name */
+            name: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** CanonicalBrand */
+        CanonicalBrand: {
+            /** @description Canonical brand enrichment data for filtering and display. */
+            brand_enrichment?: components["schemas"]["CanonicalBrandEnrichment"] | null;
+            /** Brand Name */
+            brand_name: string;
+            /**
+             * Brand Slug
+             * @description Canonical slug for the brand.
+             */
+            brand_slug?: string | null;
+            /**
+             * Brand Synonyms
+             * @description Alternate names for the brand.
+             */
+            brand_synonyms?: string[] | null;
+            /** Brand Uuid */
+            brand_uuid: string;
+        };
+        /**
+         * CanonicalBrandEnrichment
+         * @description Enrichment data attached to canonical brand metadata, used for filtering and display.
+         */
+        CanonicalBrandEnrichment: {
+            /** Brand Accessibility Index */
+            brand_accessibility_index?: string | null;
+            /** Brand Community Perception */
+            brand_community_perception?: string | null;
+            /** Brand Craft Production */
+            brand_craft_production?: string | null;
+            /** Brand Description */
+            brand_description?: string | null;
+            /** Brand Popularity Level */
+            brand_popularity_level?: string | null;
+            /** Brand Popularity Trend Direction */
+            brand_popularity_trend_direction?: string | null;
+            /** Brand Positioning */
+            brand_positioning?: string | null;
+            /** Brand Quality Justification */
+            brand_quality_justification?: string | null;
+            /** Brand Quality Score */
+            brand_quality_score?: number | null;
+            /** Directory Subheading */
+            directory_subheading?: string | null;
+            /** Domain */
+            domain?: string | null;
+            /** Facet Brand Cultural Anchors */
+            facet_brand_cultural_anchors?: string[] | null;
+            /** Facet Brand Ethics */
+            facet_brand_ethics?: string[] | null;
+            /** Facet Brand Hype Cycle Stage */
+            facet_brand_hype_cycle_stage?: string[] | null;
+            /** Facet Brand Inclusivity */
+            facet_brand_inclusivity?: string[] | null;
+            /** Facet Key People Names */
+            facet_key_people_names?: string[] | null;
+            /** Facet Key People Nationalities */
+            facet_key_people_nationalities?: string[] | null;
+            /** Facet Origin Country */
+            facet_origin_country?: string | null;
+            /** Facet Price Tier */
+            facet_price_tier?: string | null;
+            /** Facet Style Identity */
+            facet_style_identity?: string[] | null;
+            /** Facet Sustainability */
+            facet_sustainability?: string[] | null;
+            /** Facet Target Audience */
+            facet_target_audience?: string | null;
+            /** Founded Year */
+            founded_year?: number | null;
+            /** Occasion Fit */
+            occasion_fit?: string | null;
+        };
+        /** CategoryView */
+        CategoryView: {
+            /** Name */
+            name: string;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * ColorFamily
+         * @enum {string}
+         */
+        ColorFamily: "Pink" | "Red" | "Orange" | "Brown" | "Yellow" | "Green" | "Blue" | "Purple" | "White" | "Gray" | "Black" | "Multicolor";
+        /**
+         * ColorName
+         * @enum {string}
+         */
+        ColorName: "aliceblue" | "antiquewhite" | "aqua" | "aquamarine" | "azure" | "beige" | "bisque" | "black" | "blanchedalmond" | "blue" | "blueviolet" | "bronze" | "brown" | "burlywood" | "cadetblue" | "chartreuse" | "chocolate" | "coral" | "cornflowerblue" | "cornsilk" | "crimson" | "cyan" | "darkblue" | "darkcyan" | "darkgoldenrod" | "darkgray" | "darkgreen" | "darkgrey" | "darkkhaki" | "darkmagenta" | "darkolivegreen" | "darkorange" | "darkorchid" | "darkred" | "darksalmon" | "darkseagreen" | "darkslateblue" | "darkslategray" | "darkslategrey" | "darkturquoise" | "darkviolet" | "deeppink" | "deepskyblue" | "dimgray" | "dimgrey" | "dodgerblue" | "firebrick" | "floralwhite" | "forestgreen" | "fuchsia" | "gainsboro" | "ghostwhite" | "gold" | "goldenrod" | "gray" | "green" | "greenyellow" | "grey" | "honeydew" | "hotpink" | "indianred" | "indigo" | "ivory" | "khaki" | "lavender" | "lavenderblush" | "lawngreen" | "lemonchiffon" | "lightblue" | "lightcoral" | "lightcyan" | "lightgoldenrodyellow" | "lightgray" | "lightgreen" | "lightgrey" | "lightpink" | "lightsalmon" | "lightseagreen" | "lightskyblue" | "lightslategray" | "lightslategrey" | "lightsteelblue" | "lightyellow" | "lime" | "limegreen" | "linen" | "magenta" | "maroon" | "mediumaquamarine" | "mediumblue" | "mediumorchid" | "mediumpurple" | "mediumseagreen" | "mediumslateblue" | "mediumspringgreen" | "mediumturquoise" | "mediumvioletred" | "midnightblue" | "mintcream" | "mistyrose" | "multi" | "moccasin" | "navajowhite" | "navy" | "oldlace" | "olive" | "olivedrab" | "orange" | "orangered" | "orchid" | "palegoldenrod" | "palegreen" | "paleturquoise" | "palevioletred" | "papayawhip" | "peachpuff" | "peru" | "pink" | "plum" | "powderblue" | "purple" | "rebeccapurple" | "red" | "rosybrown" | "royalblue" | "saddlebrown" | "salmon" | "sandybrown" | "seagreen" | "seashell" | "sienna" | "silver" | "skyblue" | "slateblue" | "slategray" | "slategrey" | "snow" | "springgreen" | "steelblue" | "tan" | "teal" | "thistle" | "tomato" | "turquoise" | "violet" | "wheat" | "white" | "whitesmoke" | "yellow" | "yellowgreen";
+        /** ColorView */
+        ColorView: {
+            /** Hexcode */
+            hexCode?: string | null;
+            /** Label */
+            label: string;
+            /** Swatchurl */
+            swatchUrl?: string | null;
+        };
+        /**
+         * CoverageAcceptedUrl
+         * @description Per-URL success outcome (design §1.2).
+         */
+        CoverageAcceptedUrl: {
+            /** Normalizedurl */
+            normalizedUrl: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * CoverageContainsResponse
+         * @description Response for ``checkUrlListUrls`` (design §1.3).
+         */
+        CoverageContainsResponse: {
+            /** Results */
+            results: components["schemas"]["CoverageContainsResult"][];
+        };
+        /**
+         * CoverageContainsResult
+         * @description Per-URL membership outcome (design §1.3). A miss is ``present:
+         *     false``, never an error.
+         */
+        CoverageContainsResult: {
+            /** Addedat */
+            addedAt: string | null;
+            /** Normalizedurl */
+            normalizedUrl: string;
+            /** Present */
+            present: boolean;
+            /** Url */
+            url: string;
+        };
+        /**
+         * CoverageRejectedUrl
+         * @description Per-URL refusal (design §1.2).
+         */
+        CoverageRejectedUrl: {
+            /**
+             * Code
+             * @constant
+             */
+            code: "invalid_url";
+            /** Message */
+            message: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * CoverageUrlList
+         * @description The URL List object (design §1.1).
+         */
+        CoverageUrlList: {
+            bigQuery: components["schemas"]["CoverageUrlListBigQuery"] | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "provisioning" | "active" | "delete_pending";
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Urlcount */
+            urlCount: number;
+            /** Urllistid */
+            urlListId: string;
+        };
+        /**
+         * CoverageUrlListBigQuery
+         * @description The ``bigQuery`` block of the URL List object (design §1.1). ``null``
+         *     on the parent while the list is provisioning; ``lastExportedAt`` /
+         *     ``lastRowCount`` stay null until the first daily export lands.
+         */
+        CoverageUrlListBigQuery: {
+            /** Exchangeid */
+            exchangeId: string;
+            /** Lastexportedat */
+            lastExportedAt: string | null;
+            /** Lastrowcount */
+            lastRowCount: number | null;
+            /** Listingid */
+            listingId: string;
+            /** Readercount */
+            readerCount: number;
+            /** Shareddatasetid */
+            sharedDatasetId: string;
+            /** Viewid */
+            viewId: string;
+        };
+        /**
+         * CoverageUrlListCreateRequest
+         * @description Body for ``POST /v1/coverage/url-lists`` (design §1.1).
+         */
+        CoverageUrlListCreateRequest: {
+            /**
+             * Name
+             * @description List name, unique among your live (provisioning/active) lists. Surrounding whitespace is trimmed. The name is released when a list is deleted.
+             */
+            name: string;
+        };
+        /**
+         * CoverageUrlListListResponse
+         * @description Response for ``GET /v1/coverage/url-lists`` (design §1.3).
+         */
+        CoverageUrlListListResponse: {
+            /** Items */
+            items: components["schemas"]["CoverageUrlList"][];
+            /** Nextcursor */
+            nextCursor: string | null;
+        };
+        /**
+         * CoverageUrlListUrl
+         * @description One enumerated list entry (design §1.3).
+         */
+        CoverageUrlListUrl: {
+            /**
+             * Addedat
+             * Format: date-time
+             */
+            addedAt: string;
+            /** Normalizedurl */
+            normalizedUrl: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * CoverageUrlListUrlsResponse
+         * @description Response for ``listUrlListUrls`` (design §1.3).
+         */
+        CoverageUrlListUrlsResponse: {
+            /** Items */
+            items: components["schemas"]["CoverageUrlListUrl"][];
+            /** Nextcursor */
+            nextCursor: string | null;
+        };
+        /**
+         * CoverageUrlMutationResponse
+         * @description Response for ``addUrlListUrls`` / ``removeUrlListUrls`` (design §1.2).
+         *
+         *     ``urlCount`` is the list's total size after the mutation — not the size
+         *     of this request; idempotent no-ops contribute nothing to it.
+         */
+        CoverageUrlMutationResponse: {
+            /** Accepted */
+            accepted: components["schemas"]["CoverageAcceptedUrl"][];
+            /** Rejected */
+            rejected: components["schemas"]["CoverageRejectedUrl"][];
+            /** Requestid */
+            requestId: string;
+            /** Urlcount */
+            urlCount: number;
+        };
+        /**
+         * CoverageUrlsRequest
+         * @description Shared body for the URL mutations and the membership check
+         *     (design §1.2, §1.3).
+         */
+        CoverageUrlsRequest: {
+            /**
+             * Urls
+             * @description Product URLs, each at most 2,048 characters. Each entry must be an http(s) URL with a dotted hostname; invalid entries are rejected per-URL, not as a request error.
+             */
+            urls: string[];
+        };
+        /**
+         * DomainEntry
+         * @description One covered host and the catalog that claims it.
+         *
+         *     Multiple hosts may map to one catalog, and (rarely) multiple catalogs may
+         *     claim the same host; each ``(host, catalog)`` pair is emitted once.
+         */
+        DomainEntry: {
+            /**
+             * Catalog
+             * @description Catalog key covering the host.
+             */
+            catalog: string;
+            /**
+             * Catalogdisplayname
+             * @description Human-readable display name for the catalog.
+             */
+            catalogDisplayName: string;
+            /**
+             * Host
+             * @description Normalized host covered by a catalog (e.g. `allbirds.com`, `www.allbirds.com`). Match a page's host against this set before calling `/products/lookup`.
+             */
+            host: string;
+        };
+        /**
+         * EmbeddingColumn
+         * @enum {string}
+         */
+        EmbeddingColumn: "embedding" | "style_embedding" | "tags_embedding" | "attributes_embedding";
+        /** Facet */
+        Facet: {
+            /**
+             * Name
+             * @description Facet key. Accepts base facets (FacetName) or attribute keys. Attribute facets may be provided as '<key>' (e.g., 'fit') or fully qualified 'attribute_facets.<key>'.
+             */
+            name: components["schemas"]["FacetName"] | string;
+            /**
+             * Values
+             * @description List of values to filter by. They should all be lowercase. Facet values can be phrases, so make sure to include the spaces.
+             */
+            values: string[];
+        };
+        /**
+         * FacetName
+         * @enum {string}
+         */
+        FacetName: "brand_name" | "brand_slug" | "raw_brand_name" | "product_type" | "gender" | "age_groups" | "color" | "color_family" | "is_activewear" | "category_path.depth_0" | "category_path.depth_1" | "category_path.depth_2" | "category_path.depth_3" | "category_path.depth_4" | "category_path.depth_5" | "category_path.depth_6";
+        /**
+         * Gender
+         * @enum {string}
+         */
+        Gender: "male" | "female" | "unisex";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IdentifiersView */
+        IdentifiersView: {
+            /** Gtin */
+            gtin?: string | null;
+            /** Productgroupid */
+            productGroupId?: string | null;
+            /** Productid */
+            productId?: string | null;
+        };
+        /**
+         * ListDomainsResponse
+         * @description The full covered-domain set.
+         *
+         *     Sorted deterministically by ``(host, catalog)`` so the response — and the
+         *     strong ``ETag`` computed over it — is stable across requests while the
+         *     underlying catalog registry is unchanged.
+         */
+        ListDomainsResponse: {
+            /**
+             * Domains
+             * @description Every covered host, one entry per `(host, catalog)` pair.
+             */
+            domains: components["schemas"]["DomainEntry"][];
+        };
+        /**
+         * MeKey
+         * @description The calling API key — identity and provenance, never the secret.
+         */
+        MeKey: {
+            /**
+             * Id
+             * @description Key id (the middle segment of the API key).
+             */
+            id: string;
+            /**
+             * Prefix
+             * @description Non-secret display prefix, e.g. `octo_live_3f9c1a2b4d`. Safe to print and log: the secret segment of the key is never included. `null` only when the key's metadata row cannot be read.
+             */
+            prefix?: string | null;
+            /**
+             * Source
+             * @description How the key was created (`ui`, `coding_agent`, or `id_jag`). **Omitted entirely** — not `null` — while the backing column does not exist yet (agent-onboarding plan Phase 2). Treat an absent field as *unknown*, never as *no source*.
+             */
+            source?: string | null;
+        };
+        /**
+         * MeOrganization
+         * @description The organization the presented credential belongs to.
+         */
+        MeOrganization: {
+            /**
+             * Id
+             * @description Octogen organization id (a UUID).
+             */
+            id: string;
+            /**
+             * Name
+             * @description Human-readable organization name.
+             */
+            name: string;
+            /**
+             * Slug
+             * @description URL-safe organization slug.
+             */
+            slug: string;
+            /**
+             * Type
+             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.
+             * @enum {string}
+             */
+            type: "merchant" | "catalog_partner";
+        };
+        /**
+         * MeQuotas
+         * @description Self-serve resource quotas for the calling organization.
+         */
+        MeQuotas: {
+            /** @description Voyage quota usage — the same block `GET /v1/voyage` returns. `null` for callers with no organization quota. */
+            voyage?: components["schemas"]["VoyageQuotas"] | null;
+        };
+        /**
+         * MeRateLimit
+         * @description The rate-limit bucket this very request was charged against.
+         *
+         *     Mirrors the ``X-RateLimit-*`` headers on the same response; it is in the
+         *     body so a client that only parses JSON still sees its allowance. ``null``
+         *     on the parent object when the limiter is disabled.
+         */
+        MeRateLimit: {
+            /**
+             * Limit
+             * @description Requests allowed per window for this caller.
+             */
+            limit: number;
+            /**
+             * Remaining
+             * @description Tokens left in the bucket right now.
+             */
+            remaining: number;
+            /**
+             * Resetat
+             * Format: date-time
+             * @description When the bucket is fully refilled (UTC, RFC 3339).
+             */
+            resetAt: string;
+        };
+        /**
+         * MerchantProductImageMetadataView
+         * @description One product image: source URL, Octogen-hosted copy, and display metadata.
+         */
+        MerchantProductImageMetadataView: {
+            /**
+             * Cdnurl
+             * @description Octogen-hosted CDN copy of this image, or null when no hosted copy exists yet. Prefer it and fall back to url.
+             */
+            cdnUrl?: string | null;
+            /**
+             * Height
+             * @description Pixel height of the hosted image.
+             */
+            height?: number | null;
+            /**
+             * Mimetype
+             * @description Image format of the hosted copy (predominantly image/webp).
+             */
+            mimeType?: string | null;
+            /**
+             * Sizebytes
+             * @description File size of the hosted image in bytes.
+             */
+            sizeBytes?: number | null;
+            /**
+             * Url
+             * @description Original image URL on the merchant storefront. Always present.
+             */
+            url: string;
+            /**
+             * Width
+             * @description Pixel width of the hosted image.
+             */
+            width?: number | null;
+        };
+        /**
+         * MerchantProductListItem
+         * @description Compact product representation for list, grid, or search results.
+         */
+        MerchantProductListItem: {
+            brand?: components["schemas"]["BrandView"] | null;
+            /**
+             * Catalogkey
+             * @description Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.
+             */
+            catalogKey?: string | null;
+            /** Currentprice */
+            currentPrice?: number | null;
+            /**
+             * Displaymatchscore
+             * @description User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.
+             */
+            displayMatchScore?: number | null;
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["MerchantProductImageMetadataView"][];
+            /**
+             * Imageurl
+             * @description Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.
+             */
+            imageUrl?: string | null;
+            /**
+             * Isactive
+             * @default true
+             */
+            isActive: boolean;
+            /** Originalprice */
+            originalPrice?: number | null;
+            /** @description The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists. */
+            primaryImage?: components["schemas"]["MerchantProductImageMetadataView"] | null;
+            /** Producturl */
+            productUrl: string;
+            rating?: components["schemas"]["RatingView"] | null;
+            /**
+             * Rawscore
+             * @description Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.
+             */
+            rawScore?: number | null;
+            /** Title */
+            title?: string | null;
+            /** Updatedat */
+            updatedAt?: string | null;
+            /** Uuid */
+            uuid: string;
+        };
+        /**
+         * MerchantProductUrlLookupResponse
+         * @description Source-aware product URL lookup result.
+         *
+         *     Indexed results retain catalog ownership and a complete indexed product view.
+         *     On-demand and client-HTML results use the same product DTO without
+         *     fabricating indexed identity or lifecycle state: ``client_html`` results
+         *     come from ``POST /products/resolve-from-html``, where the caller supplied
+         *     the page bytes and nothing was fetched or cached.
+         */
+        MerchantProductUrlLookupResponse: {
+            /** Cachestatus */
+            cacheStatus?: ("hit" | "miss" | "refresh") | null;
+            /**
+             * Canonicalurl
+             * @description For on-demand and client_html results: the canonical URL the product page declares (JSON-LD url, og:url, or link rel=canonical); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed results) or resolvedUrl (on-demand results), not this field.
+             */
+            canonicalUrl?: string | null;
+            /** Catalogdisplayname */
+            catalogDisplayName?: string | null;
+            /** Catalogkey */
+            catalogKey?: string | null;
+            /**
+             * Matchedvia
+             * @description Debug: which probe arm of the URL lookup ladder resolved the product — normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.
+             */
+            matchedVia?: string | null;
+            /**
+             * Normalizedurl
+             * @description Stable URL for this product that callers should reuse on follow-up lookups: the matched product's stored normalized URL (Octogen's deterministic normalization — scheme forced to https, leading www. stripped, fragments and known tracking params removed, remaining query params sorted), falling back to its exact indexed URL for legacy rows. Populated for indexed results; for on-demand results reuse resolvedUrl instead.
+             */
+            normalizedUrl?: string | null;
+            product: components["schemas"]["MerchantProductView"];
+            /**
+             * Requestedurl
+             * @description The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them — key on this field when variants must stay distinct.
+             */
+            requestedUrl?: string | null;
+            /** Requestid */
+            requestId?: string | null;
+            resolution?: components["schemas"]["ProductResolutionMetadata"] | null;
+            /**
+             * Resolvedurl
+             * @description Final URL after following redirects. Populated for on-demand results only.
+             */
+            resolvedUrl?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "indexed" | "on_demand" | "client_html";
+            /** Sourcebaseurl */
+            sourceBaseUrl?: string | null;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /**
+         * MerchantProductView
+         * @description Full product detail view returned by product lookup/detail endpoints.
+         *
+         *     ``uuid`` and ``isActive`` are nullable because an on-demand result is
+         *     intentionally ephemeral and has no indexed identity or lifecycle state.
+         *     Indexed projections continue to populate both fields.
+         */
+        MerchantProductView: {
+            audience?: components["schemas"]["AudienceView"] | null;
+            brand?: components["schemas"]["BrandView"] | null;
+            /**
+             * Breadcrumbs
+             * @default []
+             */
+            breadcrumbs: components["schemas"]["BreadcrumbView"][];
+            /**
+             * Catalogkey
+             * @description Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.
+             */
+            catalogKey?: string | null;
+            /**
+             * Categories
+             * @default []
+             */
+            categories: components["schemas"]["CategoryView"][];
+            /**
+             * Colors
+             * @default []
+             */
+            colors: components["schemas"]["ColorView"][];
+            /** Currency */
+            currency?: string | null;
+            /** Currentprice */
+            currentPrice?: number | null;
+            /** Description */
+            description?: string | null;
+            /**
+             * @default {
+             *       "fit": [],
+             *       "materials": [],
+             *       "patterns": []
+             *     }
+             */
+            details: components["schemas"]["ProductDetailsView"];
+            /**
+             * Displaymatchscore
+             * @description User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.
+             */
+            displayMatchScore?: number | null;
+            enrichment?: components["schemas"]["ProductEnrichment"] | null;
+            /** @default {} */
+            identifiers: components["schemas"]["IdentifiersView"];
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["MerchantProductImageMetadataView"][];
+            /**
+             * Imageurl
+             * @description Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.
+             */
+            imageUrl?: string | null;
+            /** Instock */
+            inStock?: boolean | null;
+            /** Isactive */
+            isActive?: boolean | null;
+            /** Originalprice */
+            originalPrice?: number | null;
+            /** @description The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists. */
+            primaryImage?: components["schemas"]["MerchantProductImageMetadataView"] | null;
+            /** Producturl */
+            productUrl: string;
+            /**
+             * Promotions
+             * @default []
+             */
+            promotions: components["schemas"]["PromotionView"][];
+            rating?: components["schemas"]["RatingView"] | null;
+            /**
+             * Rawscore
+             * @description Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.
+             */
+            rawScore?: number | null;
+            /**
+             * Reviews
+             * @default []
+             */
+            reviews: components["schemas"]["ReviewView"][];
+            /**
+             * Sizes
+             * @default []
+             */
+            sizes: string[];
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /** Title */
+            title?: string | null;
+            /** Updatedat */
+            updatedAt?: string | null;
+            /** Uuid */
+            uuid: string | null;
+            /**
+             * Variants
+             * @default []
+             */
+            variants: components["schemas"]["MerchantVariantView"][];
+            /**
+             * Videos
+             * @default []
+             */
+            videos: components["schemas"]["VideoView"][];
+        };
+        /**
+         * MerchantVariantView
+         * @description A single variant of a product (size/color/sku combo).
+         */
+        MerchantVariantView: {
+            color?: components["schemas"]["ColorView"] | null;
+            /** Imageurl */
+            imageUrl?: string | null;
+            /** Instock */
+            inStock?: boolean | null;
+            /** Producturl */
+            productUrl?: string | null;
+            /** Size */
+            size?: string | null;
+            /** Sku */
+            sku?: string | null;
+        };
+        /**
+         * MeResponse
+         * @description ``GET /v1/me`` — the caller's own identity and limits.
+         *
+         *     ``organization``, ``key`` and ``quotas`` are ``null`` for a super-admin
+         *     operator bearer, which is org-less and key-less by construction (the same
+         *     reason ``GET /v1/voyage`` returns a ``null`` ``quotas`` block for it).
+         *     ``principal`` says which case a client is looking at without making it
+         *     infer from nulls.
+         */
+        MeResponse: {
+            /** @description The calling API key; `null` for a super admin. */
+            key?: components["schemas"]["MeKey"] | null;
+            /** @description The credential's organization; `null` for a super admin. */
+            organization?: components["schemas"]["MeOrganization"] | null;
+            /**
+             * Principal
+             * @description Which credential kind authenticated this request.
+             * @enum {string}
+             */
+            principal: "api_key" | "super_admin";
+            /** @description Resource quotas for the organization; `null` for a super admin. */
+            quotas?: components["schemas"]["MeQuotas"] | null;
+            /** @description Current rate-limit posture; `null` when the limiter is off. */
+            rateLimit?: components["schemas"]["MeRateLimit"] | null;
+        };
+        /** ProductDetailsView */
+        ProductDetailsView: {
+            /** Dimensions */
+            dimensions?: string | null;
+            /**
+             * Fit
+             * @default []
+             */
+            fit: string[];
+            /**
+             * Materials
+             * @default []
+             */
+            materials: string[];
+            /**
+             * Patterns
+             * @default []
+             */
+            patterns: string[];
+        };
+        /** ProductEnrichment */
+        ProductEnrichment: {
+            /**
+             * Age Groups
+             * @description Target age groups for the product.
+             */
+            readonly age_groups: components["schemas"]["AgeGroup"][] | null;
+            /**
+             * Attribute Handles
+             * @description Taxonomy attributes keyed by Attribute.handle with values as AttributeValue.handle lists.
+             */
+            attribute_handles?: {
+                [key: string]: string[];
+            } | null;
+            /**
+             * Attributes
+             * @description Shopify taxonomy attributes mapped to their values.
+             */
+            attributes?: {
+                [key: string]: string[];
+            } | null;
+            /**
+             * Brand Id
+             * @description Unique brand identifier in the product_brands table.
+             */
+            brand_id?: string | null;
+            /** @description Canonical brand identifier in the product_brands table. */
+            canonical_brand?: components["schemas"]["CanonicalBrand"] | null;
+            /**
+             * Category Path
+             * @description Shopify taxonomy category path (excluding 'Apparel & Accessories' root).
+             */
+            category_path?: string[] | null;
+            /**
+             * Classification
+             * @description Classification-axis values keyed by axis handle (e.g. {'gender': ['female'], 'age_group': ['adult']}). Only axes the product's taxonomy section declares are present.
+             */
+            classification?: {
+                [key: string]: string[];
+            };
+            /**
+             * Color
+             * @description List of specific colors of the product matched from existing color fields (e.g., ['Crimson', 'Navy Blue']).
+             */
+            color?: components["schemas"]["ColorName"][] | null;
+            /**
+             * Color Family
+             * @description List of color families corresponding to each color by index (e.g., ['Red', 'Blue']).
+             */
+            color_family?: components["schemas"]["ColorFamily"][] | null;
+            /**
+             * Color Indices
+             * @description Indices of the resolved colors in the palette.
+             */
+            color_indices?: number[] | null;
+            /**
+             * Fully Qualified Name
+             * @description Fully qualified taxonomy path for the resolved category.
+             */
+            fully_qualified_name?: string | null;
+            /** @description The target gender of the product. */
+            readonly gender: components["schemas"]["Gender"] | null;
+            /**
+             * Image With Single Product
+             * @description Whether the image only contains a single product.
+             */
+            image_with_single_product?: boolean | null;
+            /**
+             * Is Activewear
+             * @description Whether the product is activewear/athleisure (e.g., sports bras, running shorts).
+             */
+            is_activewear?: boolean | null;
+            /**
+             * Structured Attributes
+             * @description Taxonomy attributes with full metadata and typed values.
+             */
+            structured_attributes?: components["schemas"]["Attribute"][] | null;
+            /**
+             * Styles
+             * @description Styles for the product.
+             */
+            styles?: string[] | null;
+            /**
+             * Summary
+             * @description Summary of the product.
+             */
+            summary?: string | null;
+            /**
+             * Tags
+             * @description Tags for the product.
+             */
+            tags?: string[] | null;
+            /**
+             * Taxonomy Uuid
+             * @description UUID of the resolved taxonomy node.
+             */
+            taxonomy_uuid?: string | null;
+            /**
+             * Type
+             * @description Type of the product.
+             */
+            type?: string | null;
+            /**
+             * Type Synonyms
+             * @description Synonyms for the type of the product.
+             */
+            type_synonyms?: string[] | null;
+        };
+        /**
+         * ProductResolutionMetadata
+         * @description Public, provider-neutral metadata for an on-demand resolution.
+         */
+        ProductResolutionMetadata: {
+            /**
+             * Completeness
+             * @enum {string}
+             */
+            completeness: "complete" | "partial";
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "json_ld" | "open_graph" | "html_meta" | "resolved_url";
+            /** Missingfields */
+            missingFields?: string[];
+            /**
+             * Rendered
+             * @default false
+             */
+            rendered: boolean;
+        };
+        /**
+         * ProductResolverCachePolicyV1
+         * @enum {string}
+         */
+        ProductResolverCachePolicyV1: "prefer_cache" | "refresh";
+        /** ProgrammaticMoreLikeThisEffectiveFacet */
+        ProgrammaticMoreLikeThisEffectiveFacet: {
+            /** Name */
+            name: string;
+            /** Values */
+            values: string[];
+        };
+        /** ProgrammaticMoreLikeThisEffectiveQuery */
+        ProgrammaticMoreLikeThisEffectiveQuery: {
+            /** Catalogs */
+            catalogs?: string[] | null;
+            /** Degradedtotextfallback */
+            degradedToTextFallback?: boolean | null;
+            /** Exclusionfacets */
+            exclusionFacets?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveFacet"][] | null;
+            /** Facets */
+            facets?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveFacet"][] | null;
+            /** Generationstages */
+            generationStages?: {
+                [key: string]: number;
+            } | null;
+            /** Imagehashmatched */
+            imageHashMatched?: boolean | null;
+            /** Limit */
+            limit: number;
+            matchedProduct?: components["schemas"]["ProgrammaticMoreLikeThisMatchedProduct"] | null;
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            /** Rankingembeddingcolumns */
+            rankingEmbeddingColumns?: string[] | null;
+            /** Reconciledfacets */
+            reconciledFacets?: string[] | null;
+            /** Relaxationdeclinedrounds */
+            relaxationDeclinedRounds?: number | null;
+            /** Relaxationdroppedfacets */
+            relaxationDroppedFacets?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveFacet"][] | null;
+            /** Relaxationrounds */
+            relaxationRounds?: number | null;
+            /** Retrievalembeddingcolumns */
+            retrievalEmbeddingColumns?: string[] | null;
+            /** Text */
+            text: string;
+        };
+        /**
+         * ProgrammaticMoreLikeThisImageSource
+         * @description Source image for a More Like This request (OCT-3654 phase 1).
+         *
+         *     The image resolves through the generation pipeline (~5-8s typical) —
+         *     see the MLT image-input proposal for the phased resolution ladder.
+         */
+        ProgrammaticMoreLikeThisImageSource: {
+            /**
+             * B64
+             * @description Base64-encoded image bytes (decoded size capped at 8 MB).
+             */
+            b64?: string | null;
+            /**
+             * Url
+             * @description HTTP(S) image URL, fetched server-side. Only hosts on the deployment allowlist are permitted.
+             */
+            url?: string | null;
+        };
+        /**
+         * ProgrammaticMoreLikeThisMatchedProduct
+         * @description The indexed product a submitted image byte-matched (debug only).
+         */
+        ProgrammaticMoreLikeThisMatchedProduct: {
+            /** Catalogkey */
+            catalogKey?: string | null;
+            /** Uuid */
+            uuid?: string | null;
+        };
+        /**
+         * ProgrammaticMoreLikeThisRequest
+         * @description Programmatic More Like This request.
+         */
+        ProgrammaticMoreLikeThisRequest: {
+            /**
+             * Catalogs
+             * @description Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants — a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.
+             */
+            catalogs?: string[] | null;
+            /**
+             * Cursor
+             * @description Opaque pagination cursor
+             */
+            cursor?: string | null;
+            /**
+             * Debug
+             * @description If true, include the curated effective query in the response.
+             * @default false
+             */
+            debug: boolean;
+            /**
+             * Exclude Facets
+             * @description Exclusion facets to apply to the similar-products search.
+             */
+            exclude_facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Include Facets
+             * @description Additional include facets to append after generated facets.
+             */
+            include_facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Limit
+             * @default 12
+             */
+            limit: number;
+            /**
+             * Omit Generated Facets
+             * @description Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery (include_facets only appends). Unknown names are ignored; caller include_facets and exclude_facets are never affected.
+             */
+            omit_generated_facets?: string[] | null;
+            /**
+             * Price Preference
+             * @description Relative price preference compared with the source product.
+             * @default any
+             * @enum {string}
+             */
+            price_preference: "lower" | "any" | "higher";
+            /**
+             * Ranking Embedding Columns
+             * @description Embedding columns used to rescore and rank retrieved candidates. When omitted, ranking uses the base embedding.
+             */
+            ranking_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
+            /**
+             * Retrieval Embedding Columns
+             * @description Embedding columns used to retrieve candidate products. Overrides the server-selected default (style/tags embeddings when the source product has styles or tags, otherwise the base embedding).
+             */
+            retrieval_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
+            source: components["schemas"]["ProgrammaticMoreLikeThisSource"];
+        };
+        /** ProgrammaticMoreLikeThisResponse */
+        ProgrammaticMoreLikeThisResponse: {
+            effectiveQuery?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveQuery"] | null;
+            /** Items */
+            items: components["schemas"]["MerchantProductListItem"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /**
+             * Resolution
+             * @description How the source was resolved. Product sources omit this; image sources report the resolution-ladder rung: 'image_query_generation' (pipeline ran) or 'cached_image_query' (served from the image-content-hash cache).
+             */
+            resolution?: string | null;
+            source?: components["schemas"]["ProgrammaticMoreLikeThisSourceResponse"] | null;
+            sourceImage?: components["schemas"]["ProgrammaticMoreLikeThisSourceImageResponse"] | null;
+        };
+        /**
+         * ProgrammaticMoreLikeThisSource
+         * @description Source product identifier for a More Like This request.
+         */
+        ProgrammaticMoreLikeThisSource: {
+            /** @description Source image to derive the query from (OCT-3654). Slower than url/uuid sources: the image runs through query generation (~5-8s typical). */
+            image?: components["schemas"]["ProgrammaticMoreLikeThisImageSource"] | null;
+            /**
+             * Url
+             * @description Canonical product URL to use as the source product.
+             */
+            url?: string | null;
+            /**
+             * Uuid
+             * @description Indexed product UUID to use as the source product.
+             */
+            uuid?: string | null;
+        };
+        /**
+         * ProgrammaticMoreLikeThisSourceImageResponse
+         * @description Identity of an image source (no indexed product to reference).
+         */
+        ProgrammaticMoreLikeThisSourceImageResponse: {
+            /**
+             * Hash
+             * @description Content hash of the submitted image bytes.
+             */
+            hash: string;
+        };
+        /**
+         * ProgrammaticMoreLikeThisSourceResponse
+         * @description Public source product identity returned by More Like This.
+         */
+        ProgrammaticMoreLikeThisSourceResponse: {
+            /** Catalogkey */
+            catalogKey: string;
+            /** Producturl */
+            productUrl: string;
+            /** Title */
+            title?: string | null;
+            /** Uuid */
+            uuid: string;
+        };
+        /**
+         * ProgrammaticProductLookupRequest
+         * @description Programmatic product lookup request.
+         *
+         *     V1 supports URL lookup only. Keep the request body object-shaped so future
+         *     identifiers such as UUID can be added without overloading product search.
+         */
+        ProgrammaticProductLookupRequest: {
+            /**
+             * Matchmode
+             * @description Index match strictness. strict matches only exact/canonical URLs. loose (default) adds a lowest-priority fallback that ignores path case and query params, so a URL differing from an indexed product only by case (e.g. /Women/ vs /women/) or a non-indexed query param (e.g. Zara's ?v1=) still resolves. It also recognizes structural aliases: Shopify collection-scoped URLs (/collections/<x>/products/<handle>) resolve to the canonical /products/<handle> product. A strict/canonical hit always wins over a loose or alias one.
+             * @default loose
+             * @enum {string}
+             */
+            matchMode: "strict" | "loose";
+            /**
+             * @description Cache behavior when the request enters the on-demand path.
+             * @default prefer_cache
+             */
+            onDemandCachePolicy: components["schemas"]["ProductResolverCachePolicyV1"];
+            /**
+             * Resolutionmode
+             * @description Source selection policy. auto checks the index before resolving on demand; index_only never performs outbound work; on_demand_only skips the index.
+             * @default auto
+             * @enum {string}
+             */
+            resolutionMode: "auto" | "index_only" | "on_demand_only";
+            /**
+             * Url
+             * @description Product URL to look up in the organization's granted catalogs and, when enabled and requested, resolve on demand.
+             */
+            url?: string | null;
+        };
+        /** ProgrammaticProductRefreshAcceptedTarget */
+        ProgrammaticProductRefreshAcceptedTarget: {
+            /** Catalog */
+            catalog: string;
+            /** Url */
+            url: string;
+        };
+        /** ProgrammaticProductRefreshRejectedTarget */
+        ProgrammaticProductRefreshRejectedTarget: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            target: components["schemas"]["ProgrammaticProductRefreshTarget"];
+        };
+        /**
+         * ProgrammaticProductRefreshRequest
+         * @description Programmatic product refresh request.
+         */
+        ProgrammaticProductRefreshRequest: {
+            /**
+             * Targets
+             * @description Products to schedule for refresh.
+             */
+            targets: components["schemas"]["ProgrammaticProductRefreshTarget"][];
+        };
+        /** ProgrammaticProductRefreshResponse */
+        ProgrammaticProductRefreshResponse: {
+            /** Accepted */
+            accepted: components["schemas"]["ProgrammaticProductRefreshAcceptedTarget"][];
+            /** Rejected */
+            rejected: components["schemas"]["ProgrammaticProductRefreshRejectedTarget"][];
+            /** Requestid */
+            requestId: string;
+            /** Submitted */
+            submitted: number;
+            /**
+             * Workflowattempts
+             * @default 0
+             */
+            workflowAttempts: number;
+            /** Workflowerror */
+            workflowError?: string | null;
+            /** Workflowid */
+            workflowId?: string | null;
+            /** Workflowstatus */
+            workflowStatus?: ("pending" | "launching" | "launched" | "retry_pending") | null;
+        };
+        /**
+         * ProgrammaticProductRefreshTarget
+         * @description One product identifier to schedule for refresh.
+         */
+        ProgrammaticProductRefreshTarget: {
+            /**
+             * Catalog
+             * @description Optional catalog key to scope or disambiguate URL refresh targets.
+             */
+            catalog?: string | null;
+            /**
+             * Url
+             * @description Product URL to refresh.
+             */
+            url?: string | null;
+            /**
+             * Uuid
+             * @description Indexed product UUID to refresh.
+             */
+            uuid?: string | null;
+        };
+        /**
+         * ProgrammaticProductSearchPage
+         * @description Search page plus the debug effective query (parity with more-like-this).
+         */
+        ProgrammaticProductSearchPage: {
+            effectiveQuery?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveQuery"] | null;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["MerchantProductListItem"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+        };
+        /**
+         * ProgrammaticProductSearchRequest
+         * @description Programmatic product search request.
+         */
+        ProgrammaticProductSearchRequest: {
+            /**
+             * Catalog
+             * @description Optional catalog to narrow the search to. When omitted, search runs across the entire indexed corpus (all active catalogs), not just catalogs granted to the API key organization. Mutually exclusive with `catalogs`.
+             */
+            catalog?: string | null;
+            /**
+             * Catalogs
+             * @description Optional catalog allowlist to narrow the search — same contract as the more-like-this `catalogs` field. Restricts results to these catalogs only. Keys are not validated against the caller's grants: a key outside the caller's resolved scope simply matches nothing. Mutually exclusive with `catalog`. When omitted or empty, search spans every catalog the caller's scope permits. Bounds stay the inherited max_length=500 with an empty list meaning no allowlist, so request shapes accepted before this field was honored keep working.
+             */
+            catalogs?: string[] | null;
+            /**
+             * Cursor
+             * @description Opaque pagination cursor
+             */
+            cursor?: string | null;
+            /**
+             * Debug
+             * @description Include the effective query in the response, mirroring more-like-this: the EXECUTED text/facets/price bounds/embedding columns — after query understanding AND after caller facets (which win over same-name generated facets) and price bounds are merged. Browse-all requests report the raw browse query. Makes search usable as a controlled comparison against more-like-this.
+             * @default false
+             */
+            debug: boolean;
+            /**
+             * Diversity
+             * @description Enable result diversification (parity with Shop Agent / conversational search). Defaults off to preserve stable merchant-browse ordering across pages.
+             * @default false
+             */
+            diversity: boolean;
+            /**
+             * Embeddingdims
+             * @description Evaluation knob: dimensionality of the query embedding. The 3072-dim embedding is truncated to this prefix and renormalized (gemini-embedding is Matryoshka-trained). Non-default values target profile-suffixed vector fields that only exist on testbed indices, and require the caller to be a super-admin or an allowlisted evaluation org. Omitted means the live default (3072).
+             */
+            embeddingDims?: (768 | 1024 | 3072) | null;
+            /**
+             * Facets
+             * @description Structured facet filters to apply to the product list.
+             */
+            facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+            /**
+             * Price Max
+             * @description Maximum price filter
+             */
+            price_max?: number | null;
+            /**
+             * Price Min
+             * @description Minimum price filter
+             */
+            price_min?: number | null;
+            /**
+             * Q
+             * @description Keyword search query
+             */
+            q?: string | null;
+            /**
+             * Quantizeembedding
+             * @description Evaluation knob: whether the query vector is int8-quantized (the live default, matching element_type: byte document fields) or sent as float32 (matching float/BBQ testbed fields). false targets profile-suffixed vector fields that only exist on testbed indices, and requires the caller to be a super-admin or an allowlisted evaluation org.
+             */
+            quantizeEmbedding?: boolean | null;
+            /** @description Pre-generated semantic search query. When provided, the service uses this query directly instead of re-running query understanding. */
+            text_search_query?: components["schemas"]["TextSearchQuery"] | null;
+        };
+        /**
+         * ProgrammaticResolveFromHtmlRequest
+         * @description Resolve a product from caller-supplied HTML.
+         *
+         *     Stateless by contract: no index read, no outbound fetch, no caching — the
+         *     response is derived entirely from the submitted document.
+         */
+        ProgrammaticResolveFromHtmlRequest: {
+            /**
+             * Html
+             * @description Product page HTML to resolve. Capped at 5 MiB — the same bound the live on-demand fetch path enforces, so any page that path could retrieve is submittable here.
+             */
+            html: string;
+            /**
+             * Url
+             * @description Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD url, og:url, or link rel=canonical) or resolution fails with product_not_found.
+             */
+            url?: string | null;
+        };
+        /** PromotionView */
+        PromotionView: {
+            /** Code */
+            code?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Promotionid */
+            promotionId?: string | null;
+        };
+        /** RatingView */
+        RatingView: {
+            /** Average */
+            average?: number | null;
+            /** Count */
+            count?: number | null;
+        };
+        /** ReviewView */
+        ReviewView: {
+            /** Author */
+            author?: string | null;
+            /** Body */
+            body?: string | null;
+            /** Publishedat */
+            publishedAt?: string | null;
+            /** Rating */
+            rating?: number | null;
+        };
+        /** TextSearchQuery */
+        TextSearchQuery: {
+            /**
+             * Maximum brand quality
+             * @description Inclusive upper bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).
+             */
+            brand_quality_max?: number | null;
+            /**
+             * Minimum brand quality
+             * @description Inclusive lower bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).
+             */
+            brand_quality_min?: number | null;
+            /**
+             * Brand similarity weight
+             * @description Weight for brand similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to brand style similarity. Default is 0.7.
+             * @default 0.7
+             */
+            brand_similarity_weight: number | null;
+            /**
+             * Browse menu UUID
+             * @description UUID of the browse menu item that matches this query's facets (gender, age_group, category_path).
+             */
+            browse_menu_uuid?: string | null;
+            /**
+             * Search output mode
+             * @description Optional response shape for product search results. Use 'card' for catalog grids that only need display fields; omit for full products.
+             */
+            compact_mode?: ("card" | "compact" | "medium" | "enriched") | null;
+            /**
+             * Exclusion facets filter
+             * @description Facets that will be excluded from the search results.
+             */
+            exclusion_facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Facets filter
+             * @description The search results will be filtered by the specified facets.
+             */
+            facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Search results limit
+             * @description The maximum number of results to return from the search. The default is 10.
+             * @default 10
+             */
+            limit: number;
+            /**
+             * Maximum price
+             * @description The products will be filtered to have a price less than or equal to the specified value.
+             */
+            price_max?: number | null;
+            /**
+             * Minimum price
+             * @description The products will be filtered to have a price greater than or equal to the specified value.
+             */
+            price_min?: number | null;
+            /**
+             * Ranking embedding columns
+             * @description The columns to use for the ranking embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `ranking_text` parameter.
+             */
+            ranking_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
+            /**
+             * Ranking text
+             * @description The text is converted to a vector embedding and used to rank the search results. It will be matched against the embeddings from ranking_embedding_columns during ranking.
+             */
+            ranking_text?: string | null;
+            /**
+             * Retrieval embedding columns
+             * @description The columns to use for the retrieval embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `text` parameter.
+             */
+            retrieval_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
+            /**
+             * Search after cursor
+             * @description Cursor for pagination. Pass the 'next_cursor' value from the previous response to fetch the next page of results. This enables efficient 'load more' functionality.
+             */
+            search_after?: unknown[] | null;
+            /**
+             * Search identifier
+             * @description Unique identifier (UUID) for this search query. Used to link agent recommendations back to specific search results.
+             */
+            search_id?: string | null;
+            /**
+             * Similar to brands
+             * @description List of brand names to find products similar to. When provided, embeddings for the specified brands are fetched, averaged, and used to boost products with similar style characteristics. This enables finding products that match the aesthetic of certain brands.
+             */
+            similar_to_brands?: string[] | null;
+            /**
+             * Product search query text
+             * @description The text is converted to a vector embedding and used to search for products in the e-commerce catalog with pre-computed product embeddings. It will be matched against the embeddings from retrieval_embedding_columns during retrieval.
+             */
+            text: string;
+            /**
+             * Text similarity weight
+             * @description Weight for text query similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to text query matching. Default is 0.3.
+             * @default 0.3
+             */
+            text_similarity_weight: number | null;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, unknown>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** VideoView */
+        VideoView: {
+            /** Name */
+            name?: string | null;
+            /** Thumbnailurl */
+            thumbnailUrl?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * VoyageError
+         * @description Redacted failure info: a stable snake_case code plus safe text.
+         */
+        VoyageError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * VoyageListResponse
+         * @description ``GET /v1/voyage`` page. ``quotas`` is the org's self-serve limit view
+         *     (null for super-admin callers, who have no org quota).
+         */
+        VoyageListResponse: {
+            /** Items */
+            items: components["schemas"]["VoyageTask"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            quotas?: components["schemas"]["VoyageQuotas"] | null;
+        };
+        /**
+         * VoyageQuotaConcurrent
+         * @description Concurrent-slot usage: clears when voyages finish, no fixed reset.
+         */
+        VoyageQuotaConcurrent: {
+            /** Limit */
+            limit?: number | null;
+            /** Used */
+            used?: number | null;
+        };
+        /** VoyageQuotaMonthly */
+        VoyageQuotaMonthly: {
+            /** Limit */
+            limit?: number | null;
+            /** Periodstart */
+            periodStart?: string | null;
+            /** Resetsat */
+            resetsAt?: string | null;
+            /** Used */
+            used?: number | null;
+        };
+        /** VoyageQuotas */
+        VoyageQuotas: {
+            concurrent: components["schemas"]["VoyageQuotaConcurrent"];
+            monthly: components["schemas"]["VoyageQuotaMonthly"];
+        };
+        /**
+         * VoyageResult
+         * @description Populated once the voyage completes and the catalog is live.
+         */
+        VoyageResult: {
+            /** Catalog */
+            catalog: string;
+            endpoints?: components["schemas"]["VoyageResultEndpoints"];
+            /** Productcount */
+            productCount?: number | null;
+        };
+        /** VoyageResultEndpoints */
+        VoyageResultEndpoints: {
+            /**
+             * Lookup
+             * @default /v1/products/lookup
+             */
+            lookup: string;
+            /**
+             * Search
+             * @default /v1/products/search
+             */
+            search: string;
+        };
+        /**
+         * VoyageStartRequest
+         * @description Body for ``POST /v1/voyage``. ``domain`` only — pipeline profile, seed
+         *     URLs, and review mode are server-side policy, not caller-controlled.
+         */
+        VoyageStartRequest: {
+            /**
+             * Domain
+             * @description Registrable domain or full URL. The server normalizes it (lowercase; scheme, path, port, and leading `www.` stripped) and echoes the normalized form back as `domain`.
+             */
+            domain: string;
+        };
+        /**
+         * VoyageTask
+         * @description The shared, org-anonymous public view of a voyage (design §3.3).
+         */
+        VoyageTask: {
+            /** Completedat */
+            completedAt?: string | null;
+            /** Createdat */
+            createdAt?: string | null;
+            /** Domain */
+            domain: string;
+            error?: components["schemas"]["VoyageError"] | null;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "discovering_site" | "sampling_products" | "building_extraction" | "in_review" | "publishing_catalog" | "complete" | "failed";
+            /** Phaselabel */
+            phaseLabel: string;
+            /** Progresspercent */
+            progressPercent: number;
+            result?: components["schemas"]["VoyageResult"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "in_review" | "completed" | "failed" | "cancelled";
+            /** Taskid */
+            taskId: string;
+            /** Updatedat */
+            updatedAt?: string | null;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+    listUrlLists: {
+        parameters: {
+            query?: {
+                /** @description Opaque page cursor. */
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlListListResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    createUrlList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageUrlListCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlList"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Name already used by a live list, or the organization is at its list cap. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description URL lists are not enabled (rollout flag). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    getUrlList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlList"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    deleteUrlList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlList"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listUrlListUrls: {
+        parameters: {
+            query?: {
+                /** @description Opaque page cursor. */
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlListUrlsResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Malformed pagination cursor. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    addUrlListUrls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageUrlsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlMutationResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request body over the byte-level size cap. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    checkUrlListUrls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageUrlsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageContainsResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request body over the byte-level size cap. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    removeUrlListUrls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                urlListId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverageUrlsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageUrlMutationResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use URL lists, or the principal carries no organization. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description List does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request body over the byte-level size cap. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listDomains: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The covered-domain set (also returns the strong `ETag`). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListDomainsResponse"];
+                };
+            };
+            /** @description The client's `If-None-Match` matches the current list; body is empty. Reuse the cached response. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Catalog registry unavailable (fail closed, safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's own identity, quotas, and rate-limit posture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Missing, invalid, or revoked Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`, or the organization is no longer active. `/me` is not an exception to the org-type gate; the `detail` is the reason. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. `/me` is cheap but not free: an agent polling it in a loop is throttled like any other `/v1` route. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    lookupProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticProductLookupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantProductUrlLookupResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requested catalog or product was not found for this API key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Product Lookup service-wide rate limit exceeded. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The target failed before product extraction completed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Indexed lookup timed out waiting for a catalog DB connection or was killed at the server-side statement timeout (retry after the advertised delay), or on-demand product resolution is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description On-demand product resolution exceeded its deadline. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    moreLikeThisProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticMoreLikeThisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticMoreLikeThisResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requested catalog or product was not found for this API key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    refreshProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticProductRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticProductRefreshResponse"];
+                };
+            };
+            /** @description No targets were accepted for refresh. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requested catalog or product was not found for this API key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Product refresh service was unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resolveProductFromHtml: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantProductUrlLookupResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The submitted HTML contains no credible product metadata, or no canonical product URL could be established (page declares none and no url was supplied). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request body exceeds the size cap. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Product resolution service-wide rate limit exceeded. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product resolution failed before completing. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product resolution is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product resolution exceeded its deadline. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    searchProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticProductSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticProductSearchPage"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requested catalog or product was not found for this API key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listVoyages: {
+        parameters: {
+            query?: {
+                /** @description Opaque page cursor. */
+                cursor?: string | null;
+                limit?: number;
+                /** @description Filter by public status. */
+                status?: ("queued" | "running" | "in_review" | "completed" | "failed" | "cancelled") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoyageListResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not voyage. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Voyage quota exceeded (structured detail), or the standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    startVoyage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoyageStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Joined an existing voyage: an active (or already-completed-and-live) voyage exists for this domain. Joins consume no quota. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoyageTask"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoyageTask"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not voyage. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Domain is blocked from voyaging. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Invalid or unnormalizable domain. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Voyage quota exceeded (structured detail), or the standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Voyager service unavailable (fail closed, safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    getVoyage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoyageTask"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not voyage. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Task does not exist or is not visible to the caller's organization (deliberately indistinguishable). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Voyage quota exceeded (structured detail), or the standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Voyager service unavailable (fail closed, safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+}

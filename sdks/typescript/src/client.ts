@@ -1,3 +1,4 @@
+import { DomainCoverage } from "./domains.js";
 import {
   MissingAPIKeyError,
   OctogenAPIError,
@@ -7,6 +8,8 @@ import {
   OctogenNotFoundError,
   OctogenValidationError,
 } from "./errors.js";
+import type { OperationId } from "./operations.js";
+import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
   CoverageContainsResponse,
   CoveragePaginationParams,
@@ -14,6 +17,11 @@ import type {
   CoverageUrlListPage,
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
+  ListDomainsOptions,
+  ListDomainsResponse,
+  ListDomainsResult,
+  ListVoyagesParams,
+  MeResponse,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
@@ -21,20 +29,39 @@ import type {
   MerchantProductListPage,
   MerchantProductUrlLookupResponse,
   ProgrammaticMoreLikeThisRequest,
-  ProgrammaticProductRecrawlRequest,
+  ProgrammaticProductLookupRequestBody,
+  ProgrammaticProductRefreshRequest,
   ProgrammaticProductSearchRequest,
-  ProductRecrawlResponse,
-  ProductRecrawlTarget,
-  RecrawlProductsParams,
+  ProgrammaticResolveFromHtmlRequest,
+  ProductRefreshResponse,
+  ProductRefreshTarget,
+  RefreshProductsParams,
+  ResolveProductFromHtmlParams,
   SearchProductsParams,
+  StartVoyageResult,
   TextSearchQuery,
   TextSearchQueryPayload,
+  VoyageListResponse,
+  VoyageTask,
 } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.1.0";
+export const SDK_VERSION = "0.2.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
+
+/**
+ * The environment variable every Octogen document, skill, and CLI command
+ * names. Prefer it in code and in docs.
+ */
+export const API_KEY_ENV_VAR = "OCTOGEN_PLATFORM_API_KEY";
+
+/**
+ * Read for backwards compatibility only. It never appeared in any Octogen
+ * document — early SDK builds read it and nothing else did — so it is a
+ * deprecated fallback that warns once and will be dropped.
+ */
+export const DEPRECATED_API_KEY_ENV_VAR = "OCTO_API_KEY";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -44,8 +71,6 @@ export interface OctogenClientOptions {
   timeoutMs?: number;
   fetch?: FetchLike;
 }
-
-type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
 export class OctogenClient {
   private readonly apiKey: string;
@@ -75,40 +100,180 @@ export class OctogenClient {
     if (resolutionMode === "index_only" && onDemandCachePolicy !== "prefer_cache") {
       throw new TypeError("onDemandCachePolicy does not apply to index_only");
     }
-    const data = await this.request("POST", "/products/lookup", {
+    const body: ProgrammaticProductLookupRequestBody = {
       url,
       resolutionMode,
       onDemandCachePolicy,
-    });
+    };
+    // Omitted rather than defaulted: the server's own default is `loose`, and
+    // sending it explicitly would freeze this SDK to today's default.
+    if (options.matchMode !== undefined) {
+      body.matchMode = options.matchMode;
+    }
+    const data = await this.json("lookupProduct", { body });
     return data as MerchantProductUrlLookupResponse;
   }
 
-  async recrawlProducts(
-    params: RecrawlProductsParams,
-  ): Promise<ProductRecrawlResponse> {
-    const payload = toRecrawlPayload(params);
-    const data = await this.request("POST", "/products/recrawl", payload);
-    return data as ProductRecrawlResponse;
+  /**
+   * Schedule product refreshes (`POST /v1/products/refresh`).
+   *
+   * Answers `202`: the targets were accepted and a refresh workflow was
+   * dispatched, not that the products have been re-crawled yet.
+   */
+  async refreshProducts(
+    params: RefreshProductsParams,
+  ): Promise<ProductRefreshResponse> {
+    const body = toRefreshPayload(params);
+    const data = await this.json("refreshProducts", { body });
+    return data as ProductRefreshResponse;
+  }
+
+  /**
+   * Resolve a product from page HTML you already have
+   * (`POST /v1/products/resolve-from-html`).
+   *
+   * No index read and no outbound fetch: the answer is derived entirely from
+   * the document you submit. Pass `url` whenever you have it.
+   */
+  async resolveProductFromHtml(
+    params: ResolveProductFromHtmlParams,
+  ): Promise<MerchantProductUrlLookupResponse> {
+    assertNonEmptyString(params.html, "html");
+    const body: ProgrammaticResolveFromHtmlRequest = { html: params.html };
+    if (params.url !== undefined) {
+      assertNonEmptyString(params.url, "url");
+      body.url = params.url;
+    }
+    const data = await this.json("resolveProductFromHtml", { body });
+    return data as MerchantProductUrlLookupResponse;
+  }
+
+  /**
+   * The calling organization, key, quotas, and rate-limit posture
+   * (`GET /v1/me`).
+   *
+   * Read-only and side-effect free: safe on startup and in CI. Never contains
+   * key material — only the key id and its non-secret display prefix.
+   */
+  async getMe(): Promise<MeResponse> {
+    const data = await this.json("getMe");
+    return data as MeResponse;
+  }
+
+  /**
+   * The covered-host set (`GET /v1/domains`), with `ETag` revalidation.
+   *
+   * Prefer {@link fetchDomainCoverage}, which handles the `304` and gives you
+   * a matcher that normalizes hosts. Use this when you manage the cache
+   * yourself.
+   */
+  async listDomains(options: ListDomainsOptions = {}): Promise<ListDomainsResult> {
+    const headers: Record<string, string> = {};
+    if (options.ifNoneMatch !== undefined) {
+      headers["If-None-Match"] = options.ifNoneMatch;
+    }
+    const { data, response } = await this.request("listDomains", { headers });
+    const etag = response.headers.get("ETag") ?? undefined;
+    const maxAgeSeconds = parseMaxAge(response.headers.get("Cache-Control"));
+
+    if (response.status === 304) {
+      return { notModified: true, domains: undefined, etag, maxAgeSeconds };
+    }
+    const body = data as ListDomainsResponse;
+    return {
+      notModified: false,
+      domains: body.domains,
+      etag,
+      maxAgeSeconds,
+    };
+  }
+
+  /**
+   * Fetch (or revalidate) the covered-domain snapshot.
+   *
+   * Pass the previous snapshot and this sends `If-None-Match`; on a `304` it
+   * returns that same snapshot untouched, which is what the endpoint's
+   * `max-age=300` and strong `ETag` are for.
+   *
+   * ```ts
+   * let coverage = await client.fetchDomainCoverage();
+   * if (coverage.isHostCovered("https://www.macys.com/shop/product/x")) {
+   *   await client.lookupProduct("https://www.macys.com/shop/product/x");
+   * }
+   * // Later — one cheap revalidation, no re-download while unchanged:
+   * coverage = await client.fetchDomainCoverage(coverage);
+   * ```
+   */
+  async fetchDomainCoverage(previous?: DomainCoverage): Promise<DomainCoverage> {
+    const options: ListDomainsOptions = {};
+    if (previous?.etag !== undefined) {
+      options.ifNoneMatch = previous.etag;
+    }
+    const result = await this.listDomains(options);
+    if (result.notModified && previous !== undefined) {
+      return previous;
+    }
+    return new DomainCoverage(result.domains ?? [], {
+      etag: result.etag,
+      maxAgeSeconds: result.maxAgeSeconds,
+    });
+  }
+
+  /**
+   * Start — or join — a voyage for a domain (`POST /v1/voyage`).
+   *
+   * Voyages are shared per domain. When one is already running (or the domain
+   * already has a live catalog) the caller joins it and no quota is consumed;
+   * {@link StartVoyageResult.created} says which happened. Voyages run for
+   * hours to days: poll {@link getVoyage} every five minutes or slower.
+   */
+  async startVoyage(domain: string): Promise<StartVoyageResult> {
+    assertNonEmptyString(domain, "domain");
+    const { data, response } = await this.request("startVoyage", {
+      body: { domain },
+    });
+    return { task: data as VoyageTask, created: response.status === 202 };
+  }
+
+  /** List this organization's voyages, newest first (`GET /v1/voyage`). */
+  async listVoyages(params: ListVoyagesParams = {}): Promise<VoyageListResponse> {
+    const data = await this.json("listVoyages", {
+      query: { cursor: params.cursor, limit: params.limit, status: params.status },
+    });
+    return data as VoyageListResponse;
+  }
+
+  /**
+   * Poll one voyage (`GET /v1/voyage/{task_id}`).
+   *
+   * A task belonging to another organization is reported as `404
+   * voyage_not_found`, indistinguishable from one that does not exist.
+   */
+  async getVoyage(taskId: string): Promise<VoyageTask> {
+    const data = await this.json("getVoyage", {
+      pathParams: { task_id: taskId },
+    });
+    return data as VoyageTask;
   }
 
   async searchProducts(params: SearchProductsParams): Promise<MerchantProductListPage> {
-    const payload = toSearchPayload(params);
-    const data = await this.request("POST", "/products/search", payload);
+    const body = toSearchPayload(params);
+    const data = await this.json("searchProducts", { body });
     return data as MerchantProductListPage;
   }
 
   async moreLikeThisProducts(
     params: MoreLikeThisProductsParams,
   ): Promise<MoreLikeThisProductsResponse> {
-    const payload = toMoreLikeThisPayload(params);
-    const data = await this.request("POST", "/products/more-like-this", payload);
+    const body = toMoreLikeThisPayload(params);
+    const data = await this.json("moreLikeThisProducts", { body });
     return data as MoreLikeThisProductsResponse;
   }
 
   /** Create a coverage URL list (returned in `provisioning`). */
   async createCoverageUrlList(name: string): Promise<CoverageUrlList> {
     assertNonEmptyString(name, "name");
-    const data = await this.request("POST", "/coverage/url-lists", { name });
+    const data = await this.json("createUrlList", { body: { name } });
     return data as CoverageUrlList;
   }
 
@@ -116,19 +281,15 @@ export class OctogenClient {
   async listCoverageUrlLists(
     params: CoveragePaginationParams = {},
   ): Promise<CoverageUrlListPage> {
-    const data = await this.request("GET", "/coverage/url-lists", undefined, {
-      cursor: params.cursor,
-      limit: params.limit,
+    const data = await this.json("listUrlLists", {
+      query: { cursor: params.cursor, limit: params.limit },
     });
     return data as CoverageUrlListPage;
   }
 
   /** Get one coverage URL list by id. */
   async getCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
-    const data = await this.request(
-      "GET",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}`,
-    );
+    const data = await this.json("getUrlList", { pathParams: { urlListId } });
     return data as CoverageUrlList;
   }
 
@@ -137,10 +298,7 @@ export class OctogenClient {
    * asynchronous and permanent: there is no grace window and no restore.
    */
   async deleteCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
-    const data = await this.request(
-      "DELETE",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}`,
-    );
+    const data = await this.json("deleteUrlList", { pathParams: { urlListId } });
     return data as CoverageUrlList;
   }
 
@@ -150,11 +308,10 @@ export class OctogenClient {
     urls: string[],
   ): Promise<CoverageUrlMutationResponse> {
     assertUrlBatch(urls);
-    const data = await this.request(
-      "POST",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls`,
-      { urls },
-    );
+    const data = await this.json("addUrlListUrls", {
+      body: { urls },
+      pathParams: { urlListId },
+    });
     return data as CoverageUrlMutationResponse;
   }
 
@@ -164,11 +321,10 @@ export class OctogenClient {
     urls: string[],
   ): Promise<CoverageUrlMutationResponse> {
     assertUrlBatch(urls);
-    const data = await this.request(
-      "POST",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls/remove`,
-      { urls },
-    );
+    const data = await this.json("removeUrlListUrls", {
+      body: { urls },
+      pathParams: { urlListId },
+    });
     return data as CoverageUrlMutationResponse;
   }
 
@@ -178,11 +334,10 @@ export class OctogenClient {
     urls: string[],
   ): Promise<CoverageContainsResponse> {
     assertUrlBatch(urls);
-    const data = await this.request(
-      "POST",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls/contains`,
-      { urls },
-    );
+    const data = await this.json("checkUrlListUrls", {
+      body: { urls },
+      pathParams: { urlListId },
+    });
     return data as CoverageContainsResponse;
   }
 
@@ -191,21 +346,32 @@ export class OctogenClient {
     urlListId: string,
     params: CoveragePaginationParams = {},
   ): Promise<CoverageUrlListUrlsPage> {
-    const data = await this.request(
-      "GET",
-      `/coverage/url-lists/${encodePathSegment(urlListId, "urlListId")}/urls`,
-      undefined,
-      { cursor: params.cursor, limit: params.limit },
-    );
+    const data = await this.json("listUrlListUrls", {
+      pathParams: { urlListId },
+      query: { cursor: params.cursor, limit: params.limit },
+    });
     return data as CoverageUrlListUrlsPage;
   }
 
+  /**
+   * Issue one registry-declared operation.
+   *
+   * Requests name an `operationId`, never a path: the verb and path template
+   * come from {@link OPERATIONS}, whose `path` is typed against the generated
+   * contract. There is no way to reach a route the published API does not
+   * define without a compile error.
+   */
   private async request(
-    method: HttpMethod,
-    path: string,
-    json?: object,
-    query?: Record<string, string | number | undefined>,
-  ): Promise<unknown> {
+    operationId: OperationId,
+    options: {
+      body?: object;
+      headers?: Record<string, string>;
+      pathParams?: Record<string, string>;
+      query?: Record<string, string | number | undefined>;
+    } = {},
+  ): Promise<{ data: unknown; response: Response }> {
+    const operation = OPERATIONS[operationId];
+    const path = resolveOperationPath(operation.path, options.pathParams);
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
@@ -213,25 +379,26 @@ export class OctogenClient {
 
     try {
       const init: RequestInit = {
-        headers: this.headers(json !== undefined),
-        method,
+        headers: { ...this.headers(options.body !== undefined), ...options.headers },
+        method: operation.method,
         signal: controller.signal,
       };
-      if (json !== undefined) {
-        init.body = JSON.stringify(json);
+      if (options.body !== undefined) {
+        init.body = JSON.stringify(options.body);
       }
 
-      const response = await this.fetchFn(this.url(path, query), init);
+      const response = await this.fetchFn(this.url(path, options.query), init);
 
       if (response.status >= 400) {
         throw await apiErrorFromResponse(response);
       }
 
-      if (response.status === 204) {
-        return undefined;
+      // 204 (no content) and 304 (revalidated) both carry no body.
+      if (response.status === 204 || response.status === 304) {
+        return { data: undefined, response };
       }
 
-      return await parseJsonResponse(response);
+      return { data: await parseJsonResponse(response), response };
     } catch (error) {
       if (error instanceof OctogenAPIError) {
         throw error;
@@ -245,6 +412,19 @@ export class OctogenClient {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  /** {@link request} for the common case: return the decoded JSON body. */
+  private async json(
+    operationId: OperationId,
+    options: {
+      body?: object;
+      pathParams?: Record<string, string>;
+      query?: Record<string, string | number | undefined>;
+    } = {},
+  ): Promise<unknown> {
+    const { data } = await this.request(operationId, options);
+    return data;
   }
 
   private url(
@@ -275,8 +455,42 @@ export class OctogenClient {
   }
 }
 
+let warnedDeprecatedApiKeyEnvVar = false;
+
 function readEnvApiKey(): string | undefined {
-  return typeof process === "undefined" ? undefined : process.env["OCTO_API_KEY"];
+  if (typeof process === "undefined") {
+    return undefined;
+  }
+  const apiKey = process.env[API_KEY_ENV_VAR];
+  if (apiKey !== undefined && apiKey.length > 0) {
+    return apiKey;
+  }
+
+  const deprecated = process.env[DEPRECATED_API_KEY_ENV_VAR];
+  if (deprecated !== undefined && deprecated.length > 0) {
+    if (!warnedDeprecatedApiKeyEnvVar) {
+      warnedDeprecatedApiKeyEnvVar = true;
+      console.warn(
+        `[octogen] ${DEPRECATED_API_KEY_ENV_VAR} is deprecated and will be ` +
+          `removed; set ${API_KEY_ENV_VAR} instead.`,
+      );
+    }
+    return deprecated;
+  }
+  return undefined;
+}
+
+/** `max-age` in seconds from a `Cache-Control` header, when present. */
+function parseMaxAge(header: string | null): number | undefined {
+  if (header === null) {
+    return undefined;
+  }
+  const match = /(?:^|[\s,])max-age\s*=\s*(\d+)/i.exec(header);
+  if (match?.[1] === undefined) {
+    return undefined;
+  }
+  const seconds = Number.parseInt(match[1], 10);
+  return Number.isFinite(seconds) ? seconds : undefined;
 }
 
 function trimTrailingSlash(value: string): string {
@@ -289,36 +503,30 @@ function assertNonEmptyString(value: string, fieldName: string): void {
   }
 }
 
-function encodePathSegment(value: string, fieldName: string): string {
-  const trimmed = value.trim();
-  assertNonEmptyString(trimmed, fieldName);
-  return encodeURIComponent(trimmed);
-}
-
 function assertUrlBatch(urls: string[]): void {
   if (urls.length < 1 || urls.length > 1000) {
     throw new TypeError("urls must contain between 1 and 1000 items");
   }
 }
 
-function toRecrawlPayload(
-  params: RecrawlProductsParams,
-): ProgrammaticProductRecrawlRequest {
+function toRefreshPayload(
+  params: RefreshProductsParams,
+): ProgrammaticProductRefreshRequest {
   if (params.targets.length < 1 || params.targets.length > 500) {
     throw new TypeError("targets must contain between 1 and 500 items");
   }
 
   return {
     targets: params.targets.map((target, index) =>
-      toRecrawlTargetPayload(target, index),
+      toRefreshTargetPayload(target, index),
     ),
   };
 }
 
-function toRecrawlTargetPayload(
-  target: ProductRecrawlTarget,
+function toRefreshTargetPayload(
+  target: ProductRefreshTarget,
   index: number,
-): ProductRecrawlTarget {
+): ProductRefreshTarget {
   const fieldPrefix = `targets[${String(index)}]`;
   const hasUrl = target.url !== undefined;
   const hasUuid = target.uuid !== undefined;
@@ -328,7 +536,7 @@ function toRecrawlTargetPayload(
     );
   }
 
-  const payload: ProductRecrawlTarget = {};
+  const payload: ProductRefreshTarget = {};
   if (target.url !== undefined) {
     assertNonEmptyString(target.url, `${fieldPrefix}.url`);
     payload.url = target.url;

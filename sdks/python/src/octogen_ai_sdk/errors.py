@@ -12,7 +12,7 @@ class OctogenError(Exception):
 
 
 class MissingAPIKeyError(OctogenError):
-    """Raised when no API key is provided and OCTO_API_KEY is unset."""
+    """Raised when no API key is provided and OCTOGEN_PLATFORM_API_KEY is unset."""
 
 
 class OctogenConnectionError(OctogenError):

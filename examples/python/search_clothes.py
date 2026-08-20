@@ -4,7 +4,7 @@ Run from the repository root:
 
     uv run --project sdks/python python examples/python/search_clothes.py
 
-Requires OCTO_API_KEY in the environment.
+Requires OCTOGEN_PLATFORM_API_KEY in the environment.
 """
 
 from __future__ import annotations

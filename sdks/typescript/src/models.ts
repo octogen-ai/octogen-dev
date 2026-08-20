@@ -1,3 +1,5 @@
+import type { components } from "./generated/types.js";
+
 export const AgeGroup = {
   INFANT: "infant",
   TODDLER: "toddler",
@@ -65,7 +67,21 @@ export const ProductLookupCachePolicy = {
 export type ProductLookupCachePolicy =
   (typeof ProductLookupCachePolicy)[keyof typeof ProductLookupCachePolicy];
 
+export const ProductLookupMatchMode = {
+  STRICT: "strict",
+  LOOSE: "loose",
+} as const;
+
+export type ProductLookupMatchMode =
+  (typeof ProductLookupMatchMode)[keyof typeof ProductLookupMatchMode];
+
 export interface LookupProductOptions {
+  /**
+   * Index match strictness. `loose` (the server default) also resolves URLs
+   * that differ from the indexed product only by path case, a non-indexed
+   * query parameter, or a Shopify collection-scoped path.
+   */
+  matchMode?: ProductLookupMatchMode;
   resolutionMode?: ProductLookupResolutionMode;
   onDemandCachePolicy?: ProductLookupCachePolicy;
 }
@@ -162,43 +178,58 @@ export interface ProgrammaticProductSearchRequest {
   price_max?: number;
 }
 
-export interface ProgrammaticProductLookupRequest {
-  url: string;
-}
+export type ProgrammaticProductLookupRequest =
+  components["schemas"]["ProgrammaticProductLookupRequest"];
 
-export interface ProductRecrawlTarget {
+/**
+ * The lookup body as a *caller* sends it.
+ *
+ * Derived from the generated type rather than re-declared, so a field rename in
+ * the contract still breaks this — but relaxed: `matchMode`, `resolutionMode`,
+ * and `onDemandCachePolicy` are `required` in the generated shape because the
+ * contract gives them defaults, and a caller must be able to omit them and let
+ * the server decide.
+ */
+export type ProgrammaticProductLookupRequestBody = Partial<
+  Omit<ProgrammaticProductLookupRequest, "url">
+> & { url: string };
+
+/**
+ * One product to refresh: exactly one of `url` or `uuid`, optionally scoped to
+ * a `catalog`. Hand-written rather than aliased from the contract because the
+ * generated shape admits `null` for every field, which the payload builder
+ * rejects anyway.
+ */
+export interface ProductRefreshTarget {
   url?: string;
   uuid?: string;
   catalog?: string;
 }
 
-export interface RecrawlProductsParams {
-  targets: ProductRecrawlTarget[];
+export interface RefreshProductsParams {
+  targets: ProductRefreshTarget[];
 }
 
-export interface ProgrammaticProductRecrawlRequest {
-  targets: ProductRecrawlTarget[];
-}
+export type ProgrammaticProductRefreshRequest =
+  components["schemas"]["ProgrammaticProductRefreshRequest"];
 
-export interface ProductRecrawlAcceptedTarget {
-  catalog: string;
-  url: string;
-}
+export type ProgrammaticProductRefreshTarget =
+  components["schemas"]["ProgrammaticProductRefreshTarget"];
 
-export interface ProductRecrawlRejectedTarget {
-  target: ProductRecrawlTarget;
-  code: string;
-  message: string;
-}
+export type ProductRefreshAcceptedTarget =
+  components["schemas"]["ProgrammaticProductRefreshAcceptedTarget"];
 
-export interface ProductRecrawlResponse {
-  requestId: string;
-  submitted: number;
-  tasksCreated: number;
-  taskIds: string[];
-  accepted: ProductRecrawlAcceptedTarget[];
-  rejected: ProductRecrawlRejectedTarget[];
-}
+export type ProductRefreshRejectedTarget =
+  components["schemas"]["ProgrammaticProductRefreshRejectedTarget"];
+
+/**
+ * `202` body of `POST /v1/products/refresh`. `workflowStatus` describes the
+ * dispatch of the refresh workflow, not the refresh itself: `launched` means
+ * the crawl was handed off, and a non-empty `rejected` can accompany a
+ * successful dispatch of the rest.
+ */
+export type ProductRefreshResponse =
+  components["schemas"]["ProgrammaticProductRefreshResponse"];
 
 export interface MoreLikeThisSource {
   url?: string;
@@ -547,4 +578,94 @@ export interface CoverageUrlListUrl {
 export interface CoverageUrlListUrlsPage {
   items: CoverageUrlListUrl[];
   nextCursor?: string | null;
+}
+
+// ── Covered domains (/v1/domains) ───────────────────────────────────────────
+
+export type DomainEntry = components["schemas"]["DomainEntry"];
+
+export type ListDomainsResponse = components["schemas"]["ListDomainsResponse"];
+
+export interface ListDomainsOptions {
+  /**
+   * Revalidate instead of refetching: an `ETag` from a previous response. When
+   * the server's list is unchanged it answers `304` and
+   * {@link ListDomainsResult.notModified} is `true` with no `domains` body.
+   */
+  ifNoneMatch?: string;
+}
+
+export interface ListDomainsResult {
+  /** `true` when the server answered `304` — reuse the cached snapshot. */
+  notModified: boolean;
+  /** The covered-domain set; `undefined` on a `304`. */
+  domains: readonly DomainEntry[] | undefined;
+  /** The strong `ETag` to revalidate with next time. */
+  etag: string | undefined;
+  /** `max-age` from `Cache-Control`, in seconds, when the server sent one. */
+  maxAgeSeconds: number | undefined;
+}
+
+// ── Caller identity (/v1/me) ────────────────────────────────────────────────
+
+export type MeResponse = components["schemas"]["MeResponse"];
+
+export type MeOrganization = components["schemas"]["MeOrganization"];
+
+export type MeKey = components["schemas"]["MeKey"];
+
+export type MeQuotas = components["schemas"]["MeQuotas"];
+
+export type MeRateLimit = components["schemas"]["MeRateLimit"];
+
+// ── Resolve from HTML (/v1/products/resolve-from-html) ──────────────────────
+
+export interface ResolveProductFromHtmlParams {
+  /** Product page HTML, capped at 5 MiB by the server. */
+  html: string;
+  /**
+   * The page's source URL — strongly recommended. It anchors relative image
+   * URLs and JSON-LD selection, and is the only variant-qualified identity the
+   * response retains for storefronts that encode the selected variant in query
+   * parameters. Without it the page must declare its own canonical URL.
+   */
+  url?: string;
+}
+
+export type ProgrammaticResolveFromHtmlRequest =
+  components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
+
+// ── Voyages (/v1/voyage) ────────────────────────────────────────────────────
+
+export type VoyageTask = components["schemas"]["VoyageTask"];
+
+export type VoyageStatus = NonNullable<VoyageTask["status"]>;
+
+export type VoyagePhase = NonNullable<VoyageTask["phase"]>;
+
+export type VoyageResult = components["schemas"]["VoyageResult"];
+
+export type VoyageError = components["schemas"]["VoyageError"];
+
+export type VoyageQuotas = components["schemas"]["VoyageQuotas"];
+
+export type VoyageListResponse = components["schemas"]["VoyageListResponse"];
+
+export type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
+
+export interface StartVoyageResult {
+  task: VoyageTask;
+  /**
+   * `true` when this call dispatched a new voyage (`202`, quota consumed);
+   * `false` when it joined one already running for the domain (`200`, no quota
+   * consumed). Voyages are shared per domain, so joining is the common case
+   * for a popular merchant.
+   */
+  created: boolean;
+}
+
+export interface ListVoyagesParams {
+  status?: VoyageStatus;
+  cursor?: string;
+  limit?: number;
 }

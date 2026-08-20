@@ -14,7 +14,9 @@ export interface OctogenAPIErrorOptions {
 }
 
 export class MissingAPIKeyError extends OctogenError {
-  constructor(message = "Octogen API key required. Set OCTO_API_KEY or pass apiKey.") {
+  constructor(
+    message = "Octogen API key required. Set OCTOGEN_PLATFORM_API_KEY or pass apiKey.",
+  ) {
     super(message);
   }
 }

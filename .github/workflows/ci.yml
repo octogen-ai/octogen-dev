@@ -62,6 +62,8 @@ jobs:
         run: npm run format
       - name: Typecheck
         run: npm run typecheck
+      # `npm run test` runs each workspace's suite and then the hermetic
+      # cross-language contract tests in `tests/contract`.
       - name: Tests
         run: npm run test
       - name: Build
@@ -87,18 +89,51 @@ jobs:
         run: >-
           uv run --project sdks/python --frozen
           ruff check --config sdks/python/pyproject.toml
-          sdks/python/src sdks/python/tests examples/python
+          sdks/python/src sdks/python/tests examples/python tests/contract tools
       - name: Ruff format check
         run: >-
           uv run --project sdks/python --frozen
           ruff format --check --config sdks/python/pyproject.toml
-          sdks/python/src sdks/python/tests examples/python
+          sdks/python/src sdks/python/tests examples/python tests/contract tools
       - name: ty typecheck
         run: >-
           uv run --project sdks/python --frozen
           ty check --project sdks/python
-          sdks/python/src sdks/python/tests examples/python
+          sdks/python/src sdks/python/tests examples/python tests/contract
       - name: Tests
         run: >-
           uv run --project sdks/python --frozen
           pytest -c sdks/python/pyproject.toml sdks/python/tests
+      # The Python half of the contract-conformance check. Hermetic: it reads
+      # the committed snapshot, so it fails for exactly one reason — the SDK
+      # and the contract disagree.
+      - name: Contract conformance
+        run: >-
+          uv run --project sdks/python --frozen
+          pytest -c sdks/python/pyproject.toml tests/contract
+
+  contract:
+    name: Contract and codegen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - run: npm ci
+      # `npm run codegen` regenerates from the committed snapshot; stale
+      # committed output means someone hand-edited generated code or bumped the
+      # snapshot without regenerating.
+      - name: Generated types are up to date
+        run: npm run codegen:check
+      # The drift alarm, and the one step here that touches the network: it
+      # compares the contract `cdn.octogen.ai` is serving right now against the
+      # committed snapshot. A newly published operation turns this red until
+      # someone adds the SDK method — CI owns drift, and a red build names the
+      # owner. Kept in its own job so it is obvious which of the two failed.
+      - name: Published contract matches the snapshot
+        run: npm run test:published-contract
