@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "check": "npm run lint && npm run format && npm run typecheck && npm run test && npm run build",
+    "check": "npm run build && npm run lint && npm run format && npm run typecheck && npm run test",
     "clean": "npm run clean --workspaces --if-present",
     "codegen": "node scripts/codegen.mjs",
     "format": "prettier --check .",

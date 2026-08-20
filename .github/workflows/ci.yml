@@ -56,6 +56,13 @@ jobs:
           cache: npm
       - run: npm ci
       # Mirrors `typescript-sdk-{lint,format,typecheck,tests,build}` in prek.toml.
+      #
+      # Build first. The contract suite imports `@octogen-ai/sdk` through its
+      # package entry point rather than from `src/`, deliberately — that is what
+      # `npm install @octogen-ai/sdk` resolves — so on a fresh checkout there
+      # are no types for ESLint to reason about until `dist/` exists.
+      - name: Build
+        run: npm run build
       - name: ESLint
         run: npm run lint
       - name: Prettier check
@@ -64,8 +71,6 @@ jobs:
         run: npm run typecheck
       - name: Tests
         run: npm run test
-      - name: Build
-        run: npm run build
 
   python:
     name: Python SDK (Python ${{ matrix.python-version }})

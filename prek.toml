@@ -61,6 +61,8 @@ hooks = [
     id = "contract-conformance-typescript",
     name = "Contract conformance (TypeScript)",
     language = "system",
+    # `pretest:contract` builds first: this suite imports the package entry
+    # point, so it needs `dist/`.
     entry = "npm run test:contract",
     files = "^(sdks/typescript|cli|tests/contract)/",
     pass_filenames = false,
