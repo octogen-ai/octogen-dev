@@ -6,8 +6,10 @@
 name: CI
 
 on:
+  # Every pull request, not just those targeting `main`: a stacked PR is
+  # exactly the change most likely to need checking, and filtering by target
+  # branch silently gives it no CI at all.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
