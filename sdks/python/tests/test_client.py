@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
+from typing import Any
 
 import httpx
 import octogen_ai_sdk
 import pytest
 import respx
 from octogen_ai_sdk import (
+    API_KEY_ENV_VAR,
+    DEPRECATED_API_KEY_ENV_VAR,
     Attribute,
     AttributeValue,
     CanonicalBrand,
@@ -26,12 +30,27 @@ from octogen_ai_sdk import (
     ProductResolutionMetadata,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
-    ProgrammaticProductRecrawlTarget,
+    ProgrammaticProductRefreshTarget,
     TextSearchQuery,
     ValidationErrorModel,
+    VoyageStatus,
 )
 
 BASE_URL = "https://api.octogen.ai/v1"
+
+FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "platform-v1"
+
+
+def fixture(name: str) -> Any:
+    """Load a fixture shared with the TypeScript suite and the conformance tests."""
+    return json.loads((FIXTURES / f"{name}.json").read_text())
+
+
+@pytest.fixture(autouse=True)
+def _clear_api_key_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test may accidentally authenticate from the developer's own shell."""
+    monkeypatch.delenv(API_KEY_ENV_VAR, raising=False)
+    monkeypatch.delenv(DEPRECATED_API_KEY_ENV_VAR, raising=False)
 
 
 def test_public_model_exports_are_available() -> None:
@@ -48,8 +67,8 @@ def test_public_model_exports_are_available() -> None:
         octogen_ai_sdk.ProgrammaticMoreLikeThisSource is ProgrammaticMoreLikeThisSource
     )
     assert (
-        octogen_ai_sdk.ProgrammaticProductRecrawlTarget
-        is ProgrammaticProductRecrawlTarget
+        octogen_ai_sdk.ProgrammaticProductRefreshTarget
+        is ProgrammaticProductRefreshTarget
     )
     assert octogen_ai_sdk.ValidationErrorModel is ValidationErrorModel
 
@@ -68,12 +87,12 @@ def test_lookup_request_rejects_refresh_for_index_only() -> None:
         )
 
 
-def test_recrawl_target_requires_exactly_one_identifier() -> None:
+def test_refresh_target_requires_exactly_one_identifier() -> None:
     with pytest.raises(ValueError):
-        ProgrammaticProductRecrawlTarget.model_validate({})
+        ProgrammaticProductRefreshTarget.model_validate({})
 
     with pytest.raises(ValueError):
-        ProgrammaticProductRecrawlTarget.model_validate(
+        ProgrammaticProductRefreshTarget.model_validate(
             {"url": "https://example.com/p", "uuid": "product-1"}
         )
 
@@ -88,10 +107,8 @@ def test_more_like_this_source_requires_exactly_one_identifier() -> None:
         )
 
 
-def test_client_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("OCTO_API_KEY", raising=False)
-
-    with pytest.raises(MissingAPIKeyError):
+def test_client_requires_api_key() -> None:
+    with pytest.raises(MissingAPIKeyError, match=API_KEY_ENV_VAR):
         OctogenClient()
 
 
@@ -99,7 +116,7 @@ def test_client_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_search_products_uses_env_api_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OCTO_API_KEY", "octo_test_key")
+    monkeypatch.setenv(API_KEY_ENV_VAR, "octo_test_key")
     route = respx.post(f"{BASE_URL}/products/search").mock(
         return_value=httpx.Response(
             200,
@@ -118,55 +135,208 @@ async def test_search_products_uses_env_api_key(
 
 
 @respx.mock
-async def test_recrawl_products_sends_typed_request() -> None:
-    route = respx.post(f"{BASE_URL}/products/recrawl").mock(
-        return_value=httpx.Response(
-            202,
-            json={
-                "requestId": "request-1",
-                "submitted": 2,
-                "tasksCreated": 1,
-                "taskIds": ["recrawl-request-1-acme-0001-products"],
-                "accepted": [
-                    {
-                        "catalog": "acme",
-                        "url": "https://example.com/products/linen-dress",
-                    }
-                ],
-                "rejected": [
-                    {
-                        "target": {"uuid": "missing-product"},
-                        "code": "product_not_found",
-                        "message": "No active product matched that UUID.",
-                    }
-                ],
-            },
-        )
+async def test_refresh_products_sends_typed_request() -> None:
+    route = respx.post(f"{BASE_URL}/products/refresh").mock(
+        return_value=httpx.Response(202, json=fixture("product-refresh"))
     )
 
     async with OctogenClient(api_key="key") as client:
-        response = await client.recrawl_products(
+        response = await client.refresh_products(
             targets=[
                 {
                     "catalog": "acme",
-                    "url": "https://example.com/products/linen-dress",
+                    "url": "https://shop.acme.example/products/linen-dress",
                 },
-                ProgrammaticProductRecrawlTarget(uuid="missing-product"),
+                ProgrammaticProductRefreshTarget(uuid="missing-product"),
             ],
         )
 
     request = route.calls.last.request
     assert request.read() == (
-        b'{"targets":[{"url":"https://example.com/products/linen-dress",'
+        b'{"targets":[{"url":"https://shop.acme.example/products/linen-dress",'
         b'"catalog":"acme"},{"uuid":"missing-product"}]}'
     )
-    assert response.request_id == "request-1"
     assert response.submitted == 2
-    assert response.tasks_created == 1
-    assert response.task_ids == ["recrawl-request-1-acme-0001-products"]
+    assert response.workflow_status == "launched"
+    assert response.workflow_attempts == 1
     assert response.accepted[0].catalog == "acme"
     assert response.rejected[0].code == "product_not_found"
     assert response.rejected[0].target.uuid == "missing-product"
+
+
+async def test_deprecated_env_var_still_works_but_warns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(DEPRECATED_API_KEY_ENV_VAR, "octo_legacy_key")
+
+    with pytest.warns(DeprecationWarning, match=API_KEY_ENV_VAR):
+        async with OctogenClient() as client:
+            assert client._headers()["Authorization"] == "Bearer octo_legacy_key"
+
+
+async def test_primary_env_var_wins_and_does_not_warn(
+    monkeypatch: pytest.MonkeyPatch,
+    recwarn: pytest.WarningsRecorder,
+) -> None:
+    monkeypatch.setenv(API_KEY_ENV_VAR, "octo_current_key")
+    monkeypatch.setenv(DEPRECATED_API_KEY_ENV_VAR, "octo_legacy_key")
+
+    async with OctogenClient() as client:
+        assert client._headers()["Authorization"] == "Bearer octo_current_key"
+
+    assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
+
+
+@respx.mock
+async def test_list_domains_returns_the_covered_set_and_etag() -> None:
+    route = respx.get(f"{BASE_URL}/domains").mock(
+        return_value=httpx.Response(
+            200,
+            json=fixture("list-domains"),
+            headers={"ETag": '"domains-v1"'},
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.list_domains()
+
+    assert route.called
+    assert result.not_modified is False
+    assert result.etag == '"domains-v1"'
+    assert result.domains is not None
+    assert [entry.host for entry in result.domains] == [
+        "allbirds.com",
+        "www.allbirds.com",
+        "shop.acme.example",
+    ]
+    assert result.domains[0].catalog_display_name == "Allbirds"
+
+
+@respx.mock
+async def test_list_domains_revalidates_with_if_none_match() -> None:
+    route = respx.get(f"{BASE_URL}/domains").mock(
+        return_value=httpx.Response(304, headers={"ETag": '"domains-v1"'})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.list_domains(if_none_match='"domains-v1"')
+
+    assert route.calls.last.request.headers["If-None-Match"] == '"domains-v1"'
+    assert result.not_modified is True
+    assert result.domains is None
+    assert result.etag == '"domains-v1"'
+
+
+@respx.mock
+async def test_resolve_product_from_html_sends_html_and_url() -> None:
+    route = respx.post(f"{BASE_URL}/products/resolve-from-html").mock(
+        return_value=httpx.Response(200, json=fixture("resolve-from-html"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        response = await client.resolve_product_from_html(
+            html="<html><body>x</body></html>",
+            url="https://shop.acme.example/products/linen-dress?variant=blue",
+        )
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "html": "<html><body>x</body></html>",
+        "url": "https://shop.acme.example/products/linen-dress?variant=blue",
+    }
+    assert response.product.title == "Linen Dress"
+
+
+@respx.mock
+async def test_resolve_product_from_html_omits_absent_url() -> None:
+    route = respx.post(f"{BASE_URL}/products/resolve-from-html").mock(
+        return_value=httpx.Response(200, json=fixture("resolve-from-html"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.resolve_product_from_html(html="<html></html>")
+
+    assert json.loads(route.calls.last.request.read()) == {"html": "<html></html>"}
+
+
+async def test_resolve_product_from_html_rejects_empty_html() -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError):
+            await client.resolve_product_from_html(html="")
+
+
+@respx.mock
+async def test_start_voyage_reports_a_fresh_dispatch() -> None:
+    route = respx.post(f"{BASE_URL}/voyage").mock(
+        return_value=httpx.Response(202, json=fixture("voyage-task-running"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.start_voyage("shop.acme.example")
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "domain": "shop.acme.example"
+    }
+    assert result.joined is False
+    assert result.task.status == VoyageStatus.RUNNING
+    assert result.task.phase_label == "Sampling products"
+
+
+@respx.mock
+async def test_start_voyage_reports_a_join_that_consumes_no_quota() -> None:
+    respx.post(f"{BASE_URL}/voyage").mock(
+        return_value=httpx.Response(200, json=fixture("voyage-task-completed"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.start_voyage("https://allbirds.com/collections/all")
+
+    assert result.joined is True
+    assert result.task.result is not None
+    assert result.task.result.catalog == "allbirds"
+    assert result.task.result.product_count == 412
+
+
+@respx.mock
+async def test_list_voyages_filters_and_reports_quotas() -> None:
+    route = respx.get(f"{BASE_URL}/voyage").mock(
+        return_value=httpx.Response(200, json=fixture("voyage-list"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.list_voyages(status=VoyageStatus.RUNNING, limit=10)
+
+    assert route.calls.last.request.url.params["status"] == "running"
+    assert route.calls.last.request.url.params["limit"] == "10"
+    assert len(page.items) == 2
+    assert page.quotas is not None
+    assert page.quotas.monthly.used == 4
+    assert page.quotas.concurrent.limit == 3
+
+
+@respx.mock
+async def test_get_voyage_polls_one_task() -> None:
+    task_id = "voyage_01J8Z4M0000000000000000001"
+    route = respx.get(f"{BASE_URL}/voyage/{task_id}").mock(
+        return_value=httpx.Response(200, json=fixture("voyage-task-completed"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        task = await client.get_voyage(task_id)
+
+    assert route.called
+    assert task.progress_percent == 100
+    assert task.task_id == task_id
+
+
+@respx.mock
+async def test_get_voyage_raises_not_found_for_another_orgs_task() -> None:
+    respx.get(f"{BASE_URL}/voyage/unknown").mock(
+        return_value=httpx.Response(404, json={"detail": "voyage_not_found"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenNotFoundError, match="voyage_not_found"):
+            await client.get_voyage("unknown")
 
 
 @respx.mock
@@ -462,13 +632,9 @@ async def test_no_content_response_returns_none() -> None:
         assert await client._request("DELETE", "/products/lookup") is None
 
 
-async def test_api_key_can_be_passed_without_mutating_env(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("OCTO_API_KEY", raising=False)
-
+async def test_api_key_can_be_passed_without_mutating_env() -> None:
     async with OctogenClient(api_key="key") as client:
-        assert os.getenv("OCTO_API_KEY") is None
+        assert os.getenv(API_KEY_ENV_VAR) is None
         assert client._headers()["Authorization"] == "Bearer key"
 
 

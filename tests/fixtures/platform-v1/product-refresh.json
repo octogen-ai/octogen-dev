@@ -1,0 +1,21 @@
+{
+  "requestId": "req_01J8Z4M0000000000000000000",
+  "submitted": 2,
+  "accepted": [
+    {
+      "catalog": "acme",
+      "url": "https://shop.acme.example/products/linen-dress"
+    }
+  ],
+  "rejected": [
+    {
+      "target": { "uuid": "missing-product" },
+      "code": "product_not_found",
+      "message": "No active product matched that UUID."
+    }
+  ],
+  "workflowId": "wf_01J8Z4M0000000000000000000",
+  "workflowStatus": "launched",
+  "workflowAttempts": 1,
+  "workflowError": null
+}

@@ -1,0 +1,13 @@
+{
+  "taskId": "voyage_01J8Z4M0000000000000000000",
+  "domain": "shop.acme.example",
+  "status": "running",
+  "phase": "sampling_products",
+  "phaseLabel": "Sampling products",
+  "progressPercent": 35,
+  "createdAt": "2026-08-20T10:00:00+00:00",
+  "updatedAt": "2026-08-20T11:30:00+00:00",
+  "completedAt": null,
+  "error": null,
+  "result": null
+}

@@ -1,0 +1,46 @@
+{
+  "$comment": [
+    "Paths an SDK may call that the published OpenAPI contract does not define.",
+    "Every entry needs a reason. This list is deliberately hard to add to: the",
+    "conformance suite's whole value is that an undefined path fails CI, and each",
+    "allowlist entry is a permanent hole in that guarantee. There is no matching",
+    "allowlist for published operations without an SDK method — that direction",
+    "has no valid exceptions.",
+    "Nothing here is reachable from an SDK method today. The entries exist so the",
+    "brand surface, which the shipped agent-onboarding SKILL.md documents and",
+    "tells agents to use, can be wrapped later without the suite reading it as",
+    "drift."
+  ],
+  "unpublishedPaths": [
+    {
+      "path": "/brands/{brand}",
+      "methods": ["GET"],
+      "reason": "Live but include_in_schema=False; the exclusion is pinned by test_programmatic_openapi_documents_public_v1_contract in the octogen monorepo."
+    },
+    {
+      "path": "/brands/{brand}/products",
+      "methods": ["GET"],
+      "reason": "Live but include_in_schema=False."
+    },
+    {
+      "path": "/brands/{brand}/top-categories",
+      "methods": ["GET"],
+      "reason": "Live but include_in_schema=False."
+    },
+    {
+      "path": "/brands/prefix",
+      "methods": ["GET"],
+      "reason": "Live but include_in_schema=False."
+    },
+    {
+      "path": "/brands/search",
+      "methods": ["POST"],
+      "reason": "Live but include_in_schema=False."
+    },
+    {
+      "path": "/brands/similar",
+      "methods": ["POST"],
+      "reason": "Live but include_in_schema=False."
+    }
+  ]
+}

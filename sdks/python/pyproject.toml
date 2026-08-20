@@ -1,6 +1,6 @@
 [project]
 name = "octogen-ai-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Async Python SDK for the Octogen AI commerce API"
 readme = "README.md"
 authors = [
@@ -53,12 +53,19 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+# `src/octogen_ai_sdk/generated` is emitted by `npm run codegen` from the
+# published OpenAPI contract. It is still formatted (the codegen script runs
+# `ruff format` over it) but not linted: its line lengths and naming come from
+# the contract, and "fixing" them by hand would be undone by the next
+# regeneration.
+extend-exclude = ["**/octogen_ai_sdk/generated/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ty.src]
 include = ["src", "tests"]
+exclude = ["src/octogen_ai_sdk/generated"]
 
 [tool.ty.environment]
 python-version = "3.11"

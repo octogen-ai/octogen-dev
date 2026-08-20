@@ -1,0 +1,50 @@
+{
+  "items": [
+    {
+      "taskId": "voyage_01J8Z4M0000000000000000000",
+      "domain": "shop.acme.example",
+      "status": "running",
+      "phase": "sampling_products",
+      "phaseLabel": "Sampling products",
+      "progressPercent": 35,
+      "createdAt": "2026-08-20T10:00:00+00:00",
+      "updatedAt": "2026-08-20T11:30:00+00:00",
+      "completedAt": null,
+      "error": null,
+      "result": null
+    },
+    {
+      "taskId": "voyage_01J8Z4M0000000000000000001",
+      "domain": "allbirds.com",
+      "status": "completed",
+      "phase": "complete",
+      "phaseLabel": "Complete",
+      "progressPercent": 100,
+      "createdAt": "2026-08-18T09:00:00+00:00",
+      "updatedAt": "2026-08-19T02:14:00+00:00",
+      "completedAt": "2026-08-19T02:14:00+00:00",
+      "error": null,
+      "result": {
+        "catalog": "allbirds",
+        "productCount": 412,
+        "endpoints": {
+          "lookup": "/v1/products/lookup",
+          "search": "/v1/products/search"
+        }
+      }
+    }
+  ],
+  "nextCursor": null,
+  "quotas": {
+    "concurrent": {
+      "limit": 3,
+      "used": 1
+    },
+    "monthly": {
+      "limit": 20,
+      "used": 4,
+      "periodStart": "2026-08-01",
+      "resetsAt": "2026-09-01T00:00:00+00:00"
+    }
+  }
+}

@@ -501,6 +501,7 @@ class TestErrors:
     def test_missing_api_key_is_a_usage_error(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
+        monkeypatch.delenv("OCTOGEN_PLATFORM_API_KEY", raising=False)
         monkeypatch.delenv("OCTO_API_KEY", raising=False)
         rc = cli.main(["list"])
         assert rc == 2

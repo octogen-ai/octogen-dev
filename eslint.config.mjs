@@ -15,7 +15,11 @@ const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
  * Every tsconfig that provides type information for linting. `examples/typescript`
  * has no tsconfig of its own — it is included by the TypeScript SDK's.
  */
-const projects = ["./sdks/typescript/tsconfig.json"];
+const projects = [
+  "./sdks/typescript/tsconfig.json",
+  "./tests/contract/typescript/tsconfig.json",
+  "./tsconfig.tools.json",
+];
 
 export default tseslint.config(
   {
@@ -40,6 +44,21 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+    },
+  },
+  // Maintainer scripts: plain Node ESM, in no package's tsconfig, so the
+  // type-aware rules have no type information to work from. Still linted for
+  // the rules that do not need it.
+  {
+    files: ["scripts/**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        fetch: "readonly",
+        process: "readonly",
+        URL: "readonly",
+      },
     },
   },
 );

@@ -102,3 +102,44 @@ jobs:
         run: >-
           uv run --project sdks/python --frozen
           pytest -c sdks/python/pyproject.toml sdks/python/tests
+
+  contract:
+    name: Contract conformance (live)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: npm ci
+
+      # Regenerate every contract-derived artifact from the CDN, so the
+      # conformance suites below run against what `/v1` publishes *right now*
+      # rather than against what it published when this branch was written. A
+      # newly published operation with no SDK method turns this job red, which
+      # is the entire point: that is exactly how `POST /products/recrawl`
+      # reached `main`. Running the real script also proves codegen still works.
+      - name: Regenerate from the live contract
+        run: npm run codegen
+      - name: Report contract drift
+        run: |
+          if git diff --quiet; then
+            echo "Committed artifacts match the live contract."
+          else
+            echo "::warning title=Contract drift::The live /v1 contract no longer" \
+                 "matches the committed artifacts. Run 'npm run codegen' and" \
+                 "commit the result."
+            git --no-pager diff --stat
+          fi
+
+      - name: TypeScript conformance
+        run: npm run test:contract
+      - name: Python conformance
+        run: >-
+          uv run --project sdks/python --frozen
+          pytest -c sdks/python/pyproject.toml tests/contract/python

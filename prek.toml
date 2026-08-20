@@ -46,6 +46,25 @@ hooks = [
     files = "^(sdks/python|examples/python)/",
     pass_filenames = false,
   },
+  # The cross-language conformance suite. Runs on any SDK change and on any
+  # change to the contract snapshot, the allowlist, or the suite itself: those
+  # are exactly the inputs that decide whether the SDKs still match `/v1`.
+  {
+    id = "contract-conformance-python",
+    name = "Contract conformance (Python)",
+    language = "system",
+    entry = "uv run --project sdks/python pytest -c sdks/python/pyproject.toml tests/contract/python",
+    files = "^(sdks/python|tests/contract)/",
+    pass_filenames = false,
+  },
+  {
+    id = "contract-conformance-typescript",
+    name = "Contract conformance (TypeScript)",
+    language = "system",
+    entry = "npm run test:contract",
+    files = "^(sdks/typescript|cli|tests/contract)/",
+    pass_filenames = false,
+  },
   # Lint and format are repository-wide: one root ESLint config and one root
   # Prettier config cover every workspace, so these run on any change that a
   # root config or any linted source file could affect.
