@@ -8,13 +8,13 @@ both share the same business logic and active crawled catalog policy. MCP
 also exposes BigQuery listing/subscriber helpers for organizations with
 BigQuery access.
 
-| Connection | What you should know |
-| --- | --- |
-| Base URL | `https://mcp.octogen.ai/mcp` for most clients; `https://codex-mcp.octogen.ai/mcp` for Codex CLI |
-| Transport | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) |
-| Authentication | OAuth 2.1 with PKCE-S256 against `https://auth.octogen.ai` |
-| Discovery | RFC 9728 protected-resource metadata at `https://mcp.octogen.ai/.well-known/oauth-protected-resource`; Codex uses `https://codex-mcp.octogen.ai/.well-known/oauth-protected-resource` |
-| Client registration | RFC 7591 Dynamic Client Registration — your MCP client registers itself on first launch |
+| Connection          | What you should know                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base URL            | `https://mcp.octogen.ai/mcp` for most clients; `https://codex-mcp.octogen.ai/mcp` for Codex CLI                                                                                       |
+| Transport           | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http)                                                                          |
+| Authentication      | OAuth 2.1 with PKCE-S256 against `https://auth.octogen.ai`                                                                                                                            |
+| Discovery           | RFC 9728 protected-resource metadata at `https://mcp.octogen.ai/.well-known/oauth-protected-resource`; Codex uses `https://codex-mcp.octogen.ai/.well-known/oauth-protected-resource` |
+| Client registration | RFC 7591 Dynamic Client Registration — your MCP client registers itself on first launch                                                                                               |
 
 You do not need to provision API keys, client IDs, or shared secrets. Compliant
 MCP clients walk the discovery chain automatically; on first use they open a
@@ -202,12 +202,12 @@ is required because the response includes customer GCP principals.
 
 Important cell states:
 
-| Status | Meaning |
-| --- | --- |
-| `preparing` | Octogen accepted the subscriber but has not finished granting Analytics Hub IAM. |
-| `awaiting_subscription` | IAM is ready; run the customer-side BigQuery subscribe helper. |
-| `active` | Analytics Hub sees the linked dataset subscription. |
-| `removing` | The subscriber was disabled and teardown is in progress. |
+| Status                  | Meaning                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `preparing`             | Octogen accepted the subscriber but has not finished granting Analytics Hub IAM. |
+| `awaiting_subscription` | IAM is ready; run the customer-side BigQuery subscribe helper.                   |
+| `active`                | Analytics Hub sees the linked dataset subscription.                              |
+| `removing`              | The subscriber was disabled and teardown is in progress.                         |
 
 ### `register_bigquery_subscriber(request)`
 
@@ -321,25 +321,25 @@ The tools return two flavors of error.
 **Transport-level errors** (HTTP 4xx) interrupt the call and propagate as
 client-side exceptions. The most common are:
 
-| Status | Meaning |
-| --- | --- |
-| 401 | Missing, expired, or wrong-audience token. Compliant clients restart the OAuth flow automatically using the `WWW-Authenticate` header. |
-| 403 | Token is valid but the organization isn't allowed to use MCP (e.g. `org_type` is not `catalog_partner`). |
-| 422 | Request body validation failed. |
+| Status | Meaning                                                                                                                                |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 401    | Missing, expired, or wrong-audience token. Compliant clients restart the OAuth flow automatically using the `WWW-Authenticate` header. |
+| 403    | Token is valid but the organization isn't allowed to use MCP (e.g. `org_type` is not `catalog_partner`).                               |
+| 422    | Request body validation failed.                                                                                                        |
 
 **Tool-level errors** (HTTP 200 with an `error` field in the payload) are
 returned as values so the calling agent can recover without a transport
 failure. The codes you can see:
 
-| Tool | `error` | Meaning |
-| --- | --- | --- |
-| `lookup_product` | `product_not_found` | No active product matched the URL in active crawled catalogs. |
-| `lookup_product` | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
-| `search_products` | `catalog_not_granted` | The `catalog` argument is not in your active grants. |
-| `search_products` | `invalid_limit` | `limit` was outside the 1..100 range. |
-| BigQuery tools | `catalog_not_granted` | A requested catalog does not have an active `bigquery_listing` grant. |
-| BigQuery subscriber tools | `not_authorized` | Your user is not an owner/admin member of the target organization. |
-| BigQuery tools | `request_failed` | The backing Analytics Hub or subscriber operation failed. |
+| Tool                      | `error`               | Meaning                                                                |
+| ------------------------- | --------------------- | ---------------------------------------------------------------------- |
+| `lookup_product`          | `product_not_found`   | No active product matched the URL in active crawled catalogs.          |
+| `lookup_product`          | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
+| `search_products`         | `catalog_not_granted` | The `catalog` argument is not in your active grants.                   |
+| `search_products`         | `invalid_limit`       | `limit` was outside the 1..100 range.                                  |
+| BigQuery tools            | `catalog_not_granted` | A requested catalog does not have an active `bigquery_listing` grant.  |
+| BigQuery subscriber tools | `not_authorized`      | Your user is not an owner/admin member of the target organization.     |
+| BigQuery tools            | `request_failed`      | The backing Analytics Hub or subscriber operation failed.              |
 
 If an agent encounters one of these, retry with a known active crawled catalog
 or call `list_bigquery_listing_resources` for the explicitly granted BigQuery
@@ -350,13 +350,13 @@ listing set.
 If you also have a Platform Catalog API v1 key, both paths work concurrently
 against the same catalog access policy — no migration needed.
 
-| | Platform Catalog API v1 (API keys) | MCP (OAuth) |
-| --- | --- | --- |
-| Use case | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop) |
-| Auth | Bearer `octo_live_...` key | OAuth 2.1 + PKCE → audience-bound Octogen access token |
-| Caller identity | (api_key_id, org_id) | (user_sub, org_id, oauth_client_id) |
-| Token lifetime | Until manually revoked | ~5 minutes access; refresh until session expiry |
-| Revocation | Revoke the API key | Sign out of the Octogen Platform or remove the user from the organization |
+|                 | Platform Catalog API v1 (API keys)     | MCP (OAuth)                                                               |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| Use case        | Backends, batch jobs, server-to-server | Interactive agents (Claude Code, Codex, Claude Desktop)                   |
+| Auth            | Bearer `octo_live_...` key             | OAuth 2.1 + PKCE → audience-bound Octogen access token                    |
+| Caller identity | (api_key_id, org_id)                   | (user_sub, org_id, oauth_client_id)                                       |
+| Token lifetime  | Until manually revoked                 | ~5 minutes access; refresh until session expiry                           |
+| Revocation      | Revoke the API key                     | Sign out of the Octogen Platform or remove the user from the organization |
 
 Both surfaces give Catalog Partners search/browse access to all active crawled
 catalogs and exclude merchant catalogs.

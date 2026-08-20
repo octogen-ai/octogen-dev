@@ -6,11 +6,11 @@ cover?". Each list is joined against every active crawled catalog daily and
 the result is shared back as a per-list BigQuery Analytics Hub listing your
 organization's registered BigQuery Readers can subscribe to.
 
-| Property | Value |
-| --- | --- |
-| Base URL | `https://api.octogen.ai/v1` |
-| Authentication | Bearer Platform API key (`octo_live_...`) |
-| Content type | `application/json` |
+| Property         | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Base URL         | `https://api.octogen.ai/v1`                               |
+| Authentication   | Bearer Platform API key (`octo_live_...`)                 |
+| Content type     | `application/json`                                        |
 | OpenAPI contract | `https://cdn.octogen.ai/openapi/platform/v1/openapi.json` |
 
 Authentication is identical to the
@@ -102,9 +102,7 @@ set-add. Returns per-URL outcomes:
       "normalizedUrl": "https://shop.example/products/dress"
     }
   ],
-  "rejected": [
-    {"url": "not-a-url", "code": "invalid_url", "message": "..."}
-  ],
+  "rejected": [{ "url": "not-a-url", "code": "invalid_url", "message": "..." }],
   "urlCount": 5445,
   "requestId": "..."
 }
@@ -135,16 +133,16 @@ Errors use the shared `{"detail": "<code>"}` envelope from the
 [Platform Catalog API v1 error model](./platform-catalog-api-v1.md#error-model).
 Coverage-specific codes:
 
-| Code | Status | Meaning |
-| --- | --- | --- |
-| `url_list_not_found` | 404 | No list with that id in your organization. |
-| `url_list_deleting` | 409 | The list is `delete_pending`; mutations are refused. |
-| `url_list_migrating` | 409 | Entries are being re-normalized; retry shortly. |
-| `url_list_name_conflict` | 409 | A live list already uses that name. |
-| `url_list_limit_exceeded` | 409 | Your organization already has 5 live lists. |
-| `list_url_capacity_exceeded` | 409 | The add would exceed 100,000 entries. |
-| `invalid_cursor` | 400 | The pagination cursor is malformed or stale. |
-| `url_lists_unavailable` | 503 | The feature is temporarily disabled; retry later. |
+| Code                         | Status | Meaning                                              |
+| ---------------------------- | ------ | ---------------------------------------------------- |
+| `url_list_not_found`         | 404    | No list with that id in your organization.           |
+| `url_list_deleting`          | 409    | The list is `delete_pending`; mutations are refused. |
+| `url_list_migrating`         | 409    | Entries are being re-normalized; retry shortly.      |
+| `url_list_name_conflict`     | 409    | A live list already uses that name.                  |
+| `url_list_limit_exceeded`    | 409    | Your organization already has 5 live lists.          |
+| `list_url_capacity_exceeded` | 409    | The add would exceed 100,000 entries.                |
+| `invalid_cursor`             | 400    | The pagination cursor is malformed or stale.         |
+| `url_lists_unavailable`      | 503    | The feature is temporarily disabled; retry later.    |
 
 Invalid URLs never fail a batch — they are reported per URL in `rejected`
 with code `invalid_url`.
@@ -167,12 +165,12 @@ object tells you what they currently reflect):
 - **`url_coverage_v1`** — one row per URL in your list, saying whether that
   URL matched:
 
-  | column | meaning |
-  | --- | --- |
-  | `url` | The URL as you submitted it |
-  | `normalized_url` | Octogen's normalized form of it |
-  | `covered` | `TRUE` iff the export matched at least one product |
-  | `exported_at` | The snapshot timestamp |
+  | column           | meaning                                            |
+  | ---------------- | -------------------------------------------------- |
+  | `url`            | The URL as you submitted it                        |
+  | `normalized_url` | Octogen's normalized form of it                    |
+  | `covered`        | `TRUE` iff the export matched at least one product |
+  | `exported_at`    | The snapshot timestamp                             |
 
   The uncovered portion of your list is one query:
 
