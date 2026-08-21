@@ -128,14 +128,19 @@ hooks = [
     files = "^(sdks/typescript|examples/typescript)/|^tsconfig\\.base\\.json$",
     pass_filenames = false,
   },
-  # The `cli` workspace does not exist yet (design P4). These hooks are inert
-  # until it does: their `files` patterns match nothing, so they never run.
+  # The CLI gates on `sdks/typescript` as well as on its own files, and that is
+  # deliberate rather than over-broad: the CLI typechecks and tests against the
+  # SDK's *source*, and it is the SDK's most demanding customer. An SDK change
+  # that breaks a command should turn red in the same commit — which is how a
+  # route that does not exist gets found in an afternoon instead of by a
+  # partner. `typescript-sdk-*` stays gated on the SDK alone, so a CLI-only
+  # change does not run the SDK suite twice.
   {
     id = "cli-typecheck",
     name = "CLI typecheck",
     language = "system",
     entry = "npm run typecheck --workspace cli",
-    files = "^cli/",
+    files = "^(cli|sdks/typescript)/|^tsconfig\\.base\\.json$",
     pass_filenames = false,
   },
   {
@@ -143,7 +148,7 @@ hooks = [
     name = "CLI tests",
     language = "system",
     entry = "npm run test --workspace cli",
-    files = "^cli/",
+    files = "^(cli|sdks/typescript|tests/fixtures)/|^tsconfig\\.base\\.json$",
     pass_filenames = false,
   },
   {
@@ -151,7 +156,7 @@ hooks = [
     name = "CLI build",
     language = "system",
     entry = "npm run build --workspace cli",
-    files = "^cli/",
+    files = "^(cli|sdks/typescript)/|^tsconfig\\.base\\.json$",
     pass_filenames = false,
   },
 ]

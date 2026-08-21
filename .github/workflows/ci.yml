@@ -137,3 +137,92 @@ jobs:
       # owner. Kept in its own job so it is obvious which of the two failed.
       - name: Published contract matches the snapshot
         run: npm run test:published-contract
+
+  cli-package:
+    name: CLI tarball smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # `npx -y @octogen-ai/cli` fetches and executes in one shot, so the
+      # properties that make that safe have to hold on the *packed* artifact
+      # rather than on the working tree: no install hook, and small enough that
+      # the fetch is not the slow part.
+      - name: Pack, and check what a stranger would download
+        id: pack
+        run: |
+          set -euo pipefail
+          pack() {
+            npm pack --workspace "$1" --pack-destination "$RUNNER_TEMP" --json \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s)[0].filename))'
+          }
+          # The SDK too: the CLI pins it to an exact version that is not on the
+          # registry until its own tag ships, so a PR has to install the local
+          # one. That is also the release order — sdk-ts-v* before cli-v*.
+          sdk=$(pack @octogen-ai/sdk)
+          cli=$(pack @octogen-ai/cli)
+          echo "sdk=$RUNNER_TEMP/$sdk" >> "$GITHUB_OUTPUT"
+          echo "cli=$RUNNER_TEMP/$cli" >> "$GITHUB_OUTPUT"
+
+          # No install hooks. A one-liner that runs arbitrary code before the
+          # user has seen a line of output is not a one-liner.
+          for hook in preinstall install postinstall prepare; do
+            if node -e "process.exit(require('./cli/package.json').scripts?.['$hook'] ? 0 : 1)"; then
+              echo "::error::cli/package.json defines a $hook script; npx must not run install hooks"
+              exit 1
+            fi
+          done
+
+          bytes=$(stat -c%s "$RUNNER_TEMP/$cli")
+          echo "packed: $bytes bytes"
+          if [ "$bytes" -gt 2097152 ]; then
+            echo "::error::packed tarball is $bytes bytes, over the 2 MB budget"
+            exit 1
+          fi
+
+      # Installed from the tarball into a scratch project, the way a user gets
+      # it — so a missing `files` entry or a wrong `bin` path fails here rather
+      # than in somebody's terminal.
+      - name: Install the tarball and run it with no credential
+        env:
+          CLI_TARBALL: ${{ steps.pack.outputs.cli }}
+          SDK_TARBALL: ${{ steps.pack.outputs.sdk }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/scratch"
+          cd "$RUNNER_TEMP/scratch"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "$SDK_TARBALL" "$CLI_TARBALL"
+
+          ./node_modules/.bin/octogen --version
+
+          # No key and no network: `status --offline` must still emit one line of
+          # parseable JSON and exit 3. That is the exact check the agent-facing
+          # documents will tell people to run, so it runs on every PR.
+          set +e
+          output=$(./node_modules/.bin/octogen status --offline)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -ne 3 ]; then
+            echo "::error::expected exit 3 with no credential, got $code"
+            exit 1
+          fi
+          printf '%s' "$output" | node -e '
+            let raw = "";
+            process.stdin.on("data", (d) => (raw += d)).on("end", () => {
+              const lines = raw.split("\n").filter(Boolean);
+              if (lines.length !== 1) throw new Error(`stdout must be one line, got ${lines.length}`);
+              const body = JSON.parse(lines[0]);
+              if (Object.keys(body)[0] !== "schemaVersion") throw new Error("schemaVersion must come first");
+              if (body.exitCode !== 3) throw new Error("envelope exitCode must match the process status");
+              if (body.ok !== false) throw new Error("ok must be false with no credential");
+              if (/octo_(live|test)_[0-9a-f]{32}_/.test(raw)) throw new Error("key material in output");
+            });
+          '

@@ -11,7 +11,8 @@ in this SDK runs both sides through :func:`normalize_host` first.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from typing import Protocol, cast
 from urllib.parse import urlsplit
 
 _SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://", re.IGNORECASE)
@@ -45,16 +46,55 @@ def normalize_host(value: str | None) -> str | None:
     return host or None
 
 
-def is_host_covered(url_or_host: str | None, hosts: Iterable[str]) -> bool:
+def is_host_covered(
+    url_or_host: str | None,
+    hosts: Iterable[str | DomainEntryLike | Mapping[str, object]],
+) -> bool:
     """Is ``url_or_host`` covered by ``hosts``?
 
     Both sides are normalized, so this answers correctly for a ``www.`` URL
     against the apex-only list the server returns.
+
+    ``hosts`` accepts host strings or the ``DomainEntry`` objects (and dicts)
+    ``GET /v1/domains`` returns, because passing ``response.domains`` straight
+    in is the obvious first call and a helper whose entire purpose is
+    preventing a silent false negative must not answer ``False`` to it.
+    Anything else raises :class:`TypeError`: the return value decides whether a
+    caller ever asks about a merchant again, so a shape this does not
+    understand has to be loud rather than falsey.
+
+    Prefer :class:`~octogen_ai_sdk.domains.DomainCoverage` when you hold a
+    whole snapshot — it indexes the set once instead of rescanning per call.
     """
     host = normalize_host(url_or_host)
     if host is None:
         return False
-    return any(normalize_host(candidate) == host for candidate in hosts)
+    return any(normalize_host(_host_of(candidate)) == host for candidate in hosts)
+
+
+class DomainEntryLike(Protocol):
+    """Anything carrying a ``host``, which is what ``GET /v1/domains`` returns."""
+
+    @property
+    def host(self) -> str: ...
+
+
+def _host_of(candidate: object) -> str:
+    if isinstance(candidate, str):
+        return candidate
+    if isinstance(candidate, Mapping):
+        mapped = cast("Mapping[str, object]", candidate).get("host")
+        if isinstance(mapped, str):
+            return mapped
+    else:
+        attribute = getattr(candidate, "host", None)
+        if isinstance(attribute, str):
+            return attribute
+    raise TypeError(
+        "is_host_covered: every element of `hosts` must be a host string or "
+        "carry a string `host` (a DomainEntry or an equivalent mapping). "
+        f"Received: {type(candidate).__name__}"
+    )
 
 
 def _host_from_url(value: str) -> str | None:

@@ -9,6 +9,7 @@ import {
   OctogenAPIError,
   OctogenClient,
   OctogenConnectionError,
+  KEYLESS_TRIAL_OPERATIONS,
   OctogenNotFoundError,
   PricePreference,
   ProductLookupCachePolicy,
@@ -685,6 +686,131 @@ describe("OctogenClient coverage URL lists", () => {
     expect(lastCall(calls).input).toBe(
       `${BASE_URL}/coverage/url-lists/cul%2F..%2Fweird%20id`,
     );
+  });
+});
+
+describe("the keyless metered trial", () => {
+  it("refuses to build a keyless client unless asked", () => {
+    // Off by default: a client with no key is only useful against three routes,
+    // and silently degrading to it would turn a misconfigured deployment into a
+    // 30-request-a-day one.
+    expect(() => new OctogenClient({ fetch: createFetchMock().fetchMock })).toThrow(
+      MissingAPIKeyError,
+    );
+  });
+
+  it("sends no Authorization header at all with allowKeyless", async () => {
+    // Not a blank one: `Authorization: Bearer ` earns `401 Invalid API key`.
+    // The trial is entered by presenting nothing.
+    const { calls, fetchMock } = createFetchMock({ domains: [] });
+    const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
+    expect(client.isKeyless).toBe(true);
+
+    await client.listDomains();
+
+    const headers = lastCall(calls).init?.headers as Record<string, string>;
+    expect(headers).not.toHaveProperty("Authorization");
+    expect(headers["Accept"]).toBe("application/json");
+  });
+
+  it("still prefers a key when one is available", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { calls, fetchMock } = createFetchMock({ domains: [] });
+    const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
+    expect(client.isKeyless).toBe(false);
+
+    await client.listDomains();
+
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      Authorization: "Bearer octo_test_key",
+    });
+  });
+
+  it("names the three eligible operations, so a caller can ask before spending", () => {
+    expect([...KEYLESS_TRIAL_OPERATIONS].sort()).toEqual([
+      "listDomains",
+      "lookupProduct",
+      "searchProducts",
+    ]);
+  });
+});
+
+describe("fetchRaw, the escape hatch", () => {
+  it("issues an arbitrary path with the credential and the timeout", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { calls, fetchMock } = createFetchMock({ brand_name: "Nike" });
+    const client = new OctogenClient({ fetch: fetchMock });
+
+    const response = await client.fetchRaw("GET", "/brands/nike");
+
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/brands/nike`);
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      Authorization: "Bearer octo_test_key",
+    });
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual({ brand_name: "Nike" });
+  });
+
+  it("returns the response headers, so a caller can read its own rate limit", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { fetchMock } = createFetchMock(
+      {},
+      { headers: { "X-RateLimit-Remaining": "118" } },
+    );
+    const client = new OctogenClient({ fetch: fetchMock });
+
+    const response = await client.fetchRaw("GET", "/me");
+
+    expect(response.headers["x-ratelimit-remaining"]).toBe("118");
+  });
+
+  it("accepts a leading slash, no slash, or a full URL on the configured base", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { calls, fetchMock } = createFetchMock({});
+    const client = new OctogenClient({ fetch: fetchMock });
+
+    await client.fetchRaw("GET", "/me");
+    await client.fetchRaw("GET", "me");
+    await client.fetchRaw("GET", `${BASE_URL}/me`);
+
+    expect(calls.map((call) => call.input)).toEqual([
+      `${BASE_URL}/me`,
+      `${BASE_URL}/me`,
+      `${BASE_URL}/me`,
+    ]);
+  });
+
+  it("refuses a URL on another origin rather than sending the key there", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { calls, fetchMock } = createFetchMock({});
+    const client = new OctogenClient({ fetch: fetchMock });
+
+    await expect(client.fetchRaw("GET", "https://evil.example/v1/me")).rejects.toThrow(
+      TypeError,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("throws the same typed errors as every other method", async () => {
+    process.env[API_KEY_ENV_VAR] = "octo_test_key";
+    const { fetchMock } = createFetchMock(
+      { detail: "product_not_found" },
+      { status: 404 },
+    );
+    const client = new OctogenClient({ fetch: fetchMock });
+
+    await expect(client.fetchRaw("GET", "/brands/nobody")).rejects.toThrow(
+      OctogenNotFoundError,
+    );
+  });
+
+  it("works keyless too, for the three routes that answer that way", async () => {
+    const { calls, fetchMock } = createFetchMock({ domains: [] });
+    const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
+
+    await client.fetchRaw("GET", "/domains");
+
+    expect(lastCall(calls).init?.headers).not.toHaveProperty("Authorization");
   });
 });
 

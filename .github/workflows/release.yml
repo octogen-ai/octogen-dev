@@ -124,10 +124,16 @@ jobs:
 
   publish-cli-npm:
     name: Publish @octogen-ai/cli
-    # The `cli/` package does not exist yet (CLI design P4 creates it), so this
-    # job is unreachable until a `cli-v*` tag is pushed. It is here so the
-    # trusted publisher already configured for @octogen-ai/cli has a workflow to
-    # match on the day the package lands.
+    # The dist-tag comes from `publishConfig.tag` in cli/package.json, which is
+    # `next` for now: `@latest` is a promise an agent-facing document depends on,
+    # so it is a promoted artifact (design D6) rather than the address a publish
+    # lands at. Moving to `@latest` is a deliberate `npm dist-tag add`, and it
+    # waits for P8's post-publish smoke suite.
+    #
+    # Release order matters: the CLI pins an *exact* SDK version, so
+    # `sdk-ts-v<x>` ships before the `cli-v<y>` that depends on it. Publishing
+    # the CLI first succeeds and then fails at install time, which is the worse
+    # of the two failures.
     if: startsWith(github.ref_name, 'cli-v')
     needs: verify
     runs-on: ubuntu-latest

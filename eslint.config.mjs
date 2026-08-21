@@ -17,7 +17,11 @@ const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
  * `tsconfig.contract.json` covers the root-level cross-language contract tests
  * and the root Vitest configs.
  */
-const projects = ["./sdks/typescript/tsconfig.json", "./tsconfig.contract.json"];
+const projects = [
+  "./cli/tsconfig.json",
+  "./sdks/typescript/tsconfig.json",
+  "./tsconfig.contract.json",
+];
 
 export default tseslint.config(
   {

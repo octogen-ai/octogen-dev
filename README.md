@@ -6,6 +6,7 @@ This repository is public-facing and is intended to become the canonical home fo
 
 - Python SDKs for Octogen APIs
 - TypeScript SDKs for Octogen APIs
+- The `@octogen-ai/cli` command-line tool, for terminals and agents
 - Shared fixtures and contract tests for SDK behavior
 - Codex, Claude, and Cursor skills for building with Octogen
 - Examples and integration guides for commerce workflows
@@ -18,6 +19,7 @@ This repository is public-facing and is intended to become the canonical home fo
 |   +-- adr/                 # Architecture decision records
 |   +-- api/                 # API notes, schemas, and generated reference docs
 |   +-- guides/              # User-facing integration and workflow guides
++-- cli/                     # `@octogen-ai/cli` — the `octogen` command
 +-- examples/
 |   +-- python/              # Python SDK examples
 |   +-- typescript/          # TypeScript SDK examples
@@ -127,12 +129,40 @@ Package names and release targets are finalized: `@octogen-ai/sdk` on npm and
 `octogen-ai-sdk` on PyPI. Publishing is gated on a human owning the
 `@octogen-ai` npm organization and configuring 2FA and OIDC trusted publishing.
 
+## The CLI
+
+[`cli/`](cli/README.md) is `@octogen-ai/cli`, a single `octogen` binary for
+session work and onboarding. It is **not** a `/v1` mirror and not a replacement
+for the SDKs: production integrations use an SDK, and the CLI is what you (or an
+agent) reach for mid-task.
+
+```bash
+npx -y @octogen-ai/cli@next domains --check https://www.macys.com/shop/product/x
+```
+
+Two properties are worth knowing before reading the code:
+
+- **All `/v1` traffic goes through `@octogen-ai/sdk`**, pinned to an exact
+  version, with no second HTTP client. The CLI is the SDK's most demanding
+  customer, which is how `POST /products/recrawl` — a route that never existed,
+  shipped in both SDKs — gets found in an afternoon rather than by a partner.
+- **The command table is bound to the SDK's `OPERATIONS` registry.** Every
+  published operation is either mapped to a command or listed in
+  `EXCLUDED_OPERATIONS` with a stated reason. A newly published operation
+  reddens `tests/contract` until the SDK gains a method, then reddens the CLI
+  until someone writes a command or records why not.
+
+The CLI is currently published to the **`@next`** dist-tag only. `@latest` is a
+promise an agent-facing document depends on, so it is promoted deliberately
+after a smoke suite rather than being wherever the last publish landed. The CLI
+pins an exact SDK version, so releases go `sdk-ts-v*` first, then `cli-v*`.
+
 ## Development
 
 ### JavaScript and TypeScript
 
-The repository is one **npm workspace**. `sdks/typescript` is a member, and so
-is `cli` once it exists. There is a single root `package-lock.json`, a single
+The repository is one **npm workspace**. `sdks/typescript` and `cli` are its
+members. There is a single root `package-lock.json`, a single
 root `eslint.config.mjs`, a single root `.prettierrc.json`, and a shared
 `tsconfig.base.json` that each package extends. Install once at the root and
 every workspace resolves the same toolchain:

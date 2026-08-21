@@ -491,6 +491,13 @@ export interface MerchantProductUrlLookupResponse {
   resolvedUrl?: string | null;
   normalizedUrl?: string | null;
   canonicalUrl?: string | null;
+  /**
+   * Which probe of the lookup ladder resolved the product — `exact`,
+   * `normalized_exact`, `normalized_alias`, `loose`, `structural_alias`, or
+   * `learned_alias:<rule_id>`. Absent for on-demand results. Informational
+   * only, and the server may extend the value set, so treat it as a string.
+   */
+  matchedVia?: string | null;
   resolution?: ProductResolutionMetadata | null;
   cacheStatus?: "hit" | "miss" | "refresh" | null;
   warnings?: string[];

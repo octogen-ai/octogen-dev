@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 import httpx
 import pytest
@@ -217,3 +218,49 @@ async def test_fetch_domain_coverage_reuses_the_snapshot_on_304() -> None:
     # The same object, not an equal one: nothing was re-parsed.
     assert second is first
     assert second.is_host_covered("https://www.macys.com/shop/x")
+
+
+def test_is_host_covered_accepts_the_entry_objects_the_api_returns() -> None:
+    """The footgun this fixes.
+
+    ``is_host_covered(url, response.domains)`` — the obvious first call — used
+    to answer ``False`` for everything, silently, because the elements are
+    ``DomainEntry`` objects rather than host strings. A helper whose entire
+    purpose is preventing a silent false negative must not have one of its own.
+    """
+    assert is_host_covered("https://www.macys.com/shop/product/x", APEX_ONLY)
+    assert not is_host_covered("https://www.example.invalid/p", APEX_ONLY)
+
+
+def test_is_host_covered_accepts_mappings_too() -> None:
+    raw = [{"host": entry.host, "catalog": entry.catalog} for entry in APEX_ONLY]
+    assert is_host_covered("https://www.macys.com/p", raw)
+
+
+def test_is_host_covered_still_accepts_host_strings() -> None:
+    hosts = [entry.host for entry in APEX_ONLY]
+    assert is_host_covered("https://www.macys.com/shop/product/x", hosts)
+    assert is_host_covered("macys.com", hosts)
+
+
+def test_is_host_covered_raises_on_a_shape_it_cannot_read() -> None:
+    """Loud, not falsey.
+
+    The return value decides whether a caller ever asks about a merchant again,
+    so ``False`` for a shape we failed to understand is the one answer this
+    function must never give.
+    """
+    # `cast` rather than a real annotation: these are the shapes a *JavaScript*
+    # caller or an untyped dict reaches this with, and the whole point is that
+    # they raise instead of quietly answering False.
+    with pytest.raises(TypeError, match="host string"):
+        is_host_covered("https://www.macys.com/p", cast("list[str]", [42]))
+    with pytest.raises(TypeError, match="host string"):
+        is_host_covered(
+            "https://www.macys.com/p", cast("list[str]", [{"hostname": "macys.com"}])
+        )
+
+
+def test_is_host_covered_treats_an_unreadable_url_as_a_miss() -> None:
+    assert not is_host_covered("not a url", APEX_ONLY)
+    assert not is_host_covered(None, APEX_ONLY)
