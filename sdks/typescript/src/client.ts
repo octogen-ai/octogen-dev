@@ -8,7 +8,7 @@ import {
   OctogenNotFoundError,
   OctogenValidationError,
 } from "./errors.js";
-import type { OperationId } from "./operations.js";
+import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
   CoverageContainsResponse,
@@ -47,7 +47,7 @@ import type {
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.2.0";
+export const SDK_VERSION = "0.3.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -65,29 +65,61 @@ export const DEPRECATED_API_KEY_ENV_VAR = "OCTO_API_KEY";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
+/**
+ * The three routes the keyless metered trial answers without a credential,
+ * as `operationId`s. 30 requests per IP per day, complete untruncated
+ * payloads; everything else on `/v1` refuses a credential-free request with
+ * `401 keyless_trial_endpoint_not_included`.
+ *
+ * Exported so a caller can ask *before* spending a request whether the call it
+ * is about to make is even eligible.
+ */
+export const KEYLESS_TRIAL_OPERATIONS: readonly OperationId[] = Object.freeze([
+  "listDomains",
+  "lookupProduct",
+  "searchProducts",
+]);
+
 export interface OctogenClientOptions {
   apiKey?: string;
   baseUrl?: string;
   timeoutMs?: number;
   fetch?: FetchLike;
+  /**
+   * Permit a client with no API key, for the keyless metered trial.
+   *
+   * Off by default: a client built without a key is only useful against
+   * {@link KEYLESS_TRIAL_OPERATIONS}, and silently degrading to it would turn
+   * a misconfigured deployment into a 30-request-a-day one. With it on and no
+   * key resolved, requests carry **no** `Authorization` header at all —
+   * sending a placeholder instead earns `401 Invalid API key`, because the
+   * trial is entered by presenting nothing rather than by presenting
+   * something empty.
+   */
+  allowKeyless?: boolean;
 }
 
 export class OctogenClient {
-  private readonly apiKey: string;
+  private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
   private readonly fetchFn: FetchLike;
   private readonly timeoutMs: number;
 
   constructor(options: OctogenClientOptions = {}) {
     const resolvedApiKey = options.apiKey ?? readEnvApiKey();
-    if (!resolvedApiKey) {
+    if (!resolvedApiKey && options.allowKeyless !== true) {
       throw new MissingAPIKeyError();
     }
 
-    this.apiKey = resolvedApiKey;
+    this.apiKey = resolvedApiKey === "" ? undefined : resolvedApiKey;
     this.baseUrl = trimTrailingSlash(options.baseUrl ?? DEFAULT_BASE_URL);
     this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  }
+
+  /** True when this client sends no credential — the keyless trial. */
+  get isKeyless(): boolean {
+    return this.apiKey === undefined;
   }
 
   async lookupProduct(
@@ -354,6 +386,49 @@ export class OctogenClient {
   }
 
   /**
+   * Issue an arbitrary `/v1` request. **Unstable by construction.**
+   *
+   * Every other method on this client names an `operationId` and takes its
+   * verb and path from {@link OPERATIONS}, so it cannot reach a route the
+   * published contract does not define. This one takes the path from you, and
+   * that is the point: it exists so a `/v1` route published tomorrow is
+   * reachable today, and so surfaces that are live but deliberately outside
+   * the contract stay usable without freezing them into typed methods.
+   *
+   * What you still get: credential resolution (including keyless), the timeout,
+   * `User-Agent`, JSON encoding, and the same typed error classes the rest of
+   * the client throws — so retry and error handling are shared rather than
+   * reimplemented. What you do not get: request or response types, defaults,
+   * or any promise that the route exists. You own the body.
+   *
+   * `path` is relative to the `/v1` base (`"/products/lookup"`,
+   * `"products/lookup"`, or a full URL on the configured base).
+   */
+  async fetchRaw(
+    method: HttpMethod,
+    path: string,
+    options: {
+      body?: unknown;
+      headers?: Record<string, string>;
+      query?: Record<string, string | number | undefined>;
+    } = {},
+  ): Promise<RawResponse> {
+    assertNonEmptyString(path.trim(), "path");
+    const { data, response } = await this.send({
+      body: options.body,
+      headers: options.headers,
+      method,
+      path: relativeToBase(path, this.baseUrl),
+      query: options.query,
+    });
+    return {
+      data,
+      headers: headerRecord(response.headers),
+      status: response.status,
+    };
+  }
+
+  /**
    * Issue one registry-declared operation.
    *
    * Requests name an `operationId`, never a path: the verb and path template
@@ -361,7 +436,7 @@ export class OctogenClient {
    * contract. There is no way to reach a route the published API does not
    * define without a compile error.
    */
-  private async request(
+  private request(
     operationId: OperationId,
     options: {
       body?: object;
@@ -371,7 +446,23 @@ export class OctogenClient {
     } = {},
   ): Promise<{ data: unknown; response: Response }> {
     const operation = OPERATIONS[operationId];
-    const path = resolveOperationPath(operation.path, options.pathParams);
+    return this.send({
+      body: options.body,
+      headers: options.headers,
+      method: operation.method,
+      path: resolveOperationPath(operation.path, options.pathParams),
+      query: options.query,
+    });
+  }
+
+  /** The one place a `/v1` request is actually issued. */
+  private async send(options: {
+    body?: unknown;
+    headers?: Record<string, string> | undefined;
+    method: HttpMethod;
+    path: string;
+    query?: Record<string, string | number | undefined> | undefined;
+  }): Promise<{ data: unknown; response: Response }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
@@ -380,14 +471,14 @@ export class OctogenClient {
     try {
       const init: RequestInit = {
         headers: { ...this.headers(options.body !== undefined), ...options.headers },
-        method: operation.method,
+        method: options.method,
         signal: controller.signal,
       };
       if (options.body !== undefined) {
         init.body = JSON.stringify(options.body);
       }
 
-      const response = await this.fetchFn(this.url(path, options.query), init);
+      const response = await this.fetchFn(this.url(options.path, options.query), init);
 
       if (response.status >= 400) {
         throw await apiErrorFromResponse(response);
@@ -445,14 +536,58 @@ export class OctogenClient {
   private headers(hasJsonBody: boolean): Record<string, string> {
     const headers: Record<string, string> = {
       Accept: "application/json",
-      Authorization: `Bearer ${this.apiKey}`,
       "User-Agent": USER_AGENT,
     };
+    // Omitted, not blank, when keyless: `Authorization: Bearer ` is a
+    // credential the gateway rejects, while no header at all is how the
+    // metered trial is entered.
+    if (this.apiKey !== undefined) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
     if (hasJsonBody) {
       headers["Content-Type"] = "application/json";
     }
     return headers;
   }
+}
+
+/** What {@link OctogenClient.fetchRaw} answers: the whole response, untyped. */
+export interface RawResponse {
+  status: number;
+  /** Lowercased header names, as `Headers` iterates them. */
+  headers: Record<string, string>;
+  /** The decoded JSON body, or `undefined` for `204`/`304`. */
+  data: unknown;
+}
+
+function headerRecord(headers: Headers): Record<string, string> {
+  const record: Record<string, string> = {};
+  for (const [name, value] of headers) {
+    record[name] = value;
+  }
+  return record;
+}
+
+/**
+ * Reduce a caller-supplied path to one relative to the `/v1` base.
+ *
+ * Accepts `/products/lookup`, `products/lookup`, and a full URL on the
+ * configured base (so pasting a URL out of a log works). A full URL on a
+ * *different* origin is a `TypeError` rather than a silent redirect of the
+ * credential to somebody else's host.
+ */
+function relativeToBase(path: string, baseUrl: string): string {
+  const candidate = path.trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
+    return candidate;
+  }
+  const base = `${baseUrl}/`;
+  if (!candidate.startsWith(base)) {
+    throw new TypeError(
+      `path must be relative to ${baseUrl}, or a URL on it; got ${candidate}`,
+    );
+  }
+  return candidate.slice(base.length);
 }
 
 let warnedDeprecatedApiKeyEnvVar = false;

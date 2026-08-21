@@ -229,3 +229,45 @@ describe("OctogenClient#fetchDomainCoverage", () => {
     expect(second.isHostCovered("https://www.macys.com/shop/x")).toBe(true);
   });
 });
+
+describe("isHostCovered's footgun", () => {
+  it("accepts the entry objects `GET /v1/domains` actually returns", () => {
+    // The bug this fixes: `isHostCovered(url, response.domains)` — the obvious
+    // first call — used to return `false` for everything, silently, because the
+    // elements are `{host, catalog, catalogDisplayName}` and not strings. A
+    // helper whose entire purpose is preventing a silent false negative must not
+    // have one of its own.
+    expect(
+      isHostCovered("https://www.macys.com/shop/product/x", APEX_ONLY_DOMAINS),
+    ).toBe(true);
+    expect(isHostCovered("https://www.example.invalid/p", APEX_ONLY_DOMAINS)).toBe(
+      false,
+    );
+  });
+
+  it("still accepts plain host strings", () => {
+    const hosts = APEX_ONLY_DOMAINS.map((entry) => entry.host);
+    expect(isHostCovered("https://www.macys.com/shop/product/x", hosts)).toBe(true);
+    expect(isHostCovered("macys.com", hosts)).toBe(true);
+  });
+
+  it("throws on an element it does not understand rather than answering false", () => {
+    // Loud, because the return value decides whether a caller ever asks about a
+    // merchant again. `false` for a shape we failed to read is the one answer
+    // this function must never give.
+    expect(() => isHostCovered("https://www.macys.com/p", [42] as never)).toThrow(
+      TypeError,
+    );
+    expect(() =>
+      isHostCovered("https://www.macys.com/p", [{ hostname: "macys.com" }] as never),
+    ).toThrow(/must be a host string or an object with a string `host`/);
+    expect(() => isHostCovered("https://www.macys.com/p", [null] as never)).toThrow(
+      TypeError,
+    );
+  });
+
+  it("does not throw when the URL side is unreadable — that is just a miss", () => {
+    expect(isHostCovered("not a url", APEX_ONLY_DOMAINS)).toBe(false);
+    expect(isHostCovered(undefined, APEX_ONLY_DOMAINS)).toBe(false);
+  });
+});

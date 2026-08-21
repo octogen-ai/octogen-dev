@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The build resolves `@octogen-ai/sdk` the way an installed copy does —
+    // through `node_modules` to the SDK's `dist` — rather than through
+    // `tsconfig.json`'s source alias. Two reasons: `rootDir` cannot contain a
+    // file outside `cli/src`, and the artifact should be compiled against the
+    // same declarations a consumer will get. Root `npm run build` fans out over
+    // the workspaces in dependency order, so the SDK's `dist` exists by then.
+    "paths": {},
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "tests"]
+}

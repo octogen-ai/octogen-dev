@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // The CLI is developed against the SDK's *source*, not its `dist`, so a
+    // `npm run typecheck` on a clean checkout does not depend on build order
+    // and an SDK change is a CLI type error in the same commit. The emitted
+    // JavaScript still imports `@octogen-ai/sdk` by name — `paths` does not
+    // rewrite specifiers — so the published CLI resolves the exact published
+    // version pinned in `package.json`.
+    "paths": {
+      "@octogen-ai/sdk": ["../sdks/typescript/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+}

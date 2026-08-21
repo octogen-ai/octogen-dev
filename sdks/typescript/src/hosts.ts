@@ -46,21 +46,69 @@ export function normalizeHost(value: string | null | undefined): string | undefi
  *
  * Both sides are normalized, so this answers correctly for a `www.` URL
  * against the apex-only list the server returns.
+ *
+ * `hosts` accepts either host strings or the `DomainEntry` objects
+ * `GET /v1/domains` returns, because passing `response.domains` straight in is
+ * the obvious first call and a helper whose entire purpose is preventing a
+ * silent false negative must not answer `false` to it. Anything that is
+ * neither is a `TypeError`: this function returns a boolean an agent uses to
+ * decide whether to ever ask about a merchant again, so a shape it does not
+ * understand has to be loud.
+ *
+ * Prefer {@link DomainCoverage} when you hold a whole snapshot — it indexes
+ * the set once instead of rescanning it per call.
  */
 export function isHostCovered(
   urlOrHost: string | null | undefined,
-  hosts: Iterable<string>,
+  hosts: Iterable<string | HostLike>,
 ): boolean {
   const host = normalizeHost(urlOrHost);
   if (host === undefined) {
     return false;
   }
   for (const candidate of hosts) {
-    if (normalizeHost(candidate) === host) {
+    if (normalizeHost(hostOf(candidate)) === host) {
       return true;
     }
   }
   return false;
+}
+
+/** Anything carrying a `host`, which is what `GET /v1/domains` returns. */
+export interface HostLike {
+  host: string;
+}
+
+// `unknown` rather than `string | HostLike`: the declared parameter type is a
+// documentation aid, and JavaScript callers (and `any`-typed data) reach this
+// with whatever they actually have.
+function hostOf(candidate: unknown): string {
+  if (typeof candidate === "string") {
+    return candidate;
+  }
+  if (typeof candidate === "object" && candidate !== null) {
+    const host: unknown = (candidate as { host?: unknown }).host;
+    if (typeof host === "string") {
+      return host;
+    }
+  }
+  throw new TypeError(
+    "isHostCovered: every element of `hosts` must be a host string or an " +
+      "object with a string `host` (a DomainEntry). Received: " +
+      describe(candidate),
+  );
+}
+
+function describe(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "object") {
+    return `${Object.prototype.toString.call(value)} with keys [${Object.keys(
+      value,
+    ).join(", ")}]`;
+  }
+  return typeof value;
 }
 
 function hostFromUrl(value: string): string | undefined {

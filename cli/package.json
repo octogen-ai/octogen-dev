@@ -1,7 +1,7 @@
 {
-  "name": "@octogen-ai/sdk",
-  "version": "0.3.0",
-  "description": "Async TypeScript SDK for the Octogen AI commerce API",
+  "name": "@octogen-ai/cli",
+  "version": "0.1.0",
+  "description": "The Octogen CLI: coverage, lookup, search, and voyages from your terminal or your agent",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Octogen AI",
@@ -9,36 +9,41 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/octogen-ai/octogen-dev.git",
-    "directory": "sdks/typescript"
+    "directory": "cli"
   },
   "bugs": {
     "url": "https://github.com/octogen-ai/octogen-dev/issues"
   },
+  "keywords": [
+    "octogen",
+    "cli",
+    "commerce",
+    "catalog",
+    "agent"
+  ],
   "engines": {
     "node": ">=20"
+  },
+  "bin": {
+    "octogen": "./dist/bin.js"
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "types": "./dist/index.d.ts",
-  "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist coverage",
-    "example:check-coverage": "tsx ../../examples/typescript/check_coverage.ts",
-    "example:search-clothes": "tsx ../../examples/typescript/search_clothes.ts",
+    "octogen": "tsx src/bin.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@octogen-ai/sdk": "0.3.0"
+  },
   "publishConfig": {
     "access": "public",
-    "provenance": true
+    "provenance": true,
+    "tag": "next"
   }
 }
