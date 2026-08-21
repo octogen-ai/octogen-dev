@@ -36,5 +36,9 @@
     "example:search-clothes": "tsx ../../examples/typescript/search_clothes.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

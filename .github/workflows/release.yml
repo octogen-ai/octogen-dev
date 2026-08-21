@@ -1,0 +1,174 @@
+# Tag-driven publishing for every package in this repo.
+#
+# One file, on purpose. npm configures a trusted publisher *per package* and
+# PyPI configures one per project, so the workflow filename is a string that has
+# to match in three separate places (`@octogen-ai/sdk`, `@octogen-ai/cli`,
+# `octogen-ai-sdk`). One filename means one string to get right; three files
+# would mean three, and a typo only surfaces when a release fails.
+#
+# Nothing here holds a registry token. Both registries authenticate this
+# workflow over OIDC ("trusted publishing"), which also attaches a provenance
+# attestation tying the artifact to this commit and this run. That is the point:
+# a package an agent-facing document tells people to run through `npx` should be
+# verifiable, not merely trusted.
+#
+# If this workflow is ever refactored to call a reusable workflow, the trusted
+# publisher config must still name THIS file — the entry point is what the
+# registries check, not the file that does the publishing.
+name: Release
+
+on:
+  push:
+    tags:
+      - "sdk-ts-v*" # @octogen-ai/sdk
+      - "sdk-py-v*" # octogen-ai-sdk
+      - "cli-v*" # @octogen-ai/cli
+
+# Read-only by default. `id-token: write` is granted per publishing job rather
+# than here, so the verification job below cannot mint an OIDC token it has no
+# use for.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # A tag does not run the pull-request CI, so a release would otherwise publish
+  # code no workflow ever checked. This re-runs the same gates ci.yml runs, and
+  # every publishing job below depends on it.
+  verify:
+    name: Verify the tagged commit
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - run: npm ci
+
+      # The version the tag claims, with the package prefix stripped.
+      - name: Read version from tag
+        id: tag
+        run: |
+          version="${GITHUB_REF_NAME#*-v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Tag $GITHUB_REF_NAME claims version $version"
+
+      # The footgun this catches: tagging sdk-ts-v0.3.0 while package.json still
+      # says 0.2.0 publishes 0.2.0 (or fails as a duplicate), and the tag then
+      # points at a version that does not exist. Cheap check, annoying bug.
+      - name: Tag version matches the package manifest
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF_NAME" in
+            sdk-ts-v*) manifest=$(node -p "require('./sdks/typescript/package.json').version") ;;
+            cli-v*)    manifest=$(node -p "require('./cli/package.json').version") ;;
+            sdk-py-v*) manifest=$(grep -m1 '^version' sdks/python/pyproject.toml | cut -d'"' -f2) ;;
+            *) echo "::error::Unrecognized tag shape: $GITHUB_REF_NAME"; exit 1 ;;
+          esac
+          if [ "$manifest" != "$VERSION" ]; then
+            echo "::error::Tag says $VERSION but the manifest says $manifest. Bump the manifest or retag."
+            exit 1
+          fi
+          echo "Manifest agrees: $manifest"
+
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Generated types are up to date
+        run: npm run codegen:check
+      - name: Python tests
+        run: >-
+          uv run --project sdks/python --frozen
+          pytest -c sdks/python/pyproject.toml sdks/python/tests tests/contract
+
+  publish-sdk-npm:
+    name: Publish @octogen-ai/sdk
+    if: startsWith(github.ref_name, 'sdk-ts-v')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC: without this, npm silently falls back to token auth
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      # The npm bundled with the runner's Node is older than the tokenless
+      # trusted-publishing support, so pin forward explicitly rather than
+      # depending on whatever the image ships this month.
+      - name: Use an npm that supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+      - run: npm ci
+      - run: npm run build
+      - name: Publish
+        run: npm publish --workspace @octogen-ai/sdk
+
+  publish-cli-npm:
+    name: Publish @octogen-ai/cli
+    # The `cli/` package does not exist yet (CLI design P4 creates it), so this
+    # job is unreachable until a `cli-v*` tag is pushed. It is here so the
+    # trusted publisher already configured for @octogen-ai/cli has a workflow to
+    # match on the day the package lands.
+    if: startsWith(github.ref_name, 'cli-v')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Use an npm that supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+      - run: npm ci
+      - run: npm run build
+      - name: Publish
+        run: npm publish --workspace @octogen-ai/cli
+
+  publish-sdk-pypi:
+    name: Publish octogen-ai-sdk
+    if: startsWith(github.ref_name, 'sdk-py-v')
+    needs: verify
+    runs-on: ubuntu-latest
+    # Must match the Environment field on the PyPI trusted publisher. If that
+    # field was left blank, delete this line or OIDC will be refused.
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - name: Build sdist and wheel
+        run: uv build --project sdks/python --out-dir dist
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
