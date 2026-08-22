@@ -96,7 +96,22 @@ Response:
     "description": "Heavyweight cotton hoodie...",
     "productUrl": "https://warrenlotas.com/products/black-hoodie",
     "imageUrl": "https://cdn.example.com/black-hoodie.jpg",
-    "images": ["https://cdn.example.com/black-hoodie.jpg"],
+    "primaryImage": {
+      "url": "https://warrenlotas.com/cdn/shop/black-hoodie.jpg",
+      "cdnUrl": "https://cdn.example.com/black-hoodie.jpg",
+      "width": 1200,
+      "height": 1600,
+      "mimeType": "image/webp"
+    },
+    "images": [
+      {
+        "url": "https://warrenlotas.com/cdn/shop/black-hoodie.jpg",
+        "cdnUrl": "https://cdn.example.com/black-hoodie.jpg",
+        "width": 1200,
+        "height": 1600,
+        "mimeType": "image/webp"
+      }
+    ],
     "currentPrice": 180,
     "originalPrice": null,
     "inStock": true,
@@ -176,7 +191,16 @@ Response:
       "title": "Black Hoodie",
       "productUrl": "https://warrenlotas.com/products/black-hoodie",
       "imageUrl": "https://cdn.example.com/black-hoodie.jpg",
-      "images": ["https://cdn.example.com/black-hoodie.jpg"],
+      "primaryImage": {
+        "url": "https://warrenlotas.com/cdn/shop/black-hoodie.jpg",
+        "cdnUrl": "https://cdn.example.com/black-hoodie.jpg"
+      },
+      "images": [
+        {
+          "url": "https://warrenlotas.com/cdn/shop/black-hoodie.jpg",
+          "cdnUrl": "https://cdn.example.com/black-hoodie.jpg"
+        }
+      ],
       "currentPrice": 180,
       "originalPrice": null,
       "isActive": true,

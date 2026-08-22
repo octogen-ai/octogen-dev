@@ -315,7 +315,19 @@ describe("OctogenClient", () => {
         productUrl: "https://example.com/products/linen-dress",
         title: "Linen Dress",
         inStock: true,
-        images: ["https://example.com/image.jpg"],
+        primaryImage: {
+          url: "https://example.com/image.jpg",
+          cdnUrl: "https://cdn.octogen.ai/abc/primary.webp",
+        },
+        images: [
+          {
+            url: "https://example.com/image.jpg",
+            cdnUrl: "https://cdn.octogen.ai/abc/primary.webp",
+            width: 1200,
+            height: 1600,
+            mimeType: "image/webp",
+          },
+        ],
         details: { materials: ["linen"], fit: ["relaxed"] },
         audience: { genders: ["female"], ageGroups: ["adult"] },
       },
@@ -331,6 +343,10 @@ describe("OctogenClient", () => {
     expect(result.canonicalUrl).toBeUndefined();
     expect(result.product.inStock).toBe(true);
     expect(result.product.details?.materials).toEqual(["linen"]);
+    expect(result.product.primaryImage?.cdnUrl).toBe(
+      "https://cdn.octogen.ai/abc/primary.webp",
+    );
+    expect(result.product.images?.[0]?.url).toBe("https://example.com/image.jpg");
     expect(result.product.audience?.ageGroups).toEqual(["adult"]);
     expect(requestBodyJson(lastCall(calls))).toEqual({
       url: "https://example.com/products/linen-dress",
