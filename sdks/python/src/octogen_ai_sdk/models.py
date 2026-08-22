@@ -478,6 +478,21 @@ class ProductEnrichment(_ResponseModel):
     summary: str | None = None
 
 
+class MerchantProductImageMetadataView(_ResponseModel):
+    """One product image: source URL, Octogen-hosted copy, and display metadata.
+
+    ``url`` is the merchant source; ``cdn_url`` is the hosted copy — prefer it
+    and fall back to ``url``.
+    """
+
+    url: str
+    cdn_url: str | None = Field(default=None, alias="cdnUrl")
+    width: int | None = None
+    height: int | None = None
+    size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    mime_type: str | None = Field(default=None, alias="mimeType")
+
+
 class MerchantProductListItem(_ResponseModel):
     uuid: str
     catalog_key: str | None = Field(default=None, alias="catalogKey")
@@ -486,8 +501,13 @@ class MerchantProductListItem(_ResponseModel):
     brand: BrandView | None = None
     current_price: float | None = Field(default=None, alias="currentPrice")
     original_price: float | None = Field(default=None, alias="originalPrice")
+    #: Deprecated: primary image CDN URL, kept populated during migration.
+    #: Read ``primary_image`` instead.
     image_url: str | None = Field(default=None, alias="imageUrl")
-    images: list[str] = Field(default_factory=list)
+    primary_image: MerchantProductImageMetadataView | None = Field(
+        default=None, alias="primaryImage"
+    )
+    images: list[MerchantProductImageMetadataView] = Field(default_factory=list)
     rating: RatingView | None = None
     is_active: bool = Field(default=True, alias="isActive")
     raw_score: float | None = Field(default=None, alias="rawScore")

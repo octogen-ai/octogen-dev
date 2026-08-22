@@ -334,7 +334,16 @@ async def test_lookup_product_parses_full_response() -> None:
                     "productUrl": "https://example.com/products/linen-dress",
                     "title": "Linen Dress",
                     "inStock": True,
-                    "images": ["https://example.com/image.jpg"],
+                    "primaryImage": {
+                        "url": "https://example.com/image.jpg",
+                        "cdnUrl": "https://cdn.octogen.ai/abc/primary.webp",
+                    },
+                    "images": [
+                        {
+                            "url": "https://example.com/image.jpg",
+                            "cdnUrl": "https://cdn.octogen.ai/abc/primary.webp",
+                        }
+                    ],
                     "details": {"materials": ["linen"], "fit": ["relaxed"]},
                     "audience": {"genders": ["female"], "ageGroups": ["adult"]},
                 },
@@ -349,6 +358,12 @@ async def test_lookup_product_parses_full_response() -> None:
     assert result.normalized_url == "https://example.com/products/linen-dress"
     assert result.canonical_url is None
     assert result.product.in_stock is True
+    assert result.product.primary_image is not None
+    assert (
+        result.product.primary_image.cdn_url
+        == "https://cdn.octogen.ai/abc/primary.webp"
+    )
+    assert result.product.images[0].url == "https://example.com/image.jpg"
     assert result.product.details.materials == ["linen"]
     assert result.product.audience is not None
     assert result.product.audience.age_groups == ["adult"]

@@ -427,6 +427,14 @@ export interface ProductEnrichment {
   summary?: string | null;
 }
 
+/**
+ * One product image: source URL, Octogen-hosted copy, and display metadata.
+ * `url` is the merchant source; `cdnUrl` is the hosted copy — prefer it and
+ * fall back to `url`.
+ */
+export type MerchantProductImageMetadataView =
+  components["schemas"]["MerchantProductImageMetadataView"];
+
 export interface MerchantProductListItem {
   uuid: string;
   catalogKey?: string | null;
@@ -435,8 +443,17 @@ export interface MerchantProductListItem {
   brand?: BrandView | null;
   currentPrice?: number | null;
   originalPrice?: number | null;
+  /**
+   * Deprecated: primary image CDN URL, kept populated during migration. Read
+   * {@link primaryImage} instead.
+   */
   imageUrl?: string | null;
-  images?: string[];
+  /**
+   * The product's display image with full metadata. Its `url` is the merchant
+   * source URL; `cdnUrl` carries the hosted copy when one exists.
+   */
+  primaryImage?: MerchantProductImageMetadataView | null;
+  images?: MerchantProductImageMetadataView[];
   rating?: RatingView | null;
   isActive?: boolean;
   rawScore?: number | null;
