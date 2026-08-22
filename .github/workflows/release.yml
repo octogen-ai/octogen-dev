@@ -100,6 +100,11 @@ jobs:
     if: startsWith(github.ref_name, 'sdk-ts-v')
     needs: verify
     runs-on: ubuntu-latest
+    # The `npm` environment gates this publish on a reviewer and restricts it to
+    # the sdk-ts-v*/cli-v* tags. It also narrows the OIDC subject to
+    # `repo:octogen-ai/octogen-dev:environment:npm`, so the registry's trusted
+    # publisher must name this environment — the two have to agree.
+    environment: npm
     permissions:
       contents: read
       id-token: write # OIDC: without this, npm silently falls back to token auth
@@ -137,6 +142,7 @@ jobs:
     if: startsWith(github.ref_name, 'cli-v')
     needs: verify
     runs-on: ubuntu-latest
+    environment: npm
     permissions:
       contents: read
       id-token: write
