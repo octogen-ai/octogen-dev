@@ -38,13 +38,6 @@ MeOrganization = _contract.MeOrganization
 MeQuotas = _contract.MeQuotas
 MeRateLimit = _contract.MeRateLimit
 MeResponse = _contract.MeResponse
-ProgrammaticProductRefreshAcceptedTarget = (
-    _contract.ProgrammaticProductRefreshAcceptedTarget
-)
-ProgrammaticProductRefreshRejectedTarget = (
-    _contract.ProgrammaticProductRefreshRejectedTarget
-)
-ProgrammaticProductRefreshResponse = _contract.ProgrammaticProductRefreshResponse
 VoyageError = _contract.VoyageError
 VoyageListResponse = _contract.VoyageListResponse
 VoyageQuotas = _contract.VoyageQuotas
@@ -237,35 +230,6 @@ class VoyageStartRequest(_RequestModel):
     """
 
     domain: str = Field(min_length=1, max_length=2048)
-
-
-class ProgrammaticProductRefreshTarget(_RequestModel):
-    """One product identifier to schedule for refresh.
-
-    Hand-written rather than re-exported from the generated mirror: the
-    contract cannot express "exactly one of ``url`` or ``uuid``", and catching
-    that here beats a server ``422``.
-    """
-
-    url: str | None = Field(default=None, min_length=1)
-    uuid: str | None = Field(default=None, min_length=1)
-    catalog: str | None = Field(default=None, min_length=1)
-
-    @model_validator(mode="after")
-    def require_exactly_one_identifier(self) -> ProgrammaticProductRefreshTarget:
-        identifiers = [self.url is not None, self.uuid is not None]
-        if sum(identifiers) != 1:
-            raise ValueError("Exactly one of url or uuid is required")
-        return self
-
-
-class ProgrammaticProductRefreshRequest(_RequestModel):
-    """Product refresh request."""
-
-    targets: list[ProgrammaticProductRefreshTarget] = Field(
-        min_length=1,
-        max_length=500,
-    )
 
 
 class ProgrammaticMoreLikeThisSource(_RequestModel):

@@ -41,7 +41,7 @@ control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `listDomains`, `refreshProducts`, `resolveProductFromHtml`,
+SDK — `getMe`, `listDomains`, `resolveProductFromHtml`,
 `startVoyage`, `listVoyages`, `getVoyage`, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
@@ -49,7 +49,6 @@ SDK — `getMe`, `listDomains`, `refreshProducts`, `resolveProductFromHtml`,
 | ---------------------------------------------- | --------------------------------------------------------------------- |
 | `GET /domains`                                 | Every covered host. Check this before `lookup` — see the note below.  |
 | `GET /me`                                      | Your organization, key id and provenance, quotas, rate-limit posture. |
-| `POST /products/refresh`                       | Schedule indexed products for a re-crawl.                             |
 | `POST /products/resolve-from-html`             | Resolve a product from HTML you already have. No index, no fetch.     |
 | `POST /voyage`, `GET /voyage`, `GET /voyage/…` | Build a catalog for a merchant not covered yet.                       |
 
@@ -350,7 +349,7 @@ It includes:
 
 - Server URLs and OpenAPI version.
 - All 18 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
-  `moreLikeThisProducts`, `lookupProduct`, `refreshProducts`,
+  `moreLikeThisProducts`, `lookupProduct`,
   `resolveProductFromHtml`, `startVoyage`, `listVoyages`, and `getVoyage`.
 - Full request and response schemas for code generation.
 - Example error bodies for auth, authorization, missing-catalog,

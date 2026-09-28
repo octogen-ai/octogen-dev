@@ -107,8 +107,6 @@ if that stops being true — see
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
-- `refresh_products(targets=[...])` schedules product URLs or UUIDs for refresh
-  (`POST /v1/products/refresh`).
 - `start_voyage(domain)`, `list_voyages(...)`, and `get_voyage(task_id)` build a
   catalog for a merchant Octogen does not cover yet. Voyages are shared per
   domain: `StartVoyageResult.created` is `False` when you joined one already
@@ -135,22 +133,6 @@ async with OctogenClient() as client:
         print(product.title, product.product_url)
 ```
 
-```python
-async with OctogenClient() as client:
-    refresh = await client.refresh_products(
-        targets=[
-            {
-                "catalog": "warrenlotas",
-                "url": "https://warrenlotas.com/products/black-hoodie",
-            },
-            {"uuid": "product-uuid"},
-        ],
-    )
-    # 202: the targets were accepted and a workflow was dispatched — not that
-    # the products have been re-crawled yet.
-    print(refresh.submitted, refresh.workflow_status)
-    print([target.code for target in refresh.rejected])
-```
 
 ```python
 async with OctogenClient() as client:

@@ -36,10 +36,7 @@ the other language's source.
 ### Why this exists
 
 Both SDKs shipped `POST /products/recrawl` in `main` of a public repository. The
-live route is `POST /products/refresh`; `products/recrawl` appears nowhere in
-the API. Every caller of that method got a 404. Neither SDK implemented
-`listDomains`, which is the coverage check the agent-onboarding skill leads with
-and the single most consequential call an agent makes.
+refresh operation has been removed; neither refresh nor recrawl is a public route.
 
 Run the tests against the pre-fix SDK and both failures are named, in both
 languages:
@@ -50,7 +47,6 @@ published operations with no SDK method:
   getVoyage (GET /voyage/{task_id})
   listDomains (GET /domains)
   listVoyages (GET /voyage)
-  refreshProducts (POST /products/refresh)
   resolveProductFromHtml (POST /products/resolve-from-html)
   startVoyage (POST /voyage)
 

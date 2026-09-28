@@ -47,9 +47,6 @@ from octogen_ai_sdk.models import (
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
-    ProgrammaticProductRefreshRequest,
-    ProgrammaticProductRefreshResponse,
-    ProgrammaticProductRefreshTarget,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
     StartVoyageResult,
@@ -166,25 +163,6 @@ class OctogenClient:
             json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
-
-    async def refresh_products(
-        self,
-        *,
-        targets: Sequence[ProgrammaticProductRefreshTarget | dict[str, Any]],
-    ) -> ProgrammaticProductRefreshResponse:
-        """Schedule product URLs or UUIDs for refresh.
-
-        Answers ``202``: the targets were accepted and a refresh workflow was
-        dispatched, not that the products have been re-crawled yet.
-        """
-        request = ProgrammaticProductRefreshRequest(
-            targets=[_coerce_refresh_target(target) for target in targets],
-        )
-        data = await self._json(
-            "refreshProducts",
-            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
-        )
-        return ProgrammaticProductRefreshResponse.model_validate(data)
 
     async def resolve_product_from_html(
         self,
@@ -588,14 +566,6 @@ def _coerce_facet(value: Facet | dict[str, Any]) -> Facet:
     if isinstance(value, Facet):
         return value
     return Facet.model_validate(value)
-
-
-def _coerce_refresh_target(
-    value: ProgrammaticProductRefreshTarget | dict[str, Any],
-) -> ProgrammaticProductRefreshTarget:
-    if isinstance(value, ProgrammaticProductRefreshTarget):
-        return value
-    return ProgrammaticProductRefreshTarget.model_validate(value)
 
 
 def _read_env_api_key() -> str | None:

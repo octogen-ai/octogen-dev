@@ -30,12 +30,8 @@ import type {
   MerchantProductUrlLookupResponse,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductLookupRequestBody,
-  ProgrammaticProductRefreshRequest,
   ProgrammaticProductSearchRequest,
   ProgrammaticResolveFromHtmlRequest,
-  ProductRefreshResponse,
-  ProductRefreshTarget,
-  RefreshProductsParams,
   ResolveProductFromHtmlParams,
   SearchProductsParams,
   StartVoyageResult,
@@ -144,20 +140,6 @@ export class OctogenClient {
     }
     const data = await this.json("lookupProduct", { body });
     return data as MerchantProductUrlLookupResponse;
-  }
-
-  /**
-   * Schedule product refreshes (`POST /v1/products/refresh`).
-   *
-   * Answers `202`: the targets were accepted and a refresh workflow was
-   * dispatched, not that the products have been re-crawled yet.
-   */
-  async refreshProducts(
-    params: RefreshProductsParams,
-  ): Promise<ProductRefreshResponse> {
-    const body = toRefreshPayload(params);
-    const data = await this.json("refreshProducts", { body });
-    return data as ProductRefreshResponse;
   }
 
   /**
@@ -642,49 +624,6 @@ function assertUrlBatch(urls: string[]): void {
   if (urls.length < 1 || urls.length > 1000) {
     throw new TypeError("urls must contain between 1 and 1000 items");
   }
-}
-
-function toRefreshPayload(
-  params: RefreshProductsParams,
-): ProgrammaticProductRefreshRequest {
-  if (params.targets.length < 1 || params.targets.length > 500) {
-    throw new TypeError("targets must contain between 1 and 500 items");
-  }
-
-  return {
-    targets: params.targets.map((target, index) =>
-      toRefreshTargetPayload(target, index),
-    ),
-  };
-}
-
-function toRefreshTargetPayload(
-  target: ProductRefreshTarget,
-  index: number,
-): ProductRefreshTarget {
-  const fieldPrefix = `targets[${String(index)}]`;
-  const hasUrl = target.url !== undefined;
-  const hasUuid = target.uuid !== undefined;
-  if (Number(hasUrl) + Number(hasUuid) !== 1) {
-    throw new TypeError(
-      `Exactly one of ${fieldPrefix}.url or ${fieldPrefix}.uuid is required`,
-    );
-  }
-
-  const payload: ProductRefreshTarget = {};
-  if (target.url !== undefined) {
-    assertNonEmptyString(target.url, `${fieldPrefix}.url`);
-    payload.url = target.url;
-  }
-  if (target.uuid !== undefined) {
-    assertNonEmptyString(target.uuid, `${fieldPrefix}.uuid`);
-    payload.uuid = target.uuid;
-  }
-  if (target.catalog !== undefined) {
-    assertNonEmptyString(target.catalog, `${fieldPrefix}.catalog`);
-    payload.catalog = target.catalog;
-  }
-  return payload;
 }
 
 function toSearchPayload(

@@ -194,43 +194,6 @@ export type ProgrammaticProductLookupRequestBody = Partial<
   Omit<ProgrammaticProductLookupRequest, "url">
 > & { url: string };
 
-/**
- * One product to refresh: exactly one of `url` or `uuid`, optionally scoped to
- * a `catalog`. Hand-written rather than aliased from the contract because the
- * generated shape admits `null` for every field, which the payload builder
- * rejects anyway.
- */
-export interface ProductRefreshTarget {
-  url?: string;
-  uuid?: string;
-  catalog?: string;
-}
-
-export interface RefreshProductsParams {
-  targets: ProductRefreshTarget[];
-}
-
-export type ProgrammaticProductRefreshRequest =
-  components["schemas"]["ProgrammaticProductRefreshRequest"];
-
-export type ProgrammaticProductRefreshTarget =
-  components["schemas"]["ProgrammaticProductRefreshTarget"];
-
-export type ProductRefreshAcceptedTarget =
-  components["schemas"]["ProgrammaticProductRefreshAcceptedTarget"];
-
-export type ProductRefreshRejectedTarget =
-  components["schemas"]["ProgrammaticProductRefreshRejectedTarget"];
-
-/**
- * `202` body of `POST /v1/products/refresh`. `workflowStatus` describes the
- * dispatch of the refresh workflow, not the refresh itself: `launched` means
- * the crawl was handed off, and a non-empty `rejected` can accompany a
- * successful dispatch of the rest.
- */
-export type ProductRefreshResponse =
-  components["schemas"]["ProgrammaticProductRefreshResponse"];
-
 export interface MoreLikeThisSource {
   url?: string;
   uuid?: string;
