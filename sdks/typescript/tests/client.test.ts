@@ -119,81 +119,6 @@ describe("OctogenClient", () => {
     expect(page.items[0]?.brand?.name).toBe("ACME");
   });
 
-  it("sends a typed product refresh request", async () => {
-    const { calls, fetchMock } = createFetchMock(
-      {
-        requestId: "request-1",
-        submitted: 2,
-        workflowId: "refresh-request-1-acme-0001-products",
-        workflowStatus: "launched",
-        workflowAttempts: 1,
-        accepted: [
-          {
-            catalog: "acme",
-            url: "https://example.com/products/linen-dress",
-          },
-        ],
-        rejected: [
-          {
-            target: { uuid: "missing-product" },
-            code: "product_not_found",
-            message: "No active product matched that UUID.",
-          },
-        ],
-      },
-      { status: 202 },
-    );
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    const response = await client.refreshProducts({
-      targets: [
-        {
-          catalog: "acme",
-          url: "https://example.com/products/linen-dress",
-        },
-        { uuid: "missing-product" },
-      ],
-    });
-
-    const call = lastCall(calls);
-    expect(call.input).toBe(`${BASE_URL}/products/refresh`);
-    expect(call.init?.method).toBe("POST");
-    expect(requestBodyJson(call)).toEqual({
-      targets: [
-        {
-          catalog: "acme",
-          url: "https://example.com/products/linen-dress",
-        },
-        { uuid: "missing-product" },
-      ],
-    });
-    expect(response.requestId).toBe("request-1");
-    expect(response.workflowId).toBe("refresh-request-1-acme-0001-products");
-    expect(response.workflowStatus).toBe("launched");
-    expect(response.accepted[0]?.catalog).toBe("acme");
-    expect(response.rejected[0]?.code).toBe("product_not_found");
-  });
-
-  it("rejects invalid product refresh targets before making a request", async () => {
-    const { calls, fetchMock } = createFetchMock();
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    await expect(client.refreshProducts({ targets: [] })).rejects.toThrow(
-      "targets must contain between 1 and 500 items",
-    );
-    await expect(
-      client.refreshProducts({
-        targets: [{ url: "https://example.com/p", uuid: "product-1" }],
-      }),
-    ).rejects.toThrow("Exactly one of targets[0].url or targets[0].uuid is required");
-    await expect(
-      client.refreshProducts({
-        targets: [{ catalog: "", uuid: "product-1" }],
-      }),
-    ).rejects.toThrow("targets[0].catalog is required");
-    expect(calls).toHaveLength(0);
-  });
-
   it("omits catalog for all-catalog search", async () => {
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
@@ -866,3 +791,7 @@ function requestBodyJson(call: FetchCall): unknown {
   }
   return JSON.parse(call.init.body) as unknown;
 }
+
+it("does not expose the retired refresh method", () => {
+  expect("refreshProducts" in OctogenClient.prototype).toBe(false);
+});

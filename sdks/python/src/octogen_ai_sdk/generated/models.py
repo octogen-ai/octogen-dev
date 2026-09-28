@@ -477,30 +477,6 @@ class ProgrammaticProductLookupRequest(BaseModel):
     )
 
 
-class ProgrammaticProductRefreshAcceptedTarget(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    catalog: str = Field(..., title="Catalog")
-    url: str = Field(..., title="Url")
-
-
-class ProgrammaticProductRefreshTarget(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    catalog: str | None = Field(
-        None,
-        description="Optional catalog key to scope or disambiguate URL refresh targets.",
-        title="Catalog",
-    )
-    url: str | None = Field(None, description="Product URL to refresh.", title="Url")
-    uuid: str | None = Field(
-        None, description="Indexed product UUID to refresh.", title="Uuid"
-    )
-
-
 class ProgrammaticResolveFromHtmlRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1201,49 +1177,6 @@ class ProgrammaticMoreLikeThisResponse(BaseModel):
     source_image: ProgrammaticMoreLikeThisSourceImageResponse | None = Field(
         None, alias="sourceImage"
     )
-
-
-class ProgrammaticProductRefreshRejectedTarget(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    code: str = Field(..., title="Code")
-    message: str = Field(..., title="Message")
-    target: ProgrammaticProductRefreshTarget
-
-
-class ProgrammaticProductRefreshRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    targets: list[ProgrammaticProductRefreshTarget] = Field(
-        ..., description="Products to schedule for refresh.", title="Targets"
-    )
-
-
-class ProgrammaticProductRefreshResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    accepted: list[ProgrammaticProductRefreshAcceptedTarget] = Field(
-        ..., title="Accepted"
-    )
-    rejected: list[ProgrammaticProductRefreshRejectedTarget] = Field(
-        ..., title="Rejected"
-    )
-    request_id: str = Field(..., alias="requestId", title="Requestid")
-    submitted: int = Field(..., title="Submitted")
-    workflow_attempts: int | None = Field(
-        0, alias="workflowAttempts", title="Workflowattempts"
-    )
-    workflow_error: str | None = Field(
-        None, alias="workflowError", title="Workflowerror"
-    )
-    workflow_id: str | None = Field(None, alias="workflowId", title="Workflowid")
-    workflow_status: (
-        Literal["pending", "launching", "launched", "retry_pending"] | None
-    ) = Field(None, alias="workflowStatus", title="Workflowstatus")
 
 
 class ProgrammaticProductSearchPage(BaseModel):

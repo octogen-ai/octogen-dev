@@ -233,26 +233,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/products/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refresh products
-         * @description Schedule product refreshes with a Catalog partner API key.
-         */
-        post: operations["refreshProducts"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/products/resolve-from-html": {
         parameters: {
             query?: never;
@@ -1550,75 +1530,6 @@ export interface components {
              */
             url?: string | null;
         };
-        /** ProgrammaticProductRefreshAcceptedTarget */
-        ProgrammaticProductRefreshAcceptedTarget: {
-            /** Catalog */
-            catalog: string;
-            /** Url */
-            url: string;
-        };
-        /** ProgrammaticProductRefreshRejectedTarget */
-        ProgrammaticProductRefreshRejectedTarget: {
-            /** Code */
-            code: string;
-            /** Message */
-            message: string;
-            target: components["schemas"]["ProgrammaticProductRefreshTarget"];
-        };
-        /**
-         * ProgrammaticProductRefreshRequest
-         * @description Programmatic product refresh request.
-         */
-        ProgrammaticProductRefreshRequest: {
-            /**
-             * Targets
-             * @description Products to schedule for refresh.
-             */
-            targets: components["schemas"]["ProgrammaticProductRefreshTarget"][];
-        };
-        /** ProgrammaticProductRefreshResponse */
-        ProgrammaticProductRefreshResponse: {
-            /** Accepted */
-            accepted: components["schemas"]["ProgrammaticProductRefreshAcceptedTarget"][];
-            /** Rejected */
-            rejected: components["schemas"]["ProgrammaticProductRefreshRejectedTarget"][];
-            /** Requestid */
-            requestId: string;
-            /** Submitted */
-            submitted: number;
-            /**
-             * Workflowattempts
-             * @default 0
-             */
-            workflowAttempts: number;
-            /** Workflowerror */
-            workflowError?: string | null;
-            /** Workflowid */
-            workflowId?: string | null;
-            /** Workflowstatus */
-            workflowStatus?: ("pending" | "launching" | "launched" | "retry_pending") | null;
-        };
-        /**
-         * ProgrammaticProductRefreshTarget
-         * @description One product identifier to schedule for refresh.
-         */
-        ProgrammaticProductRefreshTarget: {
-            /**
-             * Catalog
-             * @description Optional catalog key to scope or disambiguate URL refresh targets.
-             */
-            catalog?: string | null;
-            /**
-             * Url
-             * @description Product URL to refresh.
-             */
-            url?: string | null;
-            /**
-             * Uuid
-             * @description Indexed product UUID to refresh.
-             */
-            uuid?: string | null;
-        };
         /**
          * ProgrammaticProductSearchPage
          * @description Search page plus the debug effective query (parity with more-like-this).
@@ -2869,80 +2780,6 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
-            };
-        };
-    };
-    refreshProducts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProgrammaticProductRefreshRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProgrammaticProductRefreshResponse"];
-                };
-            };
-            /** @description No targets were accepted for refresh. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing or invalid Bearer API key. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description API key is valid but not allowed to access this resource. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Requested catalog or product was not found for this API key. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Request validation failed. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Product refresh service was unavailable. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

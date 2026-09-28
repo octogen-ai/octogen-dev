@@ -117,15 +117,11 @@ octogen search dress --facet color=red,blue --price-max 300 --catalog macys
 `--catalog`, `--facet k=v` (repeatable; comma-separate values), `--price-min`,
 `--price-max`, `--limit`, `--cursor`. Exit `6` when nothing matched.
 
-### `octogen similar <url|uuid>`, `octogen refresh <url...>`
+### `octogen similar <url|uuid>`
 
 ```bash
 octogen similar https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
-octogen refresh https://www.jcrew.com/p/mens/categories/clothing/pajamas-and-loungewear/robes/fleece-robe/BM002
 ```
-
-`refresh` answers per target, so it is where exit `7` lives: some scheduled, some
-rejected. Read `rejected[]` — each entry names the target and why.
 
 ### `octogen resolve --html <file|->`
 

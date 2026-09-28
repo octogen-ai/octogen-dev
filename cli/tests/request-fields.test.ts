@@ -64,8 +64,6 @@ const COVERAGE: { schema: string; map: string }[] = [
   { map: "searchProducts", schema: "ProgrammaticProductSearchRequest" },
   { map: "moreLikeThisProducts", schema: "ProgrammaticMoreLikeThisRequest" },
   { map: "resolveProductFromHtml", schema: "ProgrammaticResolveFromHtmlRequest" },
-  { map: "refreshProducts", schema: "ProgrammaticProductRefreshRequest" },
-  { map: "refreshTarget", schema: "ProgrammaticProductRefreshTarget" },
   { map: "startVoyage", schema: "VoyageStartRequest" },
 ];
 
@@ -120,8 +118,6 @@ describe("every published request field is accounted for", () => {
     const byMap: Record<string, string> = {
       lookupProduct: "lookup",
       moreLikeThisProducts: "similar",
-      refreshProducts: "refresh",
-      refreshTarget: "refresh",
       resolveProductFromHtml: "resolve",
       searchProducts: "search",
       startVoyage: "voyage",

@@ -313,128 +313,6 @@ describe("octogen similar", () => {
   });
 });
 
-describe("octogen refresh", () => {
-  function refreshBody(
-    accepted: { catalog: string; url: string }[],
-    rejected: { code: string; message: string; target: { url: string } }[],
-  ): Record<string, unknown> {
-    return {
-      accepted,
-      rejected,
-      requestId: "req-1",
-      submitted: accepted.length,
-      workflowId: "wf-1",
-      workflowStatus: "launched",
-    };
-  }
-
-  it("exits 0 when every target was scheduled", async () => {
-    const result = await runCli({
-      argv: ["refresh", "https://lagence.com/products/akiya"],
-      env: KEYED,
-      routes: {
-        "POST /products/refresh": {
-          body: refreshBody(
-            [{ catalog: "lagence", url: "https://lagence.com/products/akiya" }],
-            [],
-          ),
-        },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Success);
-    expect(result.json()["workflowStatus"]).toBe("launched");
-  });
-
-  it("exits 7 on a mix — the reason exit 7 exists", async () => {
-    const result = await runCli({
-      argv: ["refresh", "https://a.example/p", "https://b.example/p"],
-      env: KEYED,
-      routes: {
-        "POST /products/refresh": {
-          body: refreshBody(
-            [{ catalog: "a", url: "https://a.example/p" }],
-            [
-              {
-                code: "product_not_found",
-                message: "no match",
-                target: { url: "https://b.example/p" },
-              },
-            ],
-          ),
-        },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Partial);
-    expect(result.json()["ok"]).toBe(false);
-  });
-
-  it("maps an all-rejected answer by its single cause", async () => {
-    const cases: { code: string; exit: ExitCode }[] = [
-      { code: "product_not_found", exit: ExitCode.NoResult },
-      { code: "catalog_not_granted", exit: ExitCode.NotEntitled },
-      { code: "invalid_url", exit: ExitCode.Usage },
-    ];
-    for (const scenario of cases) {
-      const result = await runCli({
-        argv: ["refresh", "https://a.example/p"],
-        env: KEYED,
-        routes: {
-          "POST /products/refresh": {
-            body: refreshBody(
-              [],
-              [
-                {
-                  code: scenario.code,
-                  message: "rejected",
-                  target: { url: "https://a.example/p" },
-                },
-              ],
-            ),
-          },
-        },
-      });
-      expect(result.exitCode, scenario.code).toBe(scenario.exit);
-    }
-  });
-
-  it("exits 7 when nothing was scheduled for more than one reason", async () => {
-    const result = await runCli({
-      argv: ["refresh", "https://a.example/p", "https://b.example/p"],
-      env: KEYED,
-      routes: {
-        "POST /products/refresh": {
-          body: refreshBody(
-            [],
-            [
-              {
-                code: "product_not_found",
-                message: "no",
-                target: { url: "https://a.example/p" },
-              },
-              {
-                code: "invalid_url",
-                message: "no",
-                target: { url: "https://b.example/p" },
-              },
-            ],
-          ),
-        },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Partial);
-  });
-
-  it("refuses more than the contract's 500 targets locally", async () => {
-    const urls = Array.from(
-      { length: 501 },
-      (_, index) => `https://a.example/${String(index)}`,
-    );
-    const result = await runCli({ argv: ["refresh", ...urls], env: KEYED });
-    expect(result.exitCode).toBe(ExitCode.Usage);
-    expect(result.requests).toHaveLength(0);
-  });
-});
-
 describe("octogen resolve", () => {
   it("reads HTML from a file, and never from an argument", async () => {
     const directory = mkdtempSync(join(tmpdir(), "octogen-html-"));
@@ -708,4 +586,13 @@ describe("octogen api", () => {
     });
     expect(result.exitCode).toBe(ExitCode.NotEntitled);
   });
+});
+
+it("does not recognize the removed refresh command or issue a request", async () => {
+  const result = await runCli({
+    argv: ["refresh", "https://example.com/product"],
+    env: KEYED,
+  });
+  expect(result.exitCode).not.toBe(ExitCode.Success);
+  expect(result.requests).toEqual([]);
 });

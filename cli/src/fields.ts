@@ -50,8 +50,6 @@ type LookupRequest = components["schemas"]["ProgrammaticProductLookupRequest"];
 type SearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
 type MoreLikeThisRequest = components["schemas"]["ProgrammaticMoreLikeThisRequest"];
 type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
-type RefreshRequest = components["schemas"]["ProgrammaticProductRefreshRequest"];
-type RefreshTarget = components["schemas"]["ProgrammaticProductRefreshTarget"];
 type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
@@ -148,18 +146,6 @@ export const RESOLVE_FIELDS = {
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
-// ── POST /products/refresh ─────────────────────────────────────────────────
-
-export const REFRESH_FIELDS = {
-  targets: { flag: "<url...> (positional)" },
-} satisfies FieldMap<RefreshRequest>;
-
-export const REFRESH_TARGET_FIELDS = {
-  catalog: { flag: "--catalog" },
-  url: { flag: "<url...> (positional)" },
-  uuid: { flag: "--uuid (repeatable)" },
-} satisfies FieldMap<RefreshTarget>;
-
 // ── POST /voyage ───────────────────────────────────────────────────────────
 
 export const VOYAGE_START_FIELDS = {
@@ -175,8 +161,6 @@ export const FIELD_MAPS: Readonly<
 > = Object.freeze({
   lookupProduct: LOOKUP_FIELDS,
   moreLikeThisProducts: SIMILAR_FIELDS,
-  refreshProducts: REFRESH_FIELDS,
-  refreshTarget: REFRESH_TARGET_FIELDS,
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   startVoyage: VOYAGE_START_FIELDS,

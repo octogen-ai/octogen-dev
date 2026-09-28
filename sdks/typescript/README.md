@@ -96,8 +96,6 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   the request field is `url`.
 - `resolveProductFromHtml(params)` resolves a product from page HTML you already
   have — no index read, no outbound fetch.
-- `refreshProducts(params)` schedules product URLs or UUIDs for refresh
-  (`POST /v1/products/refresh`).
 - `startVoyage(domain)`, `listVoyages(params?)`, and `getVoyage(taskId)` build a
   catalog for a merchant Octogen does not cover yet. Voyages are shared per
   domain: `StartVoyageResult.created` is `false` when you joined one already
@@ -125,23 +123,6 @@ const similar = await client.moreLikeThisProducts({
 for (const product of similar.items) {
   console.log(product.title, product.productUrl);
 }
-```
-
-```ts
-const refresh = await client.refreshProducts({
-  targets: [
-    {
-      catalog: "warrenlotas",
-      url: "https://warrenlotas.com/products/black-hoodie",
-    },
-    { uuid: "product-uuid" },
-  ],
-});
-
-// 202: the targets were accepted and a workflow was dispatched — not that the
-// products have been re-crawled yet.
-console.log(refresh.submitted, refresh.workflowStatus);
-console.log(refresh.rejected.map((target) => target.code));
 ```
 
 ```ts

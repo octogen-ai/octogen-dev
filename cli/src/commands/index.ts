@@ -13,7 +13,6 @@ import { commandTable, EXCLUDED_OPERATIONS, type CommandSpec } from "../registry
 import { apiCommand } from "./api.js";
 import { domainsCommand } from "./domains.js";
 import { lookupCommand } from "./lookup.js";
-import { refreshCommand } from "./refresh.js";
 import { resolveCommand } from "./resolve.js";
 import { searchCommand } from "./search.js";
 import { similarCommand } from "./similar.js";
@@ -31,7 +30,6 @@ export const ALL_COMMANDS = [
   lookupCommand,
   searchCommand,
   similarCommand,
-  refreshCommand,
   resolveCommand,
   voyageCommand,
   voyageStatusCommand,

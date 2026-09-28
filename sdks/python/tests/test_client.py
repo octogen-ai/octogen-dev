@@ -28,7 +28,6 @@ from octogen_ai_sdk import (
     ProductResolutionMetadata,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
-    ProgrammaticProductRefreshTarget,
     TextSearchQuery,
     ValidationErrorModel,
 )
@@ -49,10 +48,7 @@ def test_public_model_exports_are_available() -> None:
     assert (
         octogen_ai_sdk.ProgrammaticMoreLikeThisSource is ProgrammaticMoreLikeThisSource
     )
-    assert (
-        octogen_ai_sdk.ProgrammaticProductRefreshTarget
-        is ProgrammaticProductRefreshTarget
-    )
+    assert not hasattr(octogen_ai_sdk, "ProgrammaticProductRefreshRequest")
     assert octogen_ai_sdk.ValidationErrorModel is ValidationErrorModel
 
 
@@ -67,16 +63,6 @@ def test_lookup_request_rejects_refresh_for_index_only() -> None:
             url="https://example.com/products/linen-dress",
             resolutionMode=ProductLookupResolutionMode.INDEX_ONLY,
             onDemandCachePolicy=ProductLookupCachePolicy.REFRESH,
-        )
-
-
-def test_refresh_target_requires_exactly_one_identifier() -> None:
-    with pytest.raises(ValueError):
-        ProgrammaticProductRefreshTarget.model_validate({})
-
-    with pytest.raises(ValueError):
-        ProgrammaticProductRefreshTarget.model_validate(
-            {"url": "https://example.com/p", "uuid": "product-1"}
         )
 
 
@@ -121,60 +107,6 @@ async def test_search_products_uses_env_api_key(
     assert route.calls.last.request.headers["User-Agent"].startswith(
         "octogen-ai-sdk-python/"
     )
-
-
-@respx.mock
-async def test_refresh_products_sends_typed_request() -> None:
-    route = respx.post(f"{BASE_URL}/products/refresh").mock(
-        return_value=httpx.Response(
-            202,
-            json={
-                "requestId": "request-1",
-                "submitted": 2,
-                "workflowId": "refresh-request-1-acme-0001-products",
-                "workflowStatus": "launched",
-                "workflowAttempts": 1,
-                "accepted": [
-                    {
-                        "catalog": "acme",
-                        "url": "https://example.com/products/linen-dress",
-                    }
-                ],
-                "rejected": [
-                    {
-                        "target": {"uuid": "missing-product"},
-                        "code": "product_not_found",
-                        "message": "No active product matched that UUID.",
-                    }
-                ],
-            },
-        )
-    )
-
-    async with OctogenClient(api_key="key") as client:
-        response = await client.refresh_products(
-            targets=[
-                {
-                    "catalog": "acme",
-                    "url": "https://example.com/products/linen-dress",
-                },
-                ProgrammaticProductRefreshTarget(uuid="missing-product"),
-            ],
-        )
-
-    request = route.calls.last.request
-    assert request.read() == (
-        b'{"targets":[{"url":"https://example.com/products/linen-dress",'
-        b'"catalog":"acme"},{"uuid":"missing-product"}]}'
-    )
-    assert response.request_id == "request-1"
-    assert response.submitted == 2
-    assert response.workflow_id == "refresh-request-1-acme-0001-products"
-    assert response.workflow_status == "launched"
-    assert response.workflow_attempts == 1
-    assert response.accepted[0].catalog == "acme"
-    assert response.rejected[0].code == "product_not_found"
-    assert response.rejected[0].target.uuid == "missing-product"
 
 
 @respx.mock

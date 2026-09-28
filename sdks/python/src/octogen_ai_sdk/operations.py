@@ -42,7 +42,6 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "listVoyages": Operation("GET", "/voyage"),
     "lookupProduct": Operation("POST", "/products/lookup"),
     "moreLikeThisProducts": Operation("POST", "/products/more-like-this"),
-    "refreshProducts": Operation("POST", "/products/refresh"),
     "removeUrlListUrls": Operation(
         "POST", "/coverage/url-lists/{urlListId}/urls/remove"
     ),

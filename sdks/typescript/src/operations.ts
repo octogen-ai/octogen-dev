@@ -39,7 +39,6 @@ export const OPERATIONS = {
   listVoyages: { method: "GET", path: "/voyage" },
   lookupProduct: { method: "POST", path: "/products/lookup" },
   moreLikeThisProducts: { method: "POST", path: "/products/more-like-this" },
-  refreshProducts: { method: "POST", path: "/products/refresh" },
   removeUrlListUrls: {
     method: "POST",
     path: "/coverage/url-lists/{urlListId}/urls/remove",

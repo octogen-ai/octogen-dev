@@ -29,7 +29,7 @@ const SRC = fileURLToPath(new URL("../src", import.meta.url));
  * Files allowed to name `ExitCode.NoResult`, and why.
  *
  * `exit.ts` defines it and `noResult()` is its only constructor; `help.ts`
- * prints the table; `refresh.ts` alone *computes* a verdict of `6` (its
+ * prints the table; legacy commands computed a verdict of `6` (their
  * per-target table can decide "every target was a miss") and immediately routes
  * it through `noResult()`, so the evidence is still recorded. Nothing else may
  * name it at all.
@@ -37,7 +37,6 @@ const SRC = fileURLToPath(new URL("../src", import.meta.url));
 const ALLOWED = new Map<string, string>([
   ["exit.ts", "defines the table and the noResult() constructor"],
   ["help.ts", "prints the exit-code table in --help"],
-  ["commands/refresh.ts", "branches on the decideExit() table's own verdict"],
 ]);
 
 function sourceFiles(directory: string, prefix = ""): string[] {
@@ -83,7 +82,6 @@ describe("exit 6 has exactly one constructor", () => {
     expect(callers.sort()).toEqual([
       "commands/domains.ts",
       "commands/lookup.ts",
-      "commands/refresh.ts",
       "commands/resolve.ts",
       "commands/search.ts",
       "commands/similar.ts",
