@@ -36,6 +36,15 @@ Before your first tool call:
 
 ## Choose your client
 
+### ChatGPT and agent plugin hosts
+
+The [Octogen plugin](../../plugins/octogen/README.md) bundles product discovery
+instructions, the Octogen logo, and the canonical
+`https://mcp.octogen.ai/mcp` connection. Build its ZIP from this repository and
+import it through Plugin Creator or a compatible Agent Plugins 1.0 host, then
+complete Octogen sign-in. ChatGPT workspace administrators must enable private
+plugins with MCP connections before users can upload the package.
+
 ### Claude Code
 
 ```bash

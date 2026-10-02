@@ -41,6 +41,19 @@ jobs:
             echo "::endgroup::"
           done
 
+  plugin:
+    name: Octogen plugin package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate and build the plugin ZIP
+        run: python3 tools/plugins/package.py
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: octogen-plugin
+          path: dist/octogen-plugin-*.zip
+          if-no-files-found: error
+
   typescript:
     name: TypeScript SDK (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest

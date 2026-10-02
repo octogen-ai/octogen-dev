@@ -1,0 +1,32 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "octogen",
+  "version": "0.1.0",
+  "description": "Find, compare, and recommend products using Octogen search and product URL lookup.",
+  "author": {
+    "name": "Octogen"
+  },
+  "homepage": "https://github.com/octogen-ai/octogen-dev/tree/main/plugins/octogen",
+  "repository": "https://github.com/octogen-ai/octogen-dev",
+  "license": "Apache-2.0",
+  "keywords": ["shopping", "products", "recommendations", "search"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Octogen",
+        "shortDescription": "Find and compare products",
+        "longDescription": "Search Octogen's product catalog, look up a product by URL, and compare recommendations based on the product information returned. Connect your Octogen account to get started.",
+        "developerName": "Octogen",
+        "category": "Productivity",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": [
+          "Find products that match what I am looking for.",
+          "Look up this product URL and explain its details.",
+          "Help me compare products and find suitable alternatives."
+        ],
+        "logo": "./assets/octogen-mark.png",
+        "composerIcon": "./assets/octogen-mark.png"
+      }
+    }
+  }
+}

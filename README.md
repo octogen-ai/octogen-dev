@@ -9,6 +9,7 @@ This repository is public-facing and is intended to become the canonical home fo
 - The `@octogen-ai/cli` command-line tool, for terminals and agents
 - Shared fixtures and contract tests for SDK behavior
 - Codex, Claude, and Cursor skills for building with Octogen
+- Installable agent plugins connected to Octogen MCP
 - Examples and integration guides for commerce workflows
 
 ## Repository Layout
@@ -23,6 +24,8 @@ This repository is public-facing and is intended to become the canonical home fo
 +-- examples/
 |   +-- python/              # Python SDK examples
 |   +-- typescript/          # TypeScript SDK examples
++-- plugins/
+|   +-- octogen/             # Product discovery plugin for Octogen MCP
 +-- sdks/
 |   +-- python/              # Python package source, packaging config, and unit tests
 |   +-- typescript/          # TypeScript package source, package config, and unit tests
@@ -220,6 +223,12 @@ every pull request, across Node 20/22 and Python 3.11/3.12. Hooks protect only
 the machines they are installed on; CI is what protects `main`.
 
 ## Skills Strategy
+
+The [Octogen plugin](plugins/octogen/README.md) packages product discovery
+instructions, the canonical MCP connection, and brand assets. Build its
+installable ZIP with `python3 tools/plugins/package.py`; CI validates and uploads
+the package as a workflow artifact. Plugin versions are independent of SDK and
+CLI versions.
 
 Skills should be organized by agent runtime because each tool has different packaging and instruction formats. Shared Octogen concepts should be documented in `docs/guides/` and referenced from each skill rather than duplicated extensively.
 
