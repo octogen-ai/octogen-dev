@@ -507,14 +507,18 @@ class MerchantProductView(MerchantProductListItem):
 
 class ProductResolutionMetadata(_ResponseModel):
     completeness: Literal["complete", "partial"]
-    method: Literal["json_ld", "open_graph", "html_meta", "resolved_url"]
-    rendered: bool = False
-    missing_fields: list[str] = Field(default_factory=list, alias="missingFields")
+    method: Literal[
+        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+    ]
+    rendered: bool | None = None
+    missing_fields: list[str] | None = Field(
+        default_factory=list, alias="missingFields"
+    )
 
 
 class MerchantProductUrlLookupResponse(_ResponseModel):
     request_id: str | None = Field(default=None, alias="requestId")
-    source: Literal["indexed", "on_demand"]
+    source: Literal["indexed", "on_demand", "client_html"]
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
@@ -528,7 +532,7 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
         default=None,
         alias="cacheStatus",
     )
-    warnings: list[str] = Field(default_factory=list)
+    warnings: list[str] | None = Field(default_factory=list)
 
 
 class ValidationErrorModel(_ResponseModel):

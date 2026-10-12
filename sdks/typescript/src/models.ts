@@ -455,14 +455,14 @@ export interface MerchantProductView extends Omit<
 
 export interface ProductResolutionMetadata {
   completeness: "complete" | "partial";
-  method: "json_ld" | "open_graph" | "html_meta" | "resolved_url";
-  rendered?: boolean;
-  missingFields?: string[];
+  method: "json_ld" | "open_graph" | "html_meta" | "resolved_url" | "catalog_extractor";
+  rendered?: boolean | null;
+  missingFields?: string[] | null;
 }
 
 export interface MerchantProductUrlLookupResponse {
   requestId?: string | null;
-  source: "indexed" | "on_demand";
+  source: "indexed" | "on_demand" | "client_html";
   catalogKey?: string | null;
   catalogDisplayName?: string | null;
   sourceBaseUrl?: string | null;
@@ -480,7 +480,7 @@ export interface MerchantProductUrlLookupResponse {
   matchedVia?: string | null;
   resolution?: ProductResolutionMetadata | null;
   cacheStatus?: "hit" | "miss" | "refresh" | null;
-  warnings?: string[];
+  warnings?: string[] | null;
 }
 
 export interface ValidationErrorModel {

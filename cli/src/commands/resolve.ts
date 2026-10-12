@@ -87,6 +87,7 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
   }
 
   const product = response.product;
+  const missingFields = response.resolution?.missingFields ?? [];
   writer.emit({
     command: context.command,
     data: {
@@ -114,10 +115,9 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
         `  price       ${product.currentPrice === null || product.currentPrice === undefined ? "—" : String(product.currentPrice)}`,
         `  from        ${String(bytes)} bytes of HTML`,
         `  method      ${response.resolution?.method ?? "—"} (${response.resolution?.completeness ?? "—"})`,
-        ...(response.resolution?.missingFields === undefined ||
-        response.resolution.missingFields.length === 0
+        ...(missingFields.length === 0
           ? []
-          : [`  missing     ${response.resolution.missingFields.join(", ")}`]),
+          : [`  missing     ${missingFields.join(", ")}`]),
       ].join("\n"),
     ok: true,
   });

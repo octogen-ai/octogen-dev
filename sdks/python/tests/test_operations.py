@@ -363,3 +363,46 @@ async def test_falls_back_to_the_deprecated_env_var_warning_once(
     await second.aclose()
 
     assert respx.calls.last.request.headers["Authorization"] == "Bearer legacy"
+
+
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("lookup_product", "lookup"),
+        ("parse_product_alias", "parse"),
+        ("resolve_product_from_html", "resolve-from-html"),
+    ],
+)
+@pytest.mark.parametrize("source", ["on_demand", "client_html"])
+@respx.mock
+async def test_lookup_methods_accept_current_resolution_metadata(
+    method: str, path: str, source: str
+) -> None:
+    respx.post(f"https://api.storerouter.ai/v1/products/{path}").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": source,
+                "product": {"uuid": None, "productUrl": "https://shop.example/p/1"},
+                "resolution": {
+                    "completeness": "partial",
+                    "method": "catalog_extractor",
+                    "rendered": None,
+                    "missingFields": None,
+                },
+            },
+        )
+    )
+    async with OctogenClient(
+        api_key="key", base_url="https://api.storerouter.ai/v1"
+    ) as client:
+        result = await (
+            getattr(client, method)(html="<html></html>")
+            if method == "resolve_product_from_html"
+            else getattr(client, method)("https://shop.example/p/1")
+        )
+    assert result.source == source
+    assert result.resolution is not None
+    assert result.resolution.method == "catalog_extractor"
+    assert result.resolution.rendered is None
+    assert result.resolution.missing_fields is None
