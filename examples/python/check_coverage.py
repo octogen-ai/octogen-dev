@@ -25,7 +25,7 @@ URLS = (
 
 
 async def main() -> None:
-    async with OctogenClient() as client:
+    async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         coverage = await client.fetch_domain_coverage()
 
         print(f"{len(coverage.hosts)} covered hosts")

@@ -4,7 +4,7 @@ import { OctogenAPIError, OctogenClient } from "../../sdks/typescript/src/index.
 
 async function main(): Promise<void> {
   try {
-    const client = new OctogenClient();
+    const client = new OctogenClient({ baseUrl: "https://api.storerouter.ai/v1" });
     const results = await client.searchProducts({
       limit: 5,
       q: "women's linen summer dresses",

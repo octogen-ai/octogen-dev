@@ -68,7 +68,7 @@ describe("command coverage of the published operation set", () => {
     }
   });
 
-  it("excludes exactly the eight coverage/url-lists operations", () => {
+  it("excludes URL-list operations and the exact lookup alias", () => {
     // Named rather than counted, so widening the exclusion list is a visible
     // change to this test rather than a number going up.
     expect([...excluded].sort()).toEqual([
@@ -79,9 +79,13 @@ describe("command coverage of the published operation set", () => {
       "getUrlList",
       "listUrlListUrls",
       "listUrlLists",
+      "parseProductAlias",
       "removeUrlListUrls",
     ]);
-    for (const operationId of excluded) {
+    expect(OPERATIONS.parseProductAlias.path).toBe("/products/parse");
+    for (const operationId of [...excluded].filter(
+      (id) => id !== "parseProductAlias",
+    )) {
       expect(
         OPERATIONS[operationId as OperationId].path,
         `${operationId} is excluded as a url-lists operation but is not one`,

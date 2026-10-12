@@ -19,7 +19,8 @@ export const SNAPSHOT_PATH = resolve(
   "platform-v1.json",
 );
 
-export const CONTRACT_URL = "https://cdn.octogen.ai/openapi/platform/v1/openapi.json";
+export const CONTRACT_URL =
+  "https://cdn.storerouter.ai/openapi/platform/v1/openapi.json";
 
 /** HTTP methods an OpenAPI path item may carry. */
 const HTTP_METHODS = [

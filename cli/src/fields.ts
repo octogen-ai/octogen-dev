@@ -55,6 +55,9 @@ type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
 export const LOOKUP_FIELDS = {
+  format: unsupported(
+    "The typed SDK and lookup command return JSON. Use `octogen api` for Markdown responses.",
+  ),
   matchMode: { flag: "--match-mode" },
   onDemandCachePolicy: { flag: "--on-demand-cache-policy" },
   resolutionMode: { flag: "--resolution-mode" },
@@ -98,13 +101,14 @@ export const SEARCH_FIELDS = {
     "Result diversification. Changes ranking, so exposing it as a flag would " +
       "make two runs of the same command incomparable by default.",
   ),
-  embeddingDims: unsupported("Retrieval tuning; not a session concern."),
   facets: { flag: "--facet k=v (repeatable)" },
   limit: { flag: "--limit" },
   price_max: { flag: "--price-max" },
   price_min: { flag: "--price-min" },
   q: { flag: "<query> (positional)" },
-  quantizeEmbedding: unsupported("Retrieval tuning; not a session concern."),
+  relax: unsupported(
+    "Opt-in query relaxation changes matching. Use `octogen api` when you need it.",
+  ),
   text_search_query: unsupported(
     "The full 18-field search query object. `octogen api POST /products/search` " +
       "is the right shape for it — a flag per field would be a second API.",

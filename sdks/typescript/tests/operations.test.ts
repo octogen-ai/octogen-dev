@@ -249,35 +249,41 @@ describe("OctogenClient voyages", () => {
   });
 });
 
-describe("OctogenClient#lookupProduct matchMode", () => {
-  it("sends matchMode only when the caller asks for one", async () => {
-    const body = {
-      source: "indexed",
-      product: { uuid: "p1", productUrl: "https://www.etro.com/us-en/x.html" },
-    };
-    const first = createFetchMock(body);
-    const client = new OctogenClient({ apiKey: "key", fetch: first.fetchMock });
+describe.each(["lookupProduct", "parseProductAlias"] as const)(
+  "OctogenClient#%s matchMode",
+  (method) => {
+    it("sends matchMode only when the caller asks for one", async () => {
+      const body = {
+        source: "indexed",
+        product: { uuid: "p1", productUrl: "https://www.etro.com/us-en/x.html" },
+      };
+      const first = createFetchMock(body);
+      const client = new OctogenClient({ apiKey: "key", fetch: first.fetchMock });
 
-    await client.lookupProduct("https://www.etro.com/us-en/x.html");
-    expect(requestBodyJson(first.calls[0])).toEqual({
-      url: "https://www.etro.com/us-en/x.html",
-      resolutionMode: "auto",
-      onDemandCachePolicy: "prefer_cache",
-    });
+      await client[method]("https://www.etro.com/us-en/x.html");
+      expect(first.calls[0]?.input).toBe(
+        `${BASE_URL}/products/${method === "lookupProduct" ? "lookup" : "parse"}`,
+      );
+      expect(requestBodyJson(first.calls[0])).toEqual({
+        url: "https://www.etro.com/us-en/x.html",
+        resolutionMode: "auto",
+        onDemandCachePolicy: "prefer_cache",
+      });
 
-    const second = createFetchMock(body);
-    const strict = new OctogenClient({ apiKey: "key", fetch: second.fetchMock });
-    await strict.lookupProduct("https://www.etro.com/us-en/x.html", {
-      matchMode: "strict",
+      const second = createFetchMock(body);
+      const strict = new OctogenClient({ apiKey: "key", fetch: second.fetchMock });
+      await strict[method]("https://www.etro.com/us-en/x.html", {
+        matchMode: "strict",
+      });
+      expect(requestBodyJson(second.calls[0])).toEqual({
+        url: "https://www.etro.com/us-en/x.html",
+        resolutionMode: "auto",
+        onDemandCachePolicy: "prefer_cache",
+        matchMode: "strict",
+      });
     });
-    expect(requestBodyJson(second.calls[0])).toEqual({
-      url: "https://www.etro.com/us-en/x.html",
-      resolutionMode: "auto",
-      onDemandCachePolicy: "prefer_cache",
-      matchMode: "strict",
-    });
-  });
-});
+  },
+);
 
 describe("API key environment variables", () => {
   beforeEach(() => {

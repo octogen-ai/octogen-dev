@@ -6,12 +6,12 @@ crawled catalog. It is the REST sibling of the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md); both enforce
 the same catalog access policy — pick the surface that fits your runtime.
 
-| Property         | Value                                                     |
-| ---------------- | --------------------------------------------------------- |
-| Base URL         | `https://api.octogen.ai/v1`                               |
-| Authentication   | Bearer Platform API key (`octo_live_...`)                 |
-| Content type     | `application/json`                                        |
-| OpenAPI contract | `https://cdn.octogen.ai/openapi/platform/v1/openapi.json` |
+| Property         | Value                                                         |
+| ---------------- | ------------------------------------------------------------- |
+| Base URL         | `https://api.storerouter.ai/v1`                               |
+| Authentication   | Bearer Platform API key (`octo_live_...`)                     |
+| Content type     | `application/json`                                            |
+| OpenAPI contract | `https://cdn.storerouter.ai/openapi/platform/v1/openapi.json` |
 
 The OpenAPI document is the source of truth for complete schemas, enum values,
 and generated-client setup. This page covers integration-level behavior and
@@ -67,7 +67,7 @@ Resolves a product page URL to a canonical product record within the catalogs
 your key has access to.
 
 ```bash
-curl -sS https://api.octogen.ai/v1/products/lookup \
+curl -sS https://api.storerouter.ai/v1/products/lookup \
   -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://warrenlotas.com/products/black-hoodie"}'
@@ -152,7 +152,7 @@ Searches products across all active crawled catalogs. To restrict
 the search to one catalog, include `catalog`; everything else is optional.
 
 ```bash
-curl -sS https://api.octogen.ai/v1/products/search \
+curl -sS https://api.storerouter.ai/v1/products/search \
   -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -229,7 +229,7 @@ from indexed product enrichment, excludes the source product, and returns a
 standard product list page.
 
 ```bash
-curl -sS https://api.octogen.ai/v1/products/more-like-this \
+curl -sS https://api.storerouter.ai/v1/products/more-like-this \
   -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -342,7 +342,7 @@ verbatim.
 The generated contract is published during every platform deploy:
 
 ```text
-https://cdn.octogen.ai/openapi/platform/v1/openapi.json
+https://cdn.storerouter.ai/openapi/platform/v1/openapi.json
 ```
 
 It includes:

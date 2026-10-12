@@ -131,7 +131,7 @@ jobs:
       - name: Generated types are up to date
         run: npm run codegen:check
       # The drift alarm, and the one step here that touches the network: it
-      # compares the contract `cdn.octogen.ai` is serving right now against the
+      # compares the contract `cdn.storerouter.ai` is serving right now against the
       # committed snapshot. A newly published operation turns this red until
       # someone adds the SDK method — CI owns drift, and a red build names the
       # owner. Kept in its own job so it is obvious which of the two failed.

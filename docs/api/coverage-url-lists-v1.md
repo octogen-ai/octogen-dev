@@ -6,12 +6,12 @@ cover?". Each list is joined against every active crawled catalog daily and
 the result is shared back as a per-list BigQuery Analytics Hub listing your
 organization's registered BigQuery Readers can subscribe to.
 
-| Property         | Value                                                     |
-| ---------------- | --------------------------------------------------------- |
-| Base URL         | `https://api.octogen.ai/v1`                               |
-| Authentication   | Bearer Platform API key (`octo_live_...`)                 |
-| Content type     | `application/json`                                        |
-| OpenAPI contract | `https://cdn.octogen.ai/openapi/platform/v1/openapi.json` |
+| Property         | Value                                                         |
+| ---------------- | ------------------------------------------------------------- |
+| Base URL         | `https://api.storerouter.ai/v1`                               |
+| Authentication   | Bearer Platform API key (`octo_live_...`)                     |
+| Content type     | `application/json`                                            |
+| OpenAPI contract | `https://cdn.storerouter.ai/openapi/platform/v1/openapi.json` |
 
 Authentication is identical to the
 [Platform Catalog API v1](./platform-catalog-api-v1.md): send your Platform
@@ -193,9 +193,9 @@ daily run.
 1,000-URL requests and keeping mutations dry-run by default:
 
 ```bash
-octogen-url-lists create --name q3-campaign --apply
-octogen-url-lists add-urls cul_01... --file urls.txt --apply
-octogen-url-lists get cul_01...
+octogen-url-lists create --base-url https://api.storerouter.ai/v1 --name q3-campaign --apply
+octogen-url-lists add-urls --base-url https://api.storerouter.ai/v1 cul_01... --file urls.txt --apply
+octogen-url-lists get --base-url https://api.storerouter.ai/v1 cul_01...
 ```
 
 See the [Python SDK README](../../sdks/python/README.md#coverage-url-lists-cli)

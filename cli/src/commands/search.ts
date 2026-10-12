@@ -5,7 +5,7 @@
  * `nextCursor`, and each item carries `productUrl`. Bodies are
  * `extra="forbid"`, so those names are not negotiable — they are pinned against
  * the generated type by `SEARCH_FIELDS` in `fields.ts`, which also records why
- * each of the seven fields the CLI does *not* expose is not exposed.
+ * each field the CLI does *not* expose is not exposed.
  */
 
 import type {

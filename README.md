@@ -117,7 +117,7 @@ output. The equivalent without npm:
 uv run --project sdks/python --frozen python tools/codegen/generate.py
 ```
 
-Refresh the snapshot from `cdn.octogen.ai` and regenerate in one step:
+Refresh the snapshot from `cdn.storerouter.ai` and regenerate in one step:
 
 ```bash
 npm run codegen -- --fetch
@@ -137,7 +137,7 @@ for the SDKs: production integrations use an SDK, and the CLI is what you (or an
 agent) reach for mid-task.
 
 ```bash
-npx -y @octogen-ai/cli@next domains --check https://www.macys.com/shop/product/x
+npx -y @octogen-ai/cli@next domains --base-url https://api.storerouter.ai/v1 --check https://www.macys.com/shop/product/x
 ```
 
 Two properties are worth knowing before reading the code:
@@ -173,18 +173,18 @@ npm install
 
 Root scripts run across every workspace:
 
-| Command                           | What it does                                                     |
-| --------------------------------- | ---------------------------------------------------------------- |
-| `npm run lint`                    | ESLint over the whole repository, one config                     |
-| `npm run format`                  | Prettier check over the whole repository                         |
-| `npm run typecheck`               | `tsc --noEmit` in each workspace, plus the root contract tests   |
-| `npm run test`                    | Each workspace's test suite, then the contract conformance tests |
-| `npm run build`                   | Each workspace's build                                           |
-| `npm run check`                   | All of the above, in that order — what CI runs                   |
-| `npm run codegen`                 | Regenerate committed types from the contract snapshot            |
-| `npm run codegen:check`           | Fail if the committed generated types are stale                  |
-| `npm run test:contract`           | Contract conformance only (hermetic)                             |
-| `npm run test:published-contract` | The snapshot vs what `cdn.octogen.ai` serves right now (network) |
+| Command                           | What it does                                                         |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `npm run lint`                    | ESLint over the whole repository, one config                         |
+| `npm run format`                  | Prettier check over the whole repository                             |
+| `npm run typecheck`               | `tsc --noEmit` in each workspace, plus the root contract tests       |
+| `npm run test`                    | Each workspace's test suite, then the contract conformance tests     |
+| `npm run build`                   | Each workspace's build                                               |
+| `npm run check`                   | All of the above, in that order — what CI runs                       |
+| `npm run codegen`                 | Regenerate committed types from the contract snapshot                |
+| `npm run codegen:check`           | Fail if the committed generated types are stale                      |
+| `npm run test:contract`           | Contract conformance only (hermetic)                                 |
+| `npm run test:published-contract` | The snapshot vs what `cdn.storerouter.ai` serves right now (network) |
 
 To work on one package, scope the script:
 

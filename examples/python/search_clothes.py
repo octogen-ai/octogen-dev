@@ -17,7 +17,7 @@ from octogen_ai_sdk import OctogenAPIError, OctogenClient
 
 async def main() -> None:
     try:
-        async with OctogenClient() as client:
+        async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
             results = await client.search_products(
                 q="women's linen summer dresses",
                 limit=5,

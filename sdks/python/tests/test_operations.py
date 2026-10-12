@@ -295,21 +295,26 @@ async def test_get_voyage_refuses_a_blank_task_id() -> None:
             await client.get_voyage("  ")
 
 
+@pytest.mark.parametrize(
+    "method,path", [("lookup_product", "lookup"), ("parse_product_alias", "parse")]
+)
 @respx.mock
-async def test_lookup_product_sends_match_mode_only_when_asked() -> None:
+async def test_lookup_product_sends_match_mode_only_when_asked(
+    method: str, path: str
+) -> None:
     body = {
         "source": "indexed",
         "product": {"uuid": "p1", "productUrl": "https://www.etro.com/us-en/x.html"},
     }
-    route = respx.post(f"{BASE_URL}/products/lookup").mock(
+    route = respx.post(f"{BASE_URL}/products/{path}").mock(
         return_value=httpx.Response(200, json=body)
     )
 
     async with OctogenClient(api_key="key") as client:
-        await client.lookup_product("https://www.etro.com/us-en/x.html")
+        await getattr(client, method)("https://www.etro.com/us-en/x.html")
         assert b"matchMode" not in route.calls.last.request.read()
 
-        await client.lookup_product(
+        await getattr(client, method)(
             "https://www.etro.com/us-en/x.html", match_mode="strict"
         )
         assert b'"matchMode":"strict"' in route.calls.last.request.read()

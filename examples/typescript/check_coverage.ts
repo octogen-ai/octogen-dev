@@ -21,7 +21,7 @@ const URLS = [
 
 async function main(): Promise<void> {
   try {
-    const client = new OctogenClient();
+    const client = new OctogenClient({ baseUrl: "https://api.storerouter.ai/v1" });
     const coverage = await client.fetchDomainCoverage();
 
     console.log(`${String(coverage.hosts.length)} covered hosts`);

@@ -142,6 +142,31 @@ export class OctogenClient {
     return data as MerchantProductUrlLookupResponse;
   }
 
+  /** Exact alias of lookupProduct, using POST /v1/products/parse. */
+  async parseProductAlias(
+    url: string,
+    options: LookupProductOptions = {},
+  ): Promise<MerchantProductUrlLookupResponse> {
+    assertNonEmptyString(url, "url");
+    const resolutionMode = options.resolutionMode ?? "auto";
+    const onDemandCachePolicy = options.onDemandCachePolicy ?? "prefer_cache";
+    if (resolutionMode === "index_only" && onDemandCachePolicy !== "prefer_cache") {
+      throw new TypeError("onDemandCachePolicy does not apply to index_only");
+    }
+    const body: ProgrammaticProductLookupRequestBody = {
+      url,
+      resolutionMode,
+      onDemandCachePolicy,
+    };
+    // Omitted rather than defaulted: the server's own default is `loose`, and
+    // sending it explicitly would freeze this SDK to today's default.
+    if (options.matchMode !== undefined) {
+      body.matchMode = options.matchMode;
+    }
+    const data = await this.json("parseProductAlias", { body });
+    return data as MerchantProductUrlLookupResponse;
+  }
+
   /**
    * Resolve a product from page HTML you already have
    * (`POST /v1/products/resolve-from-html`).

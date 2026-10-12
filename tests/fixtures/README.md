@@ -6,7 +6,7 @@ SDK tests.
 ## `openapi/platform-v1.json`
 
 The published `/v1` OpenAPI contract, fetched verbatim from
-`https://cdn.octogen.ai/openapi/platform/v1/openapi.json` and re-serialized with
+`https://cdn.storerouter.ai/openapi/platform/v1/openapi.json` and re-serialized with
 sorted keys so a diff is readable.
 
 It is the single input to two things:
