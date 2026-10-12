@@ -46,7 +46,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/octogen-ai/octogen-dev"
-Documentation = "https://api.octogen.ai/v1/docs"
+Documentation = "https://api.storerouter.ai/v1/docs"
 Source = "https://github.com/octogen-ai/octogen-dev"
 
 [tool.pytest.ini_options]

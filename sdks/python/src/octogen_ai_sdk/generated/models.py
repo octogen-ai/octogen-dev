@@ -365,13 +365,13 @@ class ProductResolutionMetadata(BaseModel):
         populate_by_name=True,
     )
     completeness: Literal["complete", "partial"] = Field(..., title="Completeness")
-    method: Literal["json_ld", "open_graph", "html_meta", "resolved_url"] = Field(
-        ..., title="Method"
-    )
+    method: Literal[
+        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+    ] = Field(..., title="Method")
     missing_fields: list[str] | None = Field(
         None, alias="missingFields", title="Missingfields"
     )
-    rendered: bool | None = Field(False, title="Rendered")
+    rendered: bool | None = Field(None, title="Rendered")
 
 
 class ProgrammaticMoreLikeThisEffectiveFacet(BaseModel):
@@ -379,6 +379,7 @@ class ProgrammaticMoreLikeThisEffectiveFacet(BaseModel):
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
+    source: str | None = Field(None, title="Source")
     values: list[str] = Field(..., title="Values")
 
 
@@ -452,6 +453,11 @@ class ProgrammaticProductLookupRequest(BaseModel):
         extra="forbid",
         populate_by_name=True,
     )
+    format: Literal["json", "md", "markdown"] | None = Field(
+        "json",
+        description="Response representation. json (default) returns the structured MerchantProductUrlLookupResponse envelope. md and markdown are equivalent aliases that return the product as LLM-ready Markdown using the same Python renderer as Cosimo.",
+        title="Format",
+    )
     match_mode: Literal["strict", "loose"] | None = Field(
         "loose",
         alias="matchMode",
@@ -489,7 +495,7 @@ class ProgrammaticResolveFromHtmlRequest(BaseModel):
     )
     url: str | None = Field(
         None,
-        description="Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD url, og:url, or link rel=canonical) or resolution fails with product_not_found.",
+        description="Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url) or resolution fails with product_not_found.",
         title="Url",
     )
 
@@ -1168,6 +1174,12 @@ class ProgrammaticMoreLikeThisResponse(BaseModel):
     )
     items: list[MerchantProductListItem] = Field(..., title="Items")
     next_cursor: str | None = Field(None, alias="nextCursor", title="Nextcursor")
+    request_id: str = Field(
+        ...,
+        alias="requestId",
+        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+        title="Requestid",
+    )
     resolution: str | None = Field(
         None,
         description="How the source was resolved. Product sources omit this; image sources report the resolution-ladder rung: 'image_query_generation' (pipeline ran) or 'cached_image_query' (served from the image-content-hash cache).",
@@ -1187,7 +1199,18 @@ class ProgrammaticProductSearchPage(BaseModel):
         None, alias="effectiveQuery"
     )
     items: list[MerchantProductListItem] | None = Field([], title="Items")
-    next_cursor: str | None = Field(None, alias="nextCursor", title="Nextcursor")
+    next_cursor: str | None = Field(
+        None,
+        alias="nextCursor",
+        description="Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. On search, consecutive pages can repeat a product: the first page is relevance-ranked while later pages are ordered by quality score from the first page's last item, so de-duplicate by `uuid` when concatenating pages.",
+        title="Nextcursor",
+    )
+    request_id: str = Field(
+        ...,
+        alias="requestId",
+        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+        title="Requestid",
+    )
 
 
 class TextSearchQuery(BaseModel):
@@ -1407,6 +1430,66 @@ class MerchantProductView(BaseModel):
     videos: list[VideoView] | None = Field([], title="Videos")
 
 
+class ProgrammaticProductLookupResponse(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+        None, alias="cacheStatus", title="Cachestatus"
+    )
+    canonical_url: str | None = Field(
+        None,
+        alias="canonicalUrl",
+        description="For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
+        title="Canonicalurl",
+    )
+    catalog_display_name: str | None = Field(
+        None, alias="catalogDisplayName", title="Catalogdisplayname"
+    )
+    catalog_key: str | None = Field(None, alias="catalogKey", title="Catalogkey")
+    matched_via: str | None = Field(
+        None,
+        alias="matchedVia",
+        description="Debug: which probe arm of the URL lookup ladder resolved the product — normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.",
+        title="Matchedvia",
+    )
+    normalized_url: str | None = Field(
+        None,
+        alias="normalizedUrl",
+        description="Stable URL for this product that callers should reuse on follow-up lookups. For indexed results this is the matched product's stored normalized URL, falling back to its exact indexed URL for legacy rows. For client_html results it is Octogen's deterministic normalization of requestedUrl, falling back to canonicalUrl when the caller supplied no URL. That normalization forces https, strips leading www., fragments and known tracking params, and sorts remaining query params. For catalog extraction it uses shared normalization; for shallow on-demand results reuse resolvedUrl instead.",
+        title="Normalizedurl",
+    )
+    product: MerchantProductView
+    request_id: str = Field(
+        ...,
+        alias="requestId",
+        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+        title="Requestid",
+    )
+    requested_url: str | None = Field(
+        None,
+        alias="requestedUrl",
+        description="The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them — key on this field when variants must stay distinct.",
+        title="Requestedurl",
+    )
+    resolution: ProductResolutionMetadata | None = None
+    resolved_url: str | None = Field(
+        None,
+        alias="resolvedUrl",
+        description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
+        title="Resolvedurl",
+    )
+    source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
+    source_base_url: str | None = Field(
+        None, alias="sourceBaseUrl", title="Sourcebaseurl"
+    )
+    warnings: list[str] | None = Field(
+        None,
+        description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
+        title="Warnings",
+    )
+
+
 class ProgrammaticProductSearchRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1435,12 +1518,6 @@ class ProgrammaticProductSearchRequest(BaseModel):
         description="Enable result diversification (parity with Shop Agent / conversational search). Defaults off to preserve stable merchant-browse ordering across pages.",
         title="Diversity",
     )
-    embedding_dims: Literal[768, 1024, 3072] | None = Field(
-        None,
-        alias="embeddingDims",
-        description="Evaluation knob: dimensionality of the query embedding. The 3072-dim embedding is truncated to this prefix and renormalized (gemini-embedding is Matryoshka-trained). Non-default values target profile-suffixed vector fields that only exist on testbed indices, and require the caller to be a super-admin or an allowlisted evaluation org. Omitted means the live default (3072).",
-        title="Embeddingdims",
-    )
     facets: list[Facet] | None = Field(
         None,
         description="Structured facet filters to apply to the product list.",
@@ -1454,11 +1531,10 @@ class ProgrammaticProductSearchRequest(BaseModel):
         None, description="Minimum price filter", title="Price Min"
     )
     q: str | None = Field(None, description="Keyword search query", title="Q")
-    quantize_embedding: bool | None = Field(
-        None,
-        alias="quantizeEmbedding",
-        description="Evaluation knob: whether the query vector is int8-quantized (the live default, matching element_type: byte document fields) or sent as float32 (matching float/BBQ testbed fields). false targets profile-suffixed vector fields that only exist on testbed indices, and requires the caller to be a super-admin or an allowlisted evaluation org.",
-        title="Quantizeembedding",
+    relax: bool | None = Field(
+        False,
+        description="Opt-in zero-result facet relaxation. When a `q` search's LLM-generated facet filters match nothing, the least-trusted generated facet families are dropped cumulatively (brand enrichment, then attributes, then color/deep categories) and the search retried; the response's `nextCursor` records the converged round so later pages continue the exact relaxed result set. Facets you provide yourself (`facets` or `text_search_query`) are NEVER dropped — with no generated facets in play this flag is a no-op. Defaults off: an empty result stays an exact answer unless relaxation is requested. Cursors from a relaxed page must be replayed with `relax: true`; with `debug: true` the applied rounds are reported in `effectiveQuery`.",
+        title="Relax",
     )
     text_search_query: TextSearchQuery | None = Field(
         None,
@@ -1485,7 +1561,7 @@ class MerchantProductUrlLookupResponse(BaseModel):
     canonical_url: str | None = Field(
         None,
         alias="canonicalUrl",
-        description="For on-demand and client_html results: the canonical URL the product page declares (JSON-LD url, og:url, or link rel=canonical); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed results) or resolvedUrl (on-demand results), not this field.",
+        description="For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
         title="Canonicalurl",
     )
     catalog_display_name: str | None = Field(
@@ -1501,7 +1577,7 @@ class MerchantProductUrlLookupResponse(BaseModel):
     normalized_url: str | None = Field(
         None,
         alias="normalizedUrl",
-        description="Stable URL for this product that callers should reuse on follow-up lookups: the matched product's stored normalized URL (Octogen's deterministic normalization — scheme forced to https, leading www. stripped, fragments and known tracking params removed, remaining query params sorted), falling back to its exact indexed URL for legacy rows. Populated for indexed results; for on-demand results reuse resolvedUrl instead.",
+        description="Stable URL for this product that callers should reuse on follow-up lookups. For indexed results this is the matched product's stored normalized URL, falling back to its exact indexed URL for legacy rows. For client_html results it is Octogen's deterministic normalization of requestedUrl, falling back to canonicalUrl when the caller supplied no URL. That normalization forces https, strips leading www., fragments and known tracking params, and sorts remaining query params. For catalog extraction it uses shared normalization; for shallow on-demand results reuse resolvedUrl instead.",
         title="Normalizedurl",
     )
     product: MerchantProductView
@@ -1516,11 +1592,15 @@ class MerchantProductUrlLookupResponse(BaseModel):
     resolved_url: str | None = Field(
         None,
         alias="resolvedUrl",
-        description="Final URL after following redirects. Populated for on-demand results only.",
+        description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
         title="Resolvedurl",
     )
     source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
     source_base_url: str | None = Field(
         None, alias="sourceBaseUrl", title="Sourcebaseurl"
     )
-    warnings: list[str] | None = Field(None, title="Warnings")
+    warnings: list[str] | None = Field(
+        None,
+        description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
+        title="Warnings",
+    )

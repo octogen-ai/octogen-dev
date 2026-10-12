@@ -164,6 +164,37 @@ class OctogenClient:
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
 
+    async def parse_product_alias(
+        self,
+        url: str,
+        *,
+        match_mode: ProductLookupMatchMode | str | None = None,
+        resolution_mode: ProductLookupResolutionMode | str = (
+            ProductLookupResolutionMode.AUTO
+        ),
+        on_demand_cache_policy: ProductLookupCachePolicy | str = (
+            ProductLookupCachePolicy.PREFER_CACHE
+        ),
+    ) -> MerchantProductUrlLookupResponse:
+        """Exact alias of lookup_product, using POST /v1/products/parse.
+
+        ``match_mode`` defaults to the server's own default (``loose``) when
+        omitted; pass ``strict`` to resolve only exact and canonical URLs.
+        """
+        request = ProgrammaticProductLookupRequest(
+            url=url,
+            matchMode=(
+                ProductLookupMatchMode(match_mode) if match_mode is not None else None
+            ),
+            resolutionMode=ProductLookupResolutionMode(resolution_mode),
+            onDemandCachePolicy=ProductLookupCachePolicy(on_demand_cache_policy),
+        )
+        data = await self._json(
+            "parseProductAlias",
+            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
+        )
+        return MerchantProductUrlLookupResponse.model_validate(data)
+
     async def resolve_product_from_html(
         self,
         *,

@@ -10,7 +10,7 @@ reviewable diff rather than as a surprise at runtime:
 The input is the **committed snapshot** at
 ``tests/fixtures/openapi/platform-v1.json``, not the network, so codegen is
 reproducible offline and in CI. ``--fetch`` refreshes that snapshot from
-``cdn.octogen.ai`` first; ``--check`` regenerates into a temporary directory and
+``cdn.storerouter.ai`` first; ``--check`` regenerates into a temporary directory and
 fails when the committed output is stale.
 
 Only the *types* are generated. The method layer in each SDK is hand-written —
@@ -31,7 +31,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-CONTRACT_URL = "https://cdn.octogen.ai/openapi/platform/v1/openapi.json"
+CONTRACT_URL = "https://cdn.storerouter.ai/openapi/platform/v1/openapi.json"
 SNAPSHOT = REPO_ROOT / "tests" / "fixtures" / "openapi" / "platform-v1.json"
 
 TS_OUTPUT = REPO_ROOT / "sdks" / "typescript" / "src" / "generated" / "types.ts"
@@ -262,7 +262,7 @@ def main() -> int:
     parser.add_argument(
         "--fetch",
         action="store_true",
-        help="refresh the committed contract snapshot from cdn.octogen.ai first",
+        help="refresh the committed contract snapshot from cdn.storerouter.ai first",
     )
     parser.add_argument(
         "--check",

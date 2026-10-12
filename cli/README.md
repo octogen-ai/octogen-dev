@@ -8,7 +8,7 @@ or from an agent, which is the caller this is actually designed for.
 > `OCTOGEN_PLATFORM_API_KEY` yourself, or use the keyless trial below.
 
 ```bash
-npx -y @octogen-ai/cli@next domains --check https://www.macys.com/shop/product/x
+npx -y @octogen-ai/cli@next domains --base-url https://api.storerouter.ai/v1 --check https://www.macys.com/shop/product/x
 ```
 
 ## Design in one page
@@ -66,7 +66,7 @@ Org, key, quotas, rate-limit window, and both versions. This is what an agent
 parses to decide whether onboarding worked.
 
 ```bash
-octogen status --json
+octogen status --base-url https://api.storerouter.ai/v1 --json
 ```
 
 `ok` is the single boolean to branch on, and it is `true` only when a key
@@ -81,8 +81,8 @@ The probe is `GET /v1/me`, which requires a key. It is deliberately **not**
 ### `octogen domains [--check <url>]`
 
 ```bash
-octogen domains --check https://www.macys.com/shop/product/x   # exit 0, macys.com
-octogen domains --check https://www.not-a-merchant.example/p    # exit 6
+octogen domains --base-url https://api.storerouter.ai/v1 --check https://www.macys.com/shop/product/x   # exit 0, macys.com
+octogen domains --base-url https://api.storerouter.ai/v1 --check https://www.not-a-merchant.example/p    # exit 6
 ```
 
 The list comes back **normalized** — lowercased, leading `www.` stripped — so the
@@ -97,8 +97,8 @@ with its `ETag` and revalidated with `If-None-Match` (`--no-cache` to skip).
 ### `octogen lookup <url>`
 
 ```bash
-octogen lookup https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
-octogen lookup https://www.etro.com/us-en/cashmere-overshirt-MRBA008599TU2K3F0257.html
+octogen lookup --base-url https://api.storerouter.ai/v1 https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
+octogen lookup --base-url https://api.storerouter.ai/v1 https://www.etro.com/us-en/cashmere-overshirt-MRBA008599TU2K3F0257.html
 ```
 
 `--match-mode strict|loose`, `--resolution-mode auto|index_only|on_demand_only`,
@@ -110,8 +110,8 @@ the same as the merchant being uncovered. Ask that with `domains --check`.
 ### `octogen search <query>`
 
 ```bash
-octogen search 'paisley jackets' --limit 3
-octogen search dress --facet color=red,blue --price-max 300 --catalog macys
+octogen search --base-url https://api.storerouter.ai/v1 'paisley jackets' --limit 3
+octogen search --base-url https://api.storerouter.ai/v1 dress --facet color=red,blue --price-max 300 --catalog macys
 ```
 
 `--catalog`, `--facet k=v` (repeatable; comma-separate values), `--price-min`,
@@ -120,14 +120,14 @@ octogen search dress --facet color=red,blue --price-max 300 --catalog macys
 ### `octogen similar <url|uuid>`
 
 ```bash
-octogen similar https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
+octogen similar --base-url https://api.storerouter.ai/v1 https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
 ```
 
 ### `octogen resolve --html <file|->`
 
 ```bash
-octogen resolve --html page.html --url https://example.com/p/1
-curl -s https://example.com/p/1 | octogen resolve --html - --url https://example.com/p/1
+octogen resolve --base-url https://api.storerouter.ai/v1 --html page.html --url https://example.com/p/1
+curl -s https://example.com/p/1 | octogen resolve --base-url https://api.storerouter.ai/v1 --html - --url https://example.com/p/1
 ```
 
 HTML comes from a file or stdin and **never from an argument**: the body cap is
@@ -137,9 +137,9 @@ argv entry in an agent transcript is its own problem.
 ### `octogen voyage <url>`, `voyage status <task_id>`, `voyage list`
 
 ```bash
-octogen voyage https://newmerchant.example --wait --wait-timeout 1800
-octogen voyage status task_01H...
-octogen voyage list --status running
+octogen voyage --base-url https://api.storerouter.ai/v1 https://newmerchant.example --wait --wait-timeout 1800
+octogen voyage status --base-url https://api.storerouter.ai/v1 task_01H...
+octogen voyage list --base-url https://api.storerouter.ai/v1 --status running
 ```
 
 Voyages are shared per domain: starting one that is already running joins it and
@@ -150,8 +150,8 @@ with `voyage status`), `1` failed or cancelled.
 ### `octogen api <METHOD> <path>` — the escape hatch
 
 ```bash
-octogen api GET /coverage/url-lists --query limit=5
-octogen api POST /products/search --data '{"q":"dress","limit":1}'
+octogen api --base-url https://api.storerouter.ai/v1 GET /coverage/url-lists --query limit=5
+octogen api --base-url https://api.storerouter.ai/v1 POST /products/search --data '{"q":"dress","limit":1}'
 ```
 
 **Unstable by construction: you own the request body.** No request or response

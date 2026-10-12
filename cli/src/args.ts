@@ -74,7 +74,7 @@ export const GLOBAL_FLAGS: FlagSpecs = Object.freeze({
     placeholder: "seconds",
   },
   "base-url": {
-    describe: "Override the API base URL. For Octogen staging only.",
+    describe: "Override the API base URL.",
     kind: "string",
     placeholder: "url",
   },

@@ -30,7 +30,7 @@ from octogen_ai_sdk.operations import OPERATIONS
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT = REPO_ROOT / "tests" / "fixtures" / "openapi" / "platform-v1.json"
 
-CONTRACT_URL = "https://cdn.octogen.ai/openapi/platform/v1/openapi.json"
+CONTRACT_URL = "https://cdn.storerouter.ai/openapi/platform/v1/openapi.json"
 
 HTTP_METHODS = (
     "delete",

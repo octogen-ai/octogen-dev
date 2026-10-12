@@ -91,6 +91,8 @@ export const EXCLUDED_OPERATIONS = {
   getUrlList: URL_LISTS,
   listUrlListUrls: URL_LISTS,
   listUrlLists: URL_LISTS,
+  parseProductAlias:
+    "Exact alias of lookupProduct, already exposed by `octogen lookup`. Use `octogen api POST /products/parse` for the alias path.",
   removeUrlListUrls: URL_LISTS,
 } as const satisfies Partial<Record<OperationId, string>>;
 

@@ -80,7 +80,7 @@ say whether the SDK drifted from the contract or the contract moved:
 npm run test:published-contract
 ```
 
-It **skips** when `cdn.octogen.ai` is unreachable, because a CDN blip is not an
+It **skips** when `cdn.storerouter.ai` is unreachable, because a CDN blip is not an
 SDK defect. Set `OCTOGEN_REQUIRE_PUBLISHED_CONTRACT=1` to make unreachable a
 failure. When the published contract has genuinely moved, refresh the snapshot,
 add the SDK methods for anything new, and commit:

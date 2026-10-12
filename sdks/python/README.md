@@ -35,7 +35,7 @@ from octogen_ai_sdk import OctogenClient
 
 
 async def main() -> None:
-    async with OctogenClient() as client:
+    async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         results = await client.search_products(q="paisley jackets", limit=3)
         for product in results.items:
             print(product.title, product.product_url)
@@ -54,7 +54,7 @@ server** — lowercased, with a leading `www.` stripped — so it reports
 as uncovered. `fetch_domain_coverage` normalizes both sides for you:
 
 ```python
-async with OctogenClient() as client:
+async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     coverage = await client.fetch_domain_coverage()
 
     url = "https://www.macys.com/shop/product/some-dress"
@@ -123,7 +123,7 @@ if that stops being true — see
   membership with per-URL accepted/rejected outcomes.
 
 ```python
-async with OctogenClient() as client:
+async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     similar = await client.more_like_this_products(
         source_url="https://warrenlotas.com/products/black-hoodie",
         price_preference="any",
@@ -135,7 +135,7 @@ async with OctogenClient() as client:
 
 
 ```python
-async with OctogenClient() as client:
+async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     # Poll a voyage until its catalog is live. Voyages run for hours to days.
     started = await client.start_voyage("shop.example")
     progress = await client.get_voyage(started.task.task_id)
@@ -143,7 +143,7 @@ async with OctogenClient() as client:
 ```
 
 ```python
-async with OctogenClient() as client:
+async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     url_list = await client.create_coverage_url_list(name="q3-campaign")
     result = await client.add_coverage_url_list_urls(
         url_list.url_list_id,
@@ -161,15 +161,15 @@ workflow — build a list, then subscribe to its BigQuery listing with
 
 ```bash
 export OCTOGEN_PLATFORM_API_KEY=octo_live_...
-uv run --project sdks/python octogen-url-lists create --name q3-campaign --apply
+uv run --project sdks/python octogen-url-lists create --base-url https://api.storerouter.ai/v1 --name q3-campaign --apply
 ```
 
 Mutating commands are **dry-run by default** — matching `octogen-bq-subscribe`
 and `octogen-bq-autosubscribe` — so nothing changes until you pass `--apply`:
 
 ```bash
-uv run --project sdks/python octogen-url-lists add-urls cul_01... --file urls.txt
-uv run --project sdks/python octogen-url-lists add-urls cul_01... --file urls.txt --apply
+uv run --project sdks/python octogen-url-lists add-urls --base-url https://api.storerouter.ai/v1 cul_01... --file urls.txt
+uv run --project sdks/python octogen-url-lists add-urls --base-url https://api.storerouter.ai/v1 cul_01... --file urls.txt --apply
 ```
 
 `--file` reads one URL per line, skipping blank lines and `#` comments (pass
@@ -255,6 +255,8 @@ Bootstrap Octogen MCP credentials once from an interactive terminal:
 
 ```bash
 uv run --project sdks/python octogen-mcp-login \
+  --authkit-domain https://auth.storerouter.ai \
+  --resource https://mcp.storerouter.ai \
   --client-id-file /secure/octogen-mcp.client-id \
   --refresh-token-file /secure/octogen-mcp.refresh
 ```
@@ -266,6 +268,8 @@ OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id \
 OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh \
 uv run --project sdks/python --extra bigquery \
   octogen-bq-autosubscribe \
+  --mcp-url https://mcp.storerouter.ai/mcp/ \
+  --mcp-token-endpoint https://auth.storerouter.ai/oauth2/token \
   --project my-gcp-project \
   --principal serviceAccount:bq-reader@my-gcp-project.iam.gserviceaccount.com \
   --json
@@ -274,7 +278,7 @@ uv run --project sdks/python --extra bigquery \
 Apply from cron:
 
 ```cron
-*/15 * * * * cd /path/to/octogen-dev && OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh uv run --project sdks/python --extra bigquery octogen-bq-autosubscribe --project my-gcp-project --principal serviceAccount:bq-reader@my-gcp-project.iam.gserviceaccount.com --apply --json
+*/15 * * * * cd /path/to/octogen-dev && OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh uv run --project sdks/python --extra bigquery octogen-bq-autosubscribe --mcp-url https://mcp.storerouter.ai/mcp/ --mcp-token-endpoint https://auth.storerouter.ai/oauth2/token --project my-gcp-project --principal serviceAccount:bq-reader@my-gcp-project.iam.gserviceaccount.com --apply --json
 ```
 
 `OCTOGEN_MCP_REFRESH_TOKEN_FILE` should contain an Octogen MCP OAuth refresh

@@ -198,7 +198,7 @@ export interface paths {
         put?: never;
         /**
          * Lookup product by URL
-         * @description Resolve a product by URL with an index-first, globally gated fallback.
+         * @description Resolve a product by URL: index first, then configured-catalog JIT or shallow resolution. One 45-second deadline bounds all tiers; no background indexing is dispatched. `POST /products/parse` is an exact alias. The response defaults to the structured JSON envelope; set `format` to `md` or `markdown` for the Python-rendered Markdown representation used by Cosimo.
          */
         post: operations["lookupProduct"];
         delete?: never;
@@ -233,6 +233,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Alias for product lookup by URL
+         * @description Alias for `POST /products/lookup`. It accepts the identical request body, runs the identical lookup and optional on-demand resolution flow, and returns the identical response. Use `format: "md"` or `format: "markdown"` on either path for the Python-rendered Markdown representation; `format: "json"` is the default.
+         */
+        post: operations["parseProductAlias"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products/resolve-from-html": {
         parameters: {
             query?: never;
@@ -244,12 +264,14 @@ export interface paths {
         put?: never;
         /**
          * Resolve product from supplied HTML
-         * @description Resolve a product from caller-supplied page HTML — no index, no fetch.
+         * @description Resolve a product from caller-supplied page HTML — no index or fetch.
          *
          *     Same shallow deterministic extraction as lookup's on-demand path
          *     (JSON-LD → Open Graph → HTML meta), run over the submitted document
-         *     instead of a fetched one. Stateless: nothing is read from or written to
-         *     the index or the resolver cache.
+         *     instead of a fetched one. Nothing is written to the product index or
+         *     resolver cache. A uniformly sampled subset of authenticated submissions,
+         *     including the supplied HTML and URL, may be retained for bounded internal
+         *     analysis.
          */
         post: operations["resolveProductFromHtml"];
         delete?: never;
@@ -949,7 +971,7 @@ export interface components {
             cacheStatus?: ("hit" | "miss" | "refresh") | null;
             /**
              * Canonicalurl
-             * @description For on-demand and client_html results: the canonical URL the product page declares (JSON-LD url, og:url, or link rel=canonical); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed results) or resolvedUrl (on-demand results), not this field.
+             * @description For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.
              */
             canonicalUrl?: string | null;
             /** Catalogdisplayname */
@@ -963,7 +985,7 @@ export interface components {
             matchedVia?: string | null;
             /**
              * Normalizedurl
-             * @description Stable URL for this product that callers should reuse on follow-up lookups: the matched product's stored normalized URL (Octogen's deterministic normalization — scheme forced to https, leading www. stripped, fragments and known tracking params removed, remaining query params sorted), falling back to its exact indexed URL for legacy rows. Populated for indexed results; for on-demand results reuse resolvedUrl instead.
+             * @description Stable URL for this product that callers should reuse on follow-up lookups. For indexed results this is the matched product's stored normalized URL, falling back to its exact indexed URL for legacy rows. For client_html results it is Octogen's deterministic normalization of requestedUrl, falling back to canonicalUrl when the caller supplied no URL. That normalization forces https, strips leading www., fragments and known tracking params, and sorts remaining query params. For catalog extraction it uses shared normalization; for shallow on-demand results reuse resolvedUrl instead.
              */
             normalizedUrl?: string | null;
             product: components["schemas"]["MerchantProductView"];
@@ -977,7 +999,7 @@ export interface components {
             resolution?: components["schemas"]["ProductResolutionMetadata"] | null;
             /**
              * Resolvedurl
-             * @description Final URL after following redirects. Populated for on-demand results only.
+             * @description Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.
              */
             resolvedUrl?: string | null;
             /**
@@ -987,7 +1009,29 @@ export interface components {
             source: "indexed" | "on_demand" | "client_html";
             /** Sourcebaseurl */
             sourceBaseUrl?: string | null;
-            /** Warnings */
+            /**
+             * Warnings
+             * @description Stable, deduplicated warning codes for on-demand and
+             *     client-HTML results. Renames or removals are breaking changes; clients should
+             *     tolerate unknown additions. Current successful-response vocabulary:
+             *
+             *     | Code | Overview |
+             *     | --- | --- |
+             *     | `source_url_missing` | The client-HTML request omitted `url`. |
+             *     | `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |
+             *     | `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |
+             *     | `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |
+             *     | `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |
+             *     | `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |
+             *     | `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |
+             *     | `price_currency_missing` | A price was extracted without a currency. |
+             *     | `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |
+             *
+             *     For shallow and client-HTML resolution, a missing canonical URL produces
+             *     `404 product_not_found`, not a warning in a successful response. Catalog
+             *     extraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,
+             *     and recommended handling.
+             */
             warnings?: string[];
         };
         /**
@@ -1291,14 +1335,11 @@ export interface components {
              * Method
              * @enum {string}
              */
-            method: "json_ld" | "open_graph" | "html_meta" | "resolved_url";
+            method: "json_ld" | "open_graph" | "html_meta" | "resolved_url" | "catalog_extractor";
             /** Missingfields */
             missingFields?: string[];
-            /**
-             * Rendered
-             * @default false
-             */
-            rendered: boolean;
+            /** Rendered */
+            rendered?: boolean | null;
         };
         /**
          * ProductResolverCachePolicyV1
@@ -1309,6 +1350,8 @@ export interface components {
         ProgrammaticMoreLikeThisEffectiveFacet: {
             /** Name */
             name: string;
+            /** Source */
+            source?: string | null;
             /** Values */
             values: string[];
         };
@@ -1447,6 +1490,11 @@ export interface components {
             /** Nextcursor */
             nextCursor?: string | null;
             /**
+             * Requestid
+             * @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.
+             */
+            requestId: string;
+            /**
              * Resolution
              * @description How the source was resolved. Product sources omit this; image sources report the resolution-ladder rung: 'image_query_generation' (pipeline ran) or 'cached_image_query' (served from the image-content-hash cache).
              */
@@ -1506,6 +1554,13 @@ export interface components {
          */
         ProgrammaticProductLookupRequest: {
             /**
+             * Format
+             * @description Response representation. json (default) returns the structured MerchantProductUrlLookupResponse envelope. md and markdown are equivalent aliases that return the product as LLM-ready Markdown using the same Python renderer as Cosimo.
+             * @default json
+             * @enum {string}
+             */
+            format: "json" | "md" | "markdown";
+            /**
              * Matchmode
              * @description Index match strictness. strict matches only exact/canonical URLs. loose (default) adds a lowest-priority fallback that ignores path case and query params, so a URL differing from an indexed product only by case (e.g. /Women/ vs /women/) or a non-indexed query param (e.g. Zara's ?v1=) still resolves. It also recognizes structural aliases: Shopify collection-scoped URLs (/collections/<x>/products/<handle>) resolve to the canonical /products/<handle> product. A strict/canonical hit always wins over a loose or alias one.
              * @default loose
@@ -1530,6 +1585,78 @@ export interface components {
              */
             url?: string | null;
         };
+        /** ProgrammaticProductLookupResponse */
+        ProgrammaticProductLookupResponse: {
+            /** Cachestatus */
+            cacheStatus?: ("hit" | "miss" | "refresh") | null;
+            /**
+             * Canonicalurl
+             * @description For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.
+             */
+            canonicalUrl?: string | null;
+            /** Catalogdisplayname */
+            catalogDisplayName?: string | null;
+            /** Catalogkey */
+            catalogKey?: string | null;
+            /**
+             * Matchedvia
+             * @description Debug: which probe arm of the URL lookup ladder resolved the product — normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.
+             */
+            matchedVia?: string | null;
+            /**
+             * Normalizedurl
+             * @description Stable URL for this product that callers should reuse on follow-up lookups. For indexed results this is the matched product's stored normalized URL, falling back to its exact indexed URL for legacy rows. For client_html results it is Octogen's deterministic normalization of requestedUrl, falling back to canonicalUrl when the caller supplied no URL. That normalization forces https, strips leading www., fragments and known tracking params, and sorts remaining query params. For catalog extraction it uses shared normalization; for shallow on-demand results reuse resolvedUrl instead.
+             */
+            normalizedUrl?: string | null;
+            product: components["schemas"]["MerchantProductView"];
+            /**
+             * Requestedurl
+             * @description The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them — key on this field when variants must stay distinct.
+             */
+            requestedUrl?: string | null;
+            /**
+             * Requestid
+             * @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.
+             */
+            requestId: string;
+            resolution?: components["schemas"]["ProductResolutionMetadata"] | null;
+            /**
+             * Resolvedurl
+             * @description Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.
+             */
+            resolvedUrl?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "indexed" | "on_demand" | "client_html";
+            /** Sourcebaseurl */
+            sourceBaseUrl?: string | null;
+            /**
+             * Warnings
+             * @description Stable, deduplicated warning codes for on-demand and
+             *     client-HTML results. Renames or removals are breaking changes; clients should
+             *     tolerate unknown additions. Current successful-response vocabulary:
+             *
+             *     | Code | Overview |
+             *     | --- | --- |
+             *     | `source_url_missing` | The client-HTML request omitted `url`. |
+             *     | `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |
+             *     | `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |
+             *     | `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |
+             *     | `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |
+             *     | `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |
+             *     | `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |
+             *     | `price_currency_missing` | A price was extracted without a currency. |
+             *     | `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |
+             *
+             *     For shallow and client-HTML resolution, a missing canonical URL produces
+             *     `404 product_not_found`, not a warning in a successful response. Catalog
+             *     extraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,
+             *     and recommended handling.
+             */
+            warnings?: string[];
+        };
         /**
          * ProgrammaticProductSearchPage
          * @description Search page plus the debug effective query (parity with more-like-this).
@@ -1541,8 +1668,16 @@ export interface components {
              * @default []
              */
             items: components["schemas"]["MerchantProductListItem"][];
-            /** Nextcursor */
+            /**
+             * Nextcursor
+             * @description Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. On search, consecutive pages can repeat a product: the first page is relevance-ranked while later pages are ordered by quality score from the first page's last item, so de-duplicate by `uuid` when concatenating pages.
+             */
             nextCursor?: string | null;
+            /**
+             * Requestid
+             * @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.
+             */
+            requestId: string;
         };
         /**
          * ProgrammaticProductSearchRequest
@@ -1577,11 +1712,6 @@ export interface components {
              */
             diversity: boolean;
             /**
-             * Embeddingdims
-             * @description Evaluation knob: dimensionality of the query embedding. The 3072-dim embedding is truncated to this prefix and renormalized (gemini-embedding is Matryoshka-trained). Non-default values target profile-suffixed vector fields that only exist on testbed indices, and require the caller to be a super-admin or an allowlisted evaluation org. Omitted means the live default (3072).
-             */
-            embeddingDims?: (768 | 1024 | 3072) | null;
-            /**
              * Facets
              * @description Structured facet filters to apply to the product list.
              */
@@ -1607,10 +1737,11 @@ export interface components {
              */
             q?: string | null;
             /**
-             * Quantizeembedding
-             * @description Evaluation knob: whether the query vector is int8-quantized (the live default, matching element_type: byte document fields) or sent as float32 (matching float/BBQ testbed fields). false targets profile-suffixed vector fields that only exist on testbed indices, and requires the caller to be a super-admin or an allowlisted evaluation org.
+             * Relax
+             * @description Opt-in zero-result facet relaxation. When a `q` search's LLM-generated facet filters match nothing, the least-trusted generated facet families are dropped cumulatively (brand enrichment, then attributes, then color/deep categories) and the search retried; the response's `nextCursor` records the converged round so later pages continue the exact relaxed result set. Facets you provide yourself (`facets` or `text_search_query`) are NEVER dropped — with no generated facets in play this flag is a no-op. Defaults off: an empty result stays an exact answer unless relaxation is requested. Cursors from a relaxed page must be replayed with `relax: true`; with `debug: true` the applied rounds are reported in `effectiveQuery`.
+             * @default false
              */
-            quantizeEmbedding?: boolean | null;
+            relax: boolean;
             /** @description Pre-generated semantic search query. When provided, the service uses this query directly instead of re-running query understanding. */
             text_search_query?: components["schemas"]["TextSearchQuery"] | null;
         };
@@ -1629,7 +1760,7 @@ export interface components {
             html: string;
             /**
              * Url
-             * @description Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD url, og:url, or link rel=canonical) or resolution fails with product_not_found.
+             * @description Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url) or resolution fails with product_not_found.
              */
             url?: string | null;
         };
@@ -2648,27 +2779,43 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description The structured lookup envelope by default, or the product rendered as Markdown when format is md or markdown. */
             200: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MerchantProductUrlLookupResponse"];
+                    "application/json": components["schemas"]["ProgrammaticProductLookupResponse"];
+                    "text/markdown": string;
                 };
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
                 };
             };
+            /** @description Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs. */
+            402: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description API key is valid but not allowed to access this resource. */
             403: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2678,6 +2825,8 @@ export interface operations {
             /** @description Requested catalog or product was not found for this API key. */
             404: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2687,6 +2836,8 @@ export interface operations {
             /** @description Request validation failed. */
             422: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2696,6 +2847,8 @@ export interface operations {
             /** @description Product Lookup service-wide rate limit exceeded. */
             429: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2703,13 +2856,17 @@ export interface operations {
             /** @description The target failed before product extraction completed. */
             502: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Indexed lookup timed out waiting for a catalog DB connection or was killed at the server-side statement timeout (retry after the advertised delay), or on-demand product resolution is unavailable. */
+            /** @description Indexed lookup timed out waiting for a catalog DB connection or was killed at the server-side statement timeout (retry after the advertised delay), or on-demand product resolution is unavailable. Prepaid requests also return detail.code=billing_temporarily_suspended during an explicit operator billing incident. */
             503: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2717,6 +2874,8 @@ export interface operations {
             /** @description On-demand product resolution exceeded its deadline. */
             504: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2736,18 +2895,33 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Successful response */
             200: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ProgrammaticMoreLikeThisResponse"];
                 };
             };
+            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, or records a relaxation round that no longer maps onto the current query. Restart from page 1 (omit the cursor). */
+            400: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
             /** @description Missing or invalid Bearer API key. */
             401: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2757,6 +2931,8 @@ export interface operations {
             /** @description API key is valid but not allowed to access this resource. */
             403: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2766,6 +2942,8 @@ export interface operations {
             /** @description Requested catalog or product was not found for this API key. */
             404: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2775,11 +2953,129 @@ export interface operations {
             /** @description Request validation failed. */
             422: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
                 };
+            };
+        };
+    };
+    parseProductAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticProductLookupRequest"];
+            };
+        };
+        responses: {
+            /** @description The structured lookup envelope by default, or the product rendered as Markdown when format is md or markdown. */
+            200: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticProductLookupResponse"];
+                    "text/markdown": string;
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs. */
+            402: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requested catalog or product was not found for this API key. */
+            404: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Product Lookup service-wide rate limit exceeded. */
+            429: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The target failed before product extraction completed. */
+            502: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Indexed lookup timed out waiting for a catalog DB connection or was killed at the server-side statement timeout (retry after the advertised delay), or on-demand product resolution is unavailable. Prepaid requests also return detail.code=billing_temporarily_suspended during an explicit operator billing incident. */
+            503: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description On-demand product resolution exceeded its deadline. */
+            504: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2889,27 +3185,53 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description Successful response */
             200: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ProgrammaticProductSearchPage"];
                 };
             };
-            /** @description Missing or invalid Bearer API key. */
-            401: {
+            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, or records a relaxation round that no longer maps onto the current query. Restart from page 1 (omit the cursor). */
+            400: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
                 };
             };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs. */
+            402: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description API key is valid but not allowed to access this resource. */
             403: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2919,6 +3241,8 @@ export interface operations {
             /** @description Requested catalog or product was not found for this API key. */
             404: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2928,11 +3252,22 @@ export interface operations {
             /** @description Request validation failed. */
             422: {
                 headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Prepaid API access explicitly suspended by an operator (detail.code=billing_temporarily_suspended), or billing startup incomplete. Management/payment access remains available. */
+            503: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3047,7 +3382,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Domain is blocked from voyaging. */
+            /** @description Domain is blacklisted or already covered by an existing catalog. */
             409: {
                 headers: {
                     [name: string]: unknown;

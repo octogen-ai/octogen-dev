@@ -1,5 +1,5 @@
 /**
- * The committed snapshot versus the contract `cdn.octogen.ai` is serving right
+ * The committed snapshot versus the contract `cdn.storerouter.ai` is serving right
  * now.
  *
  * This is the drift alarm, and it is deliberately a separate file from

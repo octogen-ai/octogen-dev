@@ -23,7 +23,7 @@ pass `apiKey` explicitly.
 ```ts
 import { OctogenClient } from "@octogen-ai/sdk";
 
-const client = new OctogenClient();
+const client = new OctogenClient({ baseUrl: "https://api.storerouter.ai/v1" });
 const results = await client.searchProducts({
   limit: 3,
   q: "paisley jackets",

@@ -4,9 +4,11 @@ Installed as ``octogen-url-lists``. A URL list is a named set of product URLs
 Octogen joins against its crawled catalogs daily, publishing the matches to a
 per-list BigQuery listing your registered Readers can subscribe to.
 
-    octogen-url-lists create --name q3-campaign --apply
-    octogen-url-lists add-urls cul_01... --file urls.txt --apply
-    octogen-url-lists get cul_01...
+    octogen-url-lists create --base-url https://api.storerouter.ai/v1 \\
+        --name q3-campaign --apply
+    octogen-url-lists add-urls --base-url https://api.storerouter.ai/v1 \\
+        cul_01... --file urls.txt --apply
+    octogen-url-lists get --base-url https://api.storerouter.ai/v1 cul_01...
 
 Mutating commands (``create``, ``add-urls``, ``remove-urls``, ``delete``) are
 dry-run by default and need ``--apply``, matching ``octogen-bq-subscribe`` and
