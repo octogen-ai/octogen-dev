@@ -86,11 +86,12 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   rate-limit posture. Read-only and side-effect free: safe on startup and in CI.
 - `listDomains(options?)` and `fetchDomainCoverage(previous?)` return the covered
   hosts, with `ETag` revalidation and host normalization.
-- `searchProducts(params)` searches all authorized catalogs by default, or one
-  catalog when `catalog` is provided. The query field is `q`; results come back
-  as `items` + `nextCursor`, each item carrying `productUrl`.
+- `searchProducts(params)` searches every active catalog by default, or only
+  the catalogs in `catalogs` (1–500 keys) when it is provided. The query field
+  is `q`; results come back as `items` + `nextCursor`, each item carrying
+  `productUrl`. `catalog` and `textSearchQuery` are deprecated (see below).
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
-  or UUID, optionally within one catalog.
+  or UUID, optionally restricted to `catalogs` (1–100 keys).
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. `matchMode`, `resolutionMode`, and `onDemandCachePolicy` are optional;
   the request field is `url`.
@@ -143,6 +144,30 @@ console.log(
   result.rejected.map((r) => r.code),
 );
 ```
+
+### Narrowing to catalogs
+
+Pass `catalogs` — a list of catalog keys — to restrict results. Omit it to
+search everything; an empty list is refused rather than sent.
+
+```ts
+const dresses = await client.searchProducts({
+  catalogs: ["macys", "jcrew"],
+  q: "linen dress",
+});
+```
+
+**Deprecated in 0.4.0**, still sent as-is and warned about once per process:
+
+- `catalog: "macys"` on `searchProducts` → use `catalogs: ["macys"]`. Passing
+  both is a `TypeError`.
+- `textSearchQuery` on `searchProducts` → use `q` with `facets`, `priceMin`,
+  and `priceMax`.
+
+The API is retiring both fields on search, so they will be removed from a later
+SDK release. `moreLikeThisProducts` already takes only `catalogs`: the endpoint
+stopped accepting `catalog`, and 0.4.0 refuses it locally instead of sending a
+request that would fail.
 
 ## Development
 

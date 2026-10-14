@@ -96,11 +96,12 @@ if that stops being true — see
   in CI.
 - `list_domains(...)` and `fetch_domain_coverage(previous=None)` return the
   covered hosts, with `ETag` revalidation and host normalization.
-- `search_products(...)` searches all authorized catalogs by default, or one
-  catalog when `catalog` is provided. The query field is `q`; results come back
-  as `items` + `next_cursor`, each item carrying `product_url`.
+- `search_products(...)` searches every active catalog by default, or only the
+  catalogs in `catalogs` (1–500 keys) when it is provided. The query field is
+  `q`; results come back as `items` + `next_cursor`, each item carrying
+  `product_url`. `catalog` and `text_search_query` are deprecated (see below).
 - `more_like_this_products(...)` finds products similar to a source product URL
-  or UUID, optionally within one catalog.
+  or UUID, optionally restricted to `catalogs` (1–100 keys).
 - `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
   resolves a product URL from the index or on demand. `resolution_mode` and
   `on_demand_cache_policy` default to `auto` and `prefer_cache`; omitting
@@ -151,6 +152,27 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     )
     print(result.url_count, [r.code for r in result.rejected])
 ```
+
+### Narrowing to catalogs
+
+Pass `catalogs` — a list of catalog keys — to restrict results. Omit it to
+search everything; an empty list is refused rather than sent.
+
+```python
+async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
+    dresses = await client.search_products(catalogs=["macys", "jcrew"], q="linen dress")
+```
+
+**Deprecated in 0.4.0**, still sent as-is with a `DeprecationWarning`:
+
+- `catalog="macys"` on `search_products` → use `catalogs=["macys"]`. Passing
+  both raises `ValueError`.
+- `text_search_query=...` on `search_products` → use `q` with `facets`,
+  `price_min`, and `price_max`.
+
+The API is retiring both fields on search, so they will be removed from a later
+SDK release. `more_like_this_products` already takes only `catalogs`: the
+endpoint stopped accepting `catalog`, so 0.4.0 removed the keyword.
 
 ## Coverage URL lists CLI
 

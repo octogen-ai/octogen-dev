@@ -148,8 +148,8 @@ Four URL fields describe how the result was reached, each with one meaning:
 
 ### `POST /products/search` — search products
 
-Searches products across all active crawled catalogs. To restrict
-the search to one catalog, include `catalog`; everything else is optional.
+Searches products across all active crawled catalogs. To restrict the search
+to specific catalogs, include `catalogs`; everything else is optional.
 
 ```bash
 curl -sS https://api.storerouter.ai/v1/products/search \
@@ -169,16 +169,17 @@ curl -sS https://api.storerouter.ai/v1/products/search \
 
 Request fields:
 
-| Field               | Type    | Notes                                                                                                                 |
-| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
-| `catalog`           | string  | Optional. When omitted, searches all active crawled catalogs. When provided, it must name one active crawled catalog. |
-| `q`                 | string  | Free-text keyword query. Omit to browse without filtering.                                                            |
-| `facets`            | array   | Structured filters (brand, category, color, product attributes).                                                      |
-| `price_min`         | number  | Inclusive minimum price.                                                                                              |
-| `price_max`         | number  | Inclusive maximum price.                                                                                              |
-| `cursor`            | string  | Opaque pagination cursor from a previous response's `nextCursor`.                                                     |
-| `limit`             | integer | Page size, 1..100. Defaults to 50.                                                                                    |
-| `text_search_query` | object  | Pre-generated semantic query. Prefer `q` unless an upstream workflow already produced this object.                    |
+| Field               | Type    | Notes                                                                                           |
+| ------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `catalogs`          | array   | Optional allowlist of 1–500 catalog keys. When omitted, searches all active crawled catalogs.   |
+| `catalog`           | string  | **Deprecated** — send `catalogs: ["<key>"]`. Being retired; cannot be combined with `catalogs`. |
+| `q`                 | string  | Free-text keyword query. Omit to browse without filtering.                                      |
+| `facets`            | array   | Structured filters (brand, category, color, product attributes).                                |
+| `price_min`         | number  | Inclusive minimum price.                                                                        |
+| `price_max`         | number  | Inclusive maximum price.                                                                        |
+| `cursor`            | string  | Opaque pagination cursor from a previous response's `nextCursor`.                               |
+| `limit`             | integer | Page size, 1..100. Defaults to 50.                                                              |
+| `text_search_query` | object  | **Deprecated** — send `q` (with `facets`, `price_min`, `price_max`). Being retired.             |
 
 Response:
 
@@ -236,7 +237,7 @@ curl -sS https://api.storerouter.ai/v1/products/more-like-this \
     "source": {
       "url": "https://warrenlotas.com/products/black-hoodie"
     },
-    "catalog": "warrenlotas",
+    "catalogs": ["warrenlotas"],
     "price_preference": "any",
     "limit": 12
   }'
@@ -248,7 +249,7 @@ Request fields:
 | ------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
 | `source.url`       | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.               |
 | `source.uuid`      | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                |
-| `catalog`          | string  | Optional. If present, source resolution and search are limited to this active crawled catalog.        |
+| `catalogs`         | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.     |
 | `limit`            | integer | Page size from 1 to 100. Defaults to 12.                                                              |
 | `cursor`           | string  | Opaque pagination cursor from the previous response.                                                  |
 | `include_facets`   | array   | Additional include facets appended after server-generated audience facets.                            |

@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from octogen_ai_sdk.generated import models as _contract
 
@@ -174,9 +174,24 @@ class TextSearchQuery(_RequestModel):
     compact_mode: Literal["card", "compact", "medium", "enriched"] | None = None
 
 
-class ProgrammaticProductSearchRequest(_RequestModel):
-    """Product search request targeting one or all active crawled catalogs."""
+def _validate_catalog_keys(catalogs: list[str] | None) -> list[str] | None:
+    # Length bounds live on the field; this rejects the blank key the contract
+    # would accept and then match nothing with. Keys are otherwise sent as given.
+    if catalogs is not None and any(not key.strip() for key in catalogs):
+        raise ValueError("catalogs must contain only non-empty catalog keys")
+    return catalogs
 
+
+class ProgrammaticProductSearchRequest(_RequestModel):
+    """Product search request targeting a catalog allowlist or every catalog.
+
+    ``catalog`` and ``text_search_query`` are deprecated: the API is retiring
+    both on search. Use ``catalogs=[key]`` and ``q`` instead.
+    """
+
+    # An empty list is refused rather than sent: the server is retiring "empty
+    # means everything", and omitting the field already says that.
+    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
     catalog: str | None = Field(default=None, min_length=1)
     cursor: str | None = None
     limit: int = Field(default=50, ge=1, le=100)
@@ -185,6 +200,16 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     facets: list[Facet] | None = None
     price_min: float | None = None
     price_max: float | None = None
+
+    _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+
+    @model_validator(mode="after")
+    def reject_catalog_with_catalogs(self) -> ProgrammaticProductSearchRequest:
+        if self.catalog is not None and self.catalogs is not None:
+            raise ValueError(
+                "Pass catalogs or catalog, not both; catalog is deprecated"
+            )
+        return self
 
 
 class ProgrammaticProductLookupRequest(_RequestModel):
@@ -247,16 +272,21 @@ class ProgrammaticMoreLikeThisSource(_RequestModel):
 
 
 class ProgrammaticMoreLikeThisRequest(_RequestModel):
-    """More Like This request targeting one or all active crawled catalogs."""
+    """More Like This request, optionally restricted to a catalog allowlist.
+
+    ``catalogs`` restricts the *results*; the source product may live outside it.
+    """
 
     source: ProgrammaticMoreLikeThisSource
-    catalog: str | None = Field(default=None, min_length=1)
+    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=100)
     cursor: str | None = None
     limit: int = Field(default=12, ge=1, le=100)
     include_facets: list[Facet] | None = None
     exclude_facets: list[Facet] | None = None
     price_preference: PricePreference = PricePreference.ANY
     debug: bool = False
+
+    _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
 
 
 class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):

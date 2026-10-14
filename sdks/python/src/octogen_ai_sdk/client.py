@@ -80,7 +80,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.3.0"
+        return "0.4.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -331,6 +331,7 @@ class OctogenClient:
     async def search_products(
         self,
         *,
+        catalogs: Sequence[str] | None = None,
         catalog: str | None = None,
         q: str | None = None,
         text_search_query: TextSearchQuery | dict[str, Any] | None = None,
@@ -340,9 +341,34 @@ class OctogenClient:
         cursor: str | None = None,
         limit: int = 50,
     ) -> MerchantProductListPage:
-        """Search products in one catalog, or all authorized catalogs if omitted."""
+        """Search products, restricted to ``catalogs`` when given.
+
+        ``catalogs`` is an allowlist of 1-500 catalog keys, sent as given; omit
+        it to search every active catalog.
+
+        ``catalog`` and ``text_search_query`` are deprecated and emit a
+        ``DeprecationWarning``: the API is retiring both on search. Use
+        ``catalogs=[key]`` and ``q`` instead. ``catalog`` cannot be combined
+        with ``catalogs``.
+        """
+        # `catalog` is deliberately not rewritten to `catalogs`: the deprecated
+        # field goes out as itself, so the server-side count of `catalog`
+        # traffic stays an honest measure of who still has to migrate.
+        if catalog is not None:
+            warnings.warn(
+                "search_products(catalog=...) is deprecated; "
+                "pass catalogs=[key] instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         resolved_text_search_query: TextSearchQuery | None = None
         if text_search_query is not None:
+            warnings.warn(
+                "search_products(text_search_query=...) is deprecated; "
+                "pass q (with facets, price_min, price_max) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             resolved_text_search_query = _coerce_text_search_query(text_search_query)
 
         resolved_facets: list[Facet] | None = None
@@ -350,6 +376,7 @@ class OctogenClient:
             resolved_facets = [_coerce_facet(facet) for facet in facets]
 
         request = ProgrammaticProductSearchRequest(
+            catalogs=_catalog_list(catalogs),
             catalog=catalog,
             cursor=cursor,
             limit=limit,
@@ -370,7 +397,7 @@ class OctogenClient:
         *,
         source_url: str | None = None,
         source_uuid: str | None = None,
-        catalog: str | None = None,
+        catalogs: Sequence[str] | None = None,
         include_facets: Sequence[Facet | dict[str, Any]] | None = None,
         exclude_facets: Sequence[Facet | dict[str, Any]] | None = None,
         price_preference: PricePreference | str = PricePreference.ANY,
@@ -378,7 +405,11 @@ class OctogenClient:
         limit: int = 12,
         debug: bool = False,
     ) -> ProgrammaticMoreLikeThisResponse:
-        """Find products similar to a source product URL or UUID."""
+        """Find products similar to a source product URL or UUID.
+
+        ``catalogs`` (1-100 keys) restricts the results; the source product may
+        live outside it. Omit it to draw results from every active catalog.
+        """
         resolved_include_facets: list[Facet] | None = None
         if include_facets is not None:
             resolved_include_facets = [_coerce_facet(facet) for facet in include_facets]
@@ -393,7 +424,7 @@ class OctogenClient:
                 url=source_url,
                 uuid=source_uuid,
             ),
-            catalog=catalog,
+            catalogs=_catalog_list(catalogs),
             cursor=cursor,
             limit=limit,
             include_facets=resolved_include_facets,
@@ -583,6 +614,14 @@ class OctogenClient:
             "Authorization": f"Bearer {self._api_key}",
             "User-Agent": USER_AGENT,
         }
+
+
+def _catalog_list(catalogs: Sequence[str] | None) -> list[str] | None:
+    # A bare string is a `Sequence[str]` too, and would otherwise go out as one
+    # catalog key per character.
+    if isinstance(catalogs, str):
+        raise TypeError("catalogs must be a list of catalog keys, not a string")
+    return None if catalogs is None else list(catalogs)
 
 
 def _coerce_text_search_query(

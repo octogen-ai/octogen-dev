@@ -157,10 +157,26 @@ export interface TextSearchQueryPayload {
 }
 
 export interface SearchProductsParams {
+  /**
+   * Restrict results to these catalog keys (1–500). Omit to search every
+   * active catalog. Keys are sent as given; one outside your grants simply
+   * matches nothing.
+   */
+  catalogs?: readonly string[];
+  /**
+   * @deprecated Use `catalogs: [key]`. The API is retiring the single-valued
+   * `catalog` field on search; it will be removed from this SDK in a future
+   * release. Cannot be combined with `catalogs`.
+   */
   catalog?: string;
   cursor?: string;
   limit?: number;
   q?: string;
+  /**
+   * @deprecated The API is retiring the pre-generated `text_search_query` on
+   * search; pass `q` (with `facets`, `priceMin`, `priceMax`) instead. It will be
+   * removed from this SDK in a future release.
+   */
   textSearchQuery?: TextSearchQuery;
   facets?: Facet[];
   priceMin?: number;
@@ -168,10 +184,13 @@ export interface SearchProductsParams {
 }
 
 export interface ProgrammaticProductSearchRequest {
+  catalogs?: string[];
+  /** @deprecated Retiring on the API; send `catalogs`. */
   catalog?: string;
   cursor?: string;
   limit: number;
   q?: string;
+  /** @deprecated Retiring on the API; send `q`. */
   text_search_query?: TextSearchQueryPayload;
   facets?: Facet[];
   price_min?: number;
@@ -201,7 +220,11 @@ export interface MoreLikeThisSource {
 
 export interface MoreLikeThisProductsParams {
   source: MoreLikeThisSource;
-  catalog?: string;
+  /**
+   * Restrict results to these catalog keys (1–100). The source product itself
+   * may live outside the list. Omit to draw results from every active catalog.
+   */
+  catalogs?: readonly string[];
   cursor?: string;
   limit?: number;
   includeFacets?: Facet[];
@@ -212,7 +235,7 @@ export interface MoreLikeThisProductsParams {
 
 export interface ProgrammaticMoreLikeThisRequest {
   source: MoreLikeThisSource;
-  catalog?: string;
+  catalogs?: string[];
   cursor?: string;
   limit: number;
   include_facets?: Facet[];

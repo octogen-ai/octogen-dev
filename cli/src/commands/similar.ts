@@ -49,21 +49,8 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
 
   const params: MoreLikeThisProductsParams = { source: sourceFor(target) };
   const catalogs = args.strings("catalog");
-  // The SDK still takes a single `catalog`; the contract's field is the
-  // `catalogs` allowlist. One value is the case an agent has, so pass the
-  // first and say so rather than silently dropping the rest.
-  const catalog = catalogs[0];
-  if (catalog !== undefined) {
-    params.catalog = catalog;
-  }
-  if (catalogs.length > 1) {
-    writer.problem({
-      code: "single_catalog_only",
-      message: `--catalog is single-valued here; using ${catalog ?? ""} and ignoring ${String(
-        catalogs.length - 1,
-      )} more.`,
-      severity: "warning",
-    });
+  if (catalogs.length > 0) {
+    params.catalogs = catalogs;
   }
   const cursor = args.string("cursor");
   if (cursor !== undefined) {

@@ -43,7 +43,7 @@ import type {
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.3.0";
+export const SDK_VERSION = "0.4.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -651,11 +651,60 @@ function assertUrlBatch(urls: string[]): void {
   }
 }
 
+const warnedDeprecatedParams = new Set<string>();
+
+/** Warn once per process that a still-working parameter is on its way out. */
+function warnDeprecatedParam(name: string, message: string): void {
+  if (warnedDeprecatedParams.has(name)) {
+    return;
+  }
+  warnedDeprecatedParams.add(name);
+  console.warn(`[octogen] ${name} is deprecated: ${message}`);
+}
+
+/**
+ * Validate a `catalogs` allowlist. An empty list is refused rather than sent:
+ * the server is retiring "empty means everything", and omitting the field is
+ * the unambiguous way to search every catalog.
+ */
+function assertCatalogs(catalogs: unknown, max: number): void {
+  if (!Array.isArray(catalogs) || catalogs.length < 1 || catalogs.length > max) {
+    throw new TypeError(
+      `catalogs must contain between 1 and ${String(max)} catalog keys; ` +
+        "omit it to search every catalog",
+    );
+  }
+  for (const key of catalogs) {
+    if (typeof key !== "string" || key.trim().length === 0) {
+      throw new TypeError("catalogs must contain only non-empty catalog keys");
+    }
+  }
+}
+
 function toSearchPayload(
   params: SearchProductsParams,
 ): ProgrammaticProductSearchRequest {
-  if (params.catalog !== undefined) {
-    assertNonEmptyString(params.catalog, "catalog");
+  // `catalog` is deliberately not rewritten to `catalogs`: the deprecated field
+  // goes out as itself, so the server-side count of `catalog` traffic stays an
+  // honest measure of who still has to migrate.
+  /* eslint-disable @typescript-eslint/no-deprecated -- reading the deprecated params is the point */
+  const { catalog, textSearchQuery } = params;
+  /* eslint-enable @typescript-eslint/no-deprecated */
+  if (catalog !== undefined && params.catalogs !== undefined) {
+    throw new TypeError("Pass catalogs or catalog, not both; catalog is deprecated");
+  }
+  if (params.catalogs !== undefined) {
+    assertCatalogs(params.catalogs, 500);
+  }
+  if (catalog !== undefined) {
+    assertNonEmptyString(catalog, "catalog");
+    warnDeprecatedParam("catalog", "pass catalogs: [key] to searchProducts instead.");
+  }
+  if (textSearchQuery !== undefined) {
+    warnDeprecatedParam(
+      "textSearchQuery",
+      "pass q (with facets, priceMin, priceMax) to searchProducts instead.",
+    );
   }
   const limit = params.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
@@ -663,8 +712,12 @@ function toSearchPayload(
   }
 
   const payload: ProgrammaticProductSearchRequest = { limit };
-  if (params.catalog !== undefined) {
-    payload.catalog = params.catalog;
+  if (params.catalogs !== undefined) {
+    payload.catalogs = [...params.catalogs];
+  }
+  if (catalog !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    payload.catalog = catalog;
   }
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;
@@ -681,8 +734,9 @@ function toSearchPayload(
   if (params.q !== undefined) {
     payload.q = params.q;
   }
-  if (params.textSearchQuery !== undefined) {
-    payload.text_search_query = toTextSearchQueryPayload(params.textSearchQuery);
+  if (textSearchQuery !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    payload.text_search_query = toTextSearchQueryPayload(textSearchQuery);
   }
   return payload;
 }
@@ -748,8 +802,16 @@ function toTextSearchQueryPayload(query: TextSearchQuery): TextSearchQueryPayloa
 function toMoreLikeThisPayload(
   params: MoreLikeThisProductsParams,
 ): ProgrammaticMoreLikeThisRequest {
-  if (params.catalog !== undefined) {
-    assertNonEmptyString(params.catalog, "catalog");
+  // The endpoint replaced `catalog` with `catalogs` and refuses the old field,
+  // so a JavaScript caller still passing it gets told here rather than having
+  // it dropped and the results silently widened to every catalog.
+  if ("catalog" in params) {
+    throw new TypeError(
+      "moreLikeThisProducts takes catalogs: [key], not catalog; the API no longer accepts catalog",
+    );
+  }
+  if (params.catalogs !== undefined) {
+    assertCatalogs(params.catalogs, 100);
   }
 
   const limit = params.limit ?? 12;
@@ -764,8 +826,8 @@ function toMoreLikeThisPayload(
     source: toMoreLikeThisSourcePayload(params.source),
   };
 
-  if (params.catalog !== undefined) {
-    payload.catalog = params.catalog;
+  if (params.catalogs !== undefined) {
+    payload.catalogs = [...params.catalogs];
   }
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;
