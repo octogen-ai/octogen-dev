@@ -87,11 +87,11 @@ export type _CachePoliciesExact = Assert<
 // ── POST /products/search ──────────────────────────────────────────────────
 
 export const SEARCH_FIELDS = {
-  catalog: { flag: "--catalog" },
-  catalogs: unsupported(
-    "Multi-catalog allowlist. Not on the SDK's SearchProductsParams; `--catalog` " +
-      "covers the single-catalog case an agent actually asks for.",
+  catalog: unsupported(
+    "Deprecated by the API in favor of the `catalogs` allowlist, which `--catalog` " +
+      "now sends.",
   ),
+  catalogs: { flag: "--catalog" },
   cursor: { flag: "--cursor" },
   debug: unsupported(
     "Returns the effective query for query-understanding analysis. A debugging " +

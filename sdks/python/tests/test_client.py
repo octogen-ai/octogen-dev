@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Any
 
 import httpx
 import octogen_ai_sdk
@@ -132,7 +133,7 @@ async def test_search_products_sends_typed_request() -> None:
 
     async with OctogenClient(api_key="explicit_key") as client:
         page = await client.search_products(
-            catalog="acme",
+            catalogs=["acme"],
             q="linen summer dress",
             facets=[{"name": FacetName.GENDER, "values": ["female"]}],
             limit=5,
@@ -141,7 +142,7 @@ async def test_search_products_sends_typed_request() -> None:
     request = route.calls.last.request
     assert request.headers["Authorization"] == "Bearer explicit_key"
     assert request.read() == (
-        b'{"catalog":"acme","limit":5,"q":"linen summer dress",'
+        b'{"catalogs":["acme"],"limit":5,"q":"linen summer dress",'
         b'"facets":[{"name":"gender","values":["female"]}]}'
     )
     assert page.next_cursor == "cursor-2"
@@ -170,17 +171,90 @@ async def test_search_products_accepts_text_search_query_model() -> None:
     )
 
     async with OctogenClient(api_key="key") as client:
-        await client.search_products(
-            catalog="acme",
-            text_search_query=TextSearchQuery(
-                text="relaxed cotton shirts",
-                retrieval_embedding_columns=[EmbeddingColumn.STYLE_EMBEDDING],
-            ),
-        )
+        with pytest.warns(DeprecationWarning, match="text_search_query"):
+            await client.search_products(
+                catalogs=["acme"],
+                text_search_query=TextSearchQuery(
+                    text="relaxed cotton shirts",
+                    retrieval_embedding_columns=[EmbeddingColumn.STYLE_EMBEDDING],
+                ),
+            )
 
     body = route.calls.last.request.read()
     assert b'"text_search_query"' in body
     assert b'"style_embedding"' in body
+
+
+@respx.mock
+async def test_search_products_sends_catalogs_verbatim() -> None:
+    route = respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.search_products(catalogs=("macys", "etro", "jcrew"), q="dress")
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "catalogs": ["macys", "etro", "jcrew"],
+        "limit": 50,
+        "q": "dress",
+    }
+
+
+@respx.mock
+async def test_search_products_still_sends_deprecated_catalog() -> None:
+    route = respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.warns(DeprecationWarning, match=r"catalog=.*catalogs=\[key\]"):
+            await client.search_products(catalog="acme", q="dress")
+
+    # Not translated to `catalogs`: the server's count of `catalog` traffic is
+    # how the rollout knows who still has to migrate.
+    assert json.loads(route.calls.last.request.read()) == {
+        "catalog": "acme",
+        "limit": 50,
+        "q": "dress",
+    }
+
+
+@respx.mock
+async def test_search_products_rejects_catalog_with_catalogs() -> None:
+    route = respx.post(f"{BASE_URL}/products/search")
+
+    async with OctogenClient(api_key="key") as client:
+        with (
+            pytest.warns(DeprecationWarning),
+            pytest.raises(ValueError, match="Pass catalogs or catalog, not both"),
+        ):
+            await client.search_products(catalog="acme", catalogs=["acme"])
+
+    assert not route.called
+
+
+@pytest.mark.parametrize(
+    ("catalogs", "error", "match"),
+    [
+        ([], ValueError, "at least 1 item"),
+        (["acme", ""], ValueError, "non-empty catalog keys"),
+        (["acme", "   "], ValueError, "non-empty catalog keys"),
+        ([f"c{i}" for i in range(501)], ValueError, "at most 500 items"),
+        ("acme", TypeError, "not a string"),
+    ],
+)
+@respx.mock
+async def test_search_products_rejects_bad_catalogs(
+    catalogs: Any, error: type[Exception], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/search")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(error, match=match):
+            await client.search_products(catalogs=catalogs)
+
+    assert not route.called
 
 
 @respx.mock
@@ -224,7 +298,7 @@ async def test_more_like_this_products_sends_typed_request() -> None:
     async with OctogenClient(api_key="key") as client:
         page = await client.more_like_this_products(
             source_url="https://example.com/products/linen-dress",
-            catalog="acme",
+            catalogs=["acme", "globex"],
             include_facets=[{"name": FacetName.GENDER, "values": ["female"]}],
             exclude_facets=[{"name": FacetName.COLOR_FAMILY, "values": ["Black"]}],
             price_preference=PricePreference.HIGHER,
@@ -235,7 +309,7 @@ async def test_more_like_this_products_sends_typed_request() -> None:
     request = route.calls.last.request
     assert json.loads(request.read()) == {
         "source": {"url": "https://example.com/products/linen-dress"},
-        "catalog": "acme",
+        "catalogs": ["acme", "globex"],
         "limit": 3,
         "include_facets": [{"name": "gender", "values": ["female"]}],
         "exclude_facets": [{"name": "color_family", "values": ["Black"]}],
@@ -247,6 +321,36 @@ async def test_more_like_this_products_sends_typed_request() -> None:
     assert page.items[0].display_match_score == 92
     assert page.effective_query is not None
     assert page.effective_query.price_min == 128
+
+
+@pytest.mark.parametrize(
+    ("catalogs", "match"),
+    [
+        ([], "at least 1 item"),
+        ([f"c{i}" for i in range(101)], "at most 100 items"),
+        ([""], "non-empty catalog keys"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_bad_catalogs(
+    catalogs: list[str], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match=match):
+            await client.more_like_this_products(source_uuid="p1", catalogs=catalogs)
+
+    assert not route.called
+
+
+async def test_more_like_this_products_no_longer_takes_catalog() -> None:
+    # The endpoint refuses `catalog`; 0.4 removed the keyword rather than
+    # sending a request the server would reject.
+    legacy_kwargs: dict[str, Any] = {"source_uuid": "p1", "catalog": "acme"}
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(TypeError, match="catalog"):
+            await client.more_like_this_products(**legacy_kwargs)
 
 
 @respx.mock

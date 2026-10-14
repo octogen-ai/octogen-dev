@@ -1,6 +1,6 @@
 {
   "name": "@octogen-ai/sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Async TypeScript SDK for the Octogen AI commerce API",
   "type": "module",
   "license": "Apache-2.0",
@@ -19,7 +19,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

@@ -163,6 +163,18 @@ describe("octogen search", () => {
     expect(body).not.toHaveProperty("query");
   });
 
+  it("sends --catalog as a one-key `catalogs` allowlist, never `catalog`", async () => {
+    const result = await runCli({
+      argv: ["search", "dress", "--catalog", "macys"],
+      env: KEYED,
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body["catalogs"]).toEqual(["macys"]);
+    expect(body).not.toHaveProperty("catalog");
+  });
+
   it("joins a multi-word query so an unquoted one still works", async () => {
     const result = await runCli({
       argv: ["search", "paisley", "jackets"],
@@ -289,6 +301,25 @@ describe("octogen similar", () => {
     });
     const body = result.requests[0]?.body as { source: Record<string, unknown> };
     expect(body.source).toEqual({ url: "https://lagence.com/products/akiya" });
+  });
+
+  it("sends every --catalog as the `catalogs` allowlist", async () => {
+    const result = await runCli({
+      argv: [
+        "similar",
+        "https://lagence.com/products/akiya",
+        "--catalog",
+        "lagence",
+        "--catalog",
+        "myshopify",
+      ],
+      env: KEYED,
+      routes: { "POST /products/more-like-this": { body: SIMILAR_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body["catalogs"]).toEqual(["lagence", "myshopify"]);
+    expect(body).not.toHaveProperty("catalog");
   });
 
   it("refuses something that is neither, rather than sending a 422", async () => {

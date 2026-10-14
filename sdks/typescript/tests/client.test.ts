@@ -95,7 +95,7 @@ describe("OctogenClient", () => {
       fetch: fetchMock,
     });
     const page = await client.searchProducts({
-      catalog: "acme",
+      catalogs: ["acme"],
       facets: [{ name: FacetName.GENDER, values: ["female"] }],
       limit: 5,
       q: "linen summer dress",
@@ -109,7 +109,7 @@ describe("OctogenClient", () => {
       "Content-Type": "application/json",
     });
     expect(requestBodyJson(call)).toEqual({
-      catalog: "acme",
+      catalogs: ["acme"],
       facets: [{ name: "gender", values: ["female"] }],
       limit: 5,
       q: "linen summer dress",
@@ -139,7 +139,7 @@ describe("OctogenClient", () => {
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     await client.searchProducts({
-      catalog: "acme",
+      catalogs: ["acme"],
       textSearchQuery: {
         retrievalEmbeddingColumns: [EmbeddingColumn.STYLE_EMBEDDING],
         text: "relaxed cotton shirts",
@@ -152,6 +152,92 @@ describe("OctogenClient", () => {
         text: "relaxed cotton shirts",
       },
     });
+  });
+
+  it("sends catalogs verbatim", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchProducts({ catalogs: ["macys", "etro", "jcrew"], q: "dress" });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      catalogs: ["macys", "etro", "jcrew"],
+      limit: 50,
+      q: "dress",
+    });
+  });
+
+  it("still sends the deprecated catalog as catalog, warning once", async () => {
+    // A fresh module instance, so the once-per-process warning has not fired.
+    vi.resetModules();
+    const fresh = await import("../src/index.js");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+      const client = new fresh.OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+      await client.searchProducts({ catalog: "acme", q: "dress" });
+      await client.searchProducts({ catalog: "acme", q: "shirt" });
+
+      // Not translated to `catalogs`: the server's count of `catalog` traffic
+      // is how the rollout knows who still has to migrate.
+      expect(requestBodyJson(lastCall(calls))).toEqual({
+        catalog: "acme",
+        limit: 50,
+        q: "shirt",
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(/catalog is deprecated.*catalogs/);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns that textSearchQuery is deprecated", async () => {
+    vi.resetModules();
+    const fresh = await import("../src/index.js");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const { fetchMock } = createFetchMock({ items: [], nextCursor: null });
+      const client = new fresh.OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+      await client.searchProducts({
+        textSearchQuery: { text: "relaxed cotton shirts" },
+      });
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(/textSearchQuery is deprecated/);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("rejects catalog and catalogs together before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(
+      client.searchProducts({ catalog: "acme", catalogs: ["acme"] }),
+    ).rejects.toThrow("Pass catalogs or catalog, not both");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects an empty or malformed catalogs list before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.searchProducts({ catalogs: [] })).rejects.toThrow(
+      "catalogs must contain between 1 and 500 catalog keys",
+    );
+    await expect(client.searchProducts({ catalogs: ["acme", ""] })).rejects.toThrow(
+      "catalogs must contain only non-empty catalog keys",
+    );
+    await expect(
+      client.searchProducts({
+        catalogs: Array.from({ length: 501 }, (_, i) => `c${String(i)}`),
+      }),
+    ).rejects.toThrow("between 1 and 500");
+    expect(calls).toHaveLength(0);
   });
 
   it("sends a typed more-like-this request", async () => {
@@ -185,7 +271,7 @@ describe("OctogenClient", () => {
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     const page = await client.moreLikeThisProducts({
-      catalog: "acme",
+      catalogs: ["acme", "globex"],
       debug: true,
       excludeFacets: [{ name: FacetName.COLOR_FAMILY, values: ["Black"] }],
       includeFacets: [{ name: FacetName.GENDER, values: ["female"] }],
@@ -198,7 +284,7 @@ describe("OctogenClient", () => {
     expect(call.input).toBe(`${BASE_URL}/products/more-like-this`);
     expect(call.init?.method).toBe("POST");
     expect(requestBodyJson(call)).toEqual({
-      catalog: "acme",
+      catalogs: ["acme", "globex"],
       debug: true,
       exclude_facets: [{ name: "color_family", values: ["Black"] }],
       include_facets: [{ name: "gender", values: ["female"] }],
@@ -224,6 +310,30 @@ describe("OctogenClient", () => {
     await expect(client.moreLikeThisProducts({ source: { url: "" } })).rejects.toThrow(
       "source.url is required",
     );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses the retired more-like-this catalog instead of dropping it", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    // What a JavaScript caller written against 0.3 still sends.
+    const legacy = {
+      catalog: "acme",
+      source: { url: "https://example.com/p" },
+    } as unknown as Parameters<OctogenClient["moreLikeThisProducts"]>[0];
+
+    await expect(client.moreLikeThisProducts(legacy)).rejects.toThrow(
+      "moreLikeThisProducts takes catalogs: [key], not catalog",
+    );
+    await expect(
+      client.moreLikeThisProducts({ catalogs: [], source: { uuid: "p1" } }),
+    ).rejects.toThrow("catalogs must contain between 1 and 100 catalog keys");
+    await expect(
+      client.moreLikeThisProducts({
+        catalogs: Array.from({ length: 101 }, (_, i) => `c${String(i)}`),
+        source: { uuid: "p1" },
+      }),
+    ).rejects.toThrow("between 1 and 100");
     expect(calls).toHaveLength(0);
   });
 

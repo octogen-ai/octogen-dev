@@ -71,7 +71,9 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
   const params: SearchProductsParams = { q: query };
   const catalog = args.string("catalog");
   if (catalog !== undefined) {
-    params.catalog = catalog;
+    // The API is retiring the single-valued `catalog`; one key is a one-entry
+    // `catalogs` allowlist.
+    params.catalogs = [catalog];
   }
   const cursor = args.string("cursor");
   if (cursor !== undefined) {

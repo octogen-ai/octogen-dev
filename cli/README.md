@@ -114,8 +114,9 @@ octogen search --base-url https://api.storerouter.ai/v1 'paisley jackets' --limi
 octogen search --base-url https://api.storerouter.ai/v1 dress --facet color=red,blue --price-max 300 --catalog macys
 ```
 
-`--catalog`, `--facet k=v` (repeatable; comma-separate values), `--price-min`,
-`--price-max`, `--limit`, `--cursor`. Exit `6` when nothing matched.
+`--catalog` (sent as a one-key `catalogs` allowlist), `--facet k=v`
+(repeatable; comma-separate values), `--price-min`, `--price-max`, `--limit`,
+`--cursor`. Exit `6` when nothing matched.
 
 ### `octogen similar <url|uuid>`
 
