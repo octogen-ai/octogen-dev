@@ -1,6 +1,6 @@
 {
   "name": "@octogen-ai/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The Octogen CLI: coverage, lookup, search, and voyages from your terminal or your agent",
   "type": "module",
   "license": "Apache-2.0",
