@@ -228,6 +228,22 @@ class DomainEntry(BaseModel):
     )
 
 
+class Facet(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    name: str = Field(
+        ...,
+        description="Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+        title="Name",
+    )
+    values: list[str] = Field(
+        ...,
+        description="Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+        title="Values",
+    )
+
+
 class IdentifiersView(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -483,6 +499,122 @@ class ProgrammaticProductLookupRequest(BaseModel):
     )
 
 
+class ProgrammaticProductSearchEffectiveFacet(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    name: str = Field(..., title="Name")
+    source: Literal["caller", "generated"] | None = Field(
+        None,
+        description="`caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.",
+        title="Source",
+    )
+    values: list[str] = Field(..., title="Values")
+
+
+class ProgrammaticProductSearchRelaxation(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    declined_rounds: int | None = Field(
+        0,
+        alias="declinedRounds",
+        description="Stages tried that still returned nothing.",
+        title="Declinedrounds",
+    )
+    dropped_facets: list[ProgrammaticProductSearchEffectiveFacet] | None = Field(
+        None,
+        alias="droppedFacets",
+        description="Understood facets dropped to produce this page.",
+        title="Droppedfacets",
+    )
+    rounds: int = Field(
+        ...,
+        description="Stages applied to produce this page; 0 if none.",
+        title="Rounds",
+    )
+
+
+class ProgrammaticProductSearchRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None,
+        description="Inclusive maximum brand quality score, 1 to 6. Combined with any understood bound by keeping the stricter one.",
+        title="Brand Quality Max",
+    )
+    brand_quality_min: float | None = Field(
+        None,
+        description="Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). Combined with any understood bound by keeping the stricter one.",
+        title="Brand Quality Min",
+    )
+    catalogs: list[str] | None = Field(
+        None,
+        description="Catalog keys to search. Omit to search every catalog your key can access. Keys your key cannot access match nothing.",
+        title="Catalogs",
+    )
+    cursor: str | None = Field(
+        None,
+        description="`nextCursor` from the previous page, passed back verbatim with the same request body.",
+        title="Cursor",
+    )
+    debug: bool | None = Field(
+        False,
+        description="Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
+        title="Debug",
+    )
+    exclude_facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
+        title="Exclude Facets",
+    )
+    facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
+        title="Facets",
+    )
+    limit: int | None = Field(
+        50, description="Maximum results per page.", title="Limit"
+    )
+    omit_generated_facets: list[str] | None = Field(
+        None,
+        description="Names of understood facets to drop before searching, for a derived filter that is wrong and that you have no value of your own for. To replace a derived filter instead, send a facet of that name. Use the names shown in `effectiveQuery`; colour is omitted per axis (`color` or `color_family`). Requires understood `q`; a name may not also appear in `facets`.",
+        title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(
+        None,
+        description="Inclusive maximum price. Combined with any understood maximum by keeping the lower one.",
+        title="Price Max",
+    )
+    price_min: float | None = Field(
+        None,
+        description="Inclusive minimum price. Combined with any understood minimum by keeping the higher one.",
+        title="Price Min",
+    )
+    q: str | None = Field(
+        None,
+        description="Free-text query. Omit to browse by filters alone. By default it is understood: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it. Blank is the same as omitted.",
+        title="Q",
+    )
+    relax: bool | None = Field(
+        False,
+        description="When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.",
+        title="Relax",
+    )
+    similar_to_brands: list[str] | None = Field(
+        None,
+        description="Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
+        title="Similar To Brands",
+    )
+    understand: bool | None = Field(
+        True,
+        description="Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
+        title="Understand",
+    )
+
+
 class ProgrammaticResolveFromHtmlRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -657,42 +789,6 @@ class CoverageUrlListListResponse(BaseModel):
     )
     items: list[CoverageUrlList] = Field(..., title="Items")
     next_cursor: str | None = Field(..., alias="nextCursor", title="Nextcursor")
-
-
-class Facet(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    name: (
-        str
-        | Literal[
-            "brand_name",
-            "brand_slug",
-            "raw_brand_name",
-            "product_type",
-            "gender",
-            "age_groups",
-            "color",
-            "color_family",
-            "is_activewear",
-            "category_path.depth_0",
-            "category_path.depth_1",
-            "category_path.depth_2",
-            "category_path.depth_3",
-            "category_path.depth_4",
-            "category_path.depth_5",
-            "category_path.depth_6",
-        ]
-    ) = Field(
-        ...,
-        description="Facet key. Accepts base facets (FacetName) or attribute keys. Attribute facets may be provided as '<key>' (e.g., 'fit') or fully qualified 'attribute_facets.<key>'.",
-        title="Name",
-    )
-    values: list[str] = Field(
-        ...,
-        description="List of values to filter by. They should all be lowercase. Facet values can be phrases, so make sure to include the spaces.",
-        title="Values",
-    )
 
 
 class HTTPValidationError(BaseModel):
@@ -1124,13 +1220,13 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     )
     include_facets: list[Facet] | None = Field(
         None,
-        description="Additional include facets to append after generated facets.",
+        description="Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.",
         title="Include Facets",
     )
     limit: int | None = Field(12, title="Limit")
     omit_generated_facets: list[str] | None = Field(
         None,
-        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery (include_facets only appends). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
         title="Omit Generated Facets",
     )
     price_preference: Literal["lower", "any", "higher"] | None = Field(
@@ -1191,12 +1287,49 @@ class ProgrammaticMoreLikeThisResponse(BaseModel):
     )
 
 
+class ProgrammaticProductSearchEffectiveQuery(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None, alias="brandQualityMax", title="Brandqualitymax"
+    )
+    brand_quality_min: float | None = Field(
+        None, alias="brandQualityMin", title="Brandqualitymin"
+    )
+    catalogs: list[str] | None = Field(
+        None,
+        description="The `catalogs` allowlist as received, normalized and deduped.",
+        title="Catalogs",
+    )
+    exclude_facets: list[ProgrammaticProductSearchEffectiveFacet] | None = Field(
+        None, alias="excludeFacets", title="Excludefacets"
+    )
+    facets: list[ProgrammaticProductSearchEffectiveFacet] | None = Field(
+        None, title="Facets"
+    )
+    price_max: float | None = Field(None, alias="priceMax", title="Pricemax")
+    price_min: float | None = Field(None, alias="priceMin", title="Pricemin")
+    relaxation: ProgrammaticProductSearchRelaxation | None = None
+    similar_to_brands: list[str] | None = Field(
+        None, alias="similarToBrands", title="Similartobrands"
+    )
+    text: str = Field(
+        ...,
+        description="Text matched against products: the understood rewrite of `q`, `q` itself with `understand: false`, or empty when browsing.",
+        title="Text",
+    )
+    understood: bool = Field(
+        ..., description="Whether query understanding ran.", title="Understood"
+    )
+
+
 class ProgrammaticProductSearchPage(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
     )
-    effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
-        None, alias="effectiveQuery"
+    effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
+        None, alias="effectiveQuery", description="Present with `debug: true`."
     )
     items: list[MerchantProductListItem] | None = Field([], title="Items")
     next_cursor: str | None = Field(
@@ -1210,116 +1343,6 @@ class ProgrammaticProductSearchPage(BaseModel):
         alias="requestId",
         description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
         title="Requestid",
-    )
-
-
-class TextSearchQuery(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    brand_quality_max: float | None = Field(
-        None,
-        description="Inclusive upper bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).",
-        title="Maximum brand quality",
-    )
-    brand_quality_min: float | None = Field(
-        None,
-        description="Inclusive lower bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).",
-        title="Minimum brand quality",
-    )
-    brand_similarity_weight: float | None = Field(
-        0.7,
-        description="Weight for brand similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to brand style similarity. Default is 0.7.",
-        title="Brand similarity weight",
-    )
-    browse_menu_uuid: str | None = Field(
-        None,
-        description="UUID of the browse menu item that matches this query's facets (gender, age_group, category_path).",
-        title="Browse menu UUID",
-    )
-    compact_mode: Literal["card", "compact", "medium", "enriched"] | None = Field(
-        None,
-        description="Optional response shape for product search results. Use 'card' for catalog grids that only need display fields; omit for full products.",
-        title="Search output mode",
-    )
-    exclusion_facets: list[Facet] | None = Field(
-        None,
-        description="Facets that will be excluded from the search results.",
-        title="Exclusion facets filter",
-    )
-    facets: list[Facet] | None = Field(
-        None,
-        description="The search results will be filtered by the specified facets.",
-        title="Facets filter",
-    )
-    limit: int | None = Field(
-        10,
-        description="The maximum number of results to return from the search. The default is 10.",
-        title="Search results limit",
-    )
-    price_max: float | None = Field(
-        None,
-        description="The products will be filtered to have a price less than or equal to the specified value.",
-        title="Maximum price",
-    )
-    price_min: float | None = Field(
-        None,
-        description="The products will be filtered to have a price greater than or equal to the specified value.",
-        title="Minimum price",
-    )
-    ranking_embedding_columns: (
-        list[
-            Literal[
-                "embedding", "style_embedding", "tags_embedding", "attributes_embedding"
-            ]
-        ]
-        | None
-    ) = Field(
-        None,
-        description="The columns to use for the ranking embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `ranking_text` parameter.",
-        title="Ranking embedding columns",
-    )
-    ranking_text: str | None = Field(
-        None,
-        description="The text is converted to a vector embedding and used to rank the search results. It will be matched against the embeddings from ranking_embedding_columns during ranking.",
-        title="Ranking text",
-    )
-    retrieval_embedding_columns: (
-        list[
-            Literal[
-                "embedding", "style_embedding", "tags_embedding", "attributes_embedding"
-            ]
-        ]
-        | None
-    ) = Field(
-        None,
-        description="The columns to use for the retrieval embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `text` parameter.",
-        title="Retrieval embedding columns",
-    )
-    search_after: list[Any] | None = Field(
-        None,
-        description="Cursor for pagination. Pass the 'next_cursor' value from the previous response to fetch the next page of results. This enables efficient 'load more' functionality.",
-        title="Search after cursor",
-    )
-    search_id: str | None = Field(
-        None,
-        description="Unique identifier (UUID) for this search query. Used to link agent recommendations back to specific search results.",
-        title="Search identifier",
-    )
-    similar_to_brands: list[str] | None = Field(
-        None,
-        description="List of brand names to find products similar to. When provided, embeddings for the specified brands are fetched, averaged, and used to boost products with similar style characteristics. This enables finding products that match the aesthetic of certain brands.",
-        title="Similar to brands",
-    )
-    text: str = Field(
-        ...,
-        description="The text is converted to a vector embedding and used to search for products in the e-commerce catalog with pre-computed product embeddings. It will be matched against the embeddings from retrieval_embedding_columns during retrieval.",
-        title="Product search query text",
-    )
-    text_similarity_weight: float | None = Field(
-        0.3,
-        description="Weight for text query similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to text query matching. Default is 0.3.",
-        title="Text similarity weight",
     )
 
 
@@ -1487,58 +1510,6 @@ class ProgrammaticProductLookupResponse(BaseModel):
         None,
         description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
         title="Warnings",
-    )
-
-
-class ProgrammaticProductSearchRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    catalog: str | None = Field(
-        None,
-        description="Optional catalog to narrow the search to. When omitted, search runs across the entire indexed corpus (all active catalogs), not just catalogs granted to the API key organization. Mutually exclusive with `catalogs`.",
-        title="Catalog",
-    )
-    catalogs: list[str] | None = Field(
-        None,
-        description="Optional catalog allowlist to narrow the search — same contract as the more-like-this `catalogs` field. Restricts results to these catalogs only. Keys are not validated against the caller's grants: a key outside the caller's resolved scope simply matches nothing. Mutually exclusive with `catalog`. When omitted or empty, search spans every catalog the caller's scope permits. Bounds stay the inherited max_length=500 with an empty list meaning no allowlist, so request shapes accepted before this field was honored keep working.",
-        title="Catalogs",
-    )
-    cursor: str | None = Field(
-        None, description="Opaque pagination cursor", title="Cursor"
-    )
-    debug: bool | None = Field(
-        False,
-        description="Include the effective query in the response, mirroring more-like-this: the EXECUTED text/facets/price bounds/embedding columns — after query understanding AND after caller facets (which win over same-name generated facets) and price bounds are merged. Browse-all requests report the raw browse query. Makes search usable as a controlled comparison against more-like-this.",
-        title="Debug",
-    )
-    diversity: bool | None = Field(
-        False,
-        description="Enable result diversification (parity with Shop Agent / conversational search). Defaults off to preserve stable merchant-browse ordering across pages.",
-        title="Diversity",
-    )
-    facets: list[Facet] | None = Field(
-        None,
-        description="Structured facet filters to apply to the product list.",
-        title="Facets",
-    )
-    limit: int | None = Field(50, title="Limit")
-    price_max: float | None = Field(
-        None, description="Maximum price filter", title="Price Max"
-    )
-    price_min: float | None = Field(
-        None, description="Minimum price filter", title="Price Min"
-    )
-    q: str | None = Field(None, description="Keyword search query", title="Q")
-    relax: bool | None = Field(
-        False,
-        description="Opt-in zero-result facet relaxation. When a `q` search's LLM-generated facet filters match nothing, the least-trusted generated facet families are dropped cumulatively (brand enrichment, then attributes, then color/deep categories) and the search retried; the response's `nextCursor` records the converged round so later pages continue the exact relaxed result set. Facets you provide yourself (`facets` or `text_search_query`) are NEVER dropped — with no generated facets in play this flag is a no-op. Defaults off: an empty result stays an exact answer unless relaxation is requested. Cursors from a relaxed page must be replayed with `relax: true`; with `debug: true` the applied rounds are reported in `effectiveQuery`.",
-        title="Relax",
-    )
-    text_search_query: TextSearchQuery | None = Field(
-        None,
-        description="Pre-generated semantic search query. When provided, the service uses this query directly instead of re-running query understanding.",
     )
 
 

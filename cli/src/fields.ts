@@ -87,9 +87,11 @@ export type _CachePoliciesExact = Assert<
 // ── POST /products/search ──────────────────────────────────────────────────
 
 export const SEARCH_FIELDS = {
-  catalog: unsupported(
-    "Deprecated by the API in favor of the `catalogs` allowlist, which `--catalog` " +
-      "now sends.",
+  brand_quality_max: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `octogen api`.",
+  ),
+  brand_quality_min: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `octogen api`.",
   ),
   catalogs: { flag: "--catalog" },
   cursor: { flag: "--cursor" },
@@ -97,21 +99,27 @@ export const SEARCH_FIELDS = {
     "Returns the effective query for query-understanding analysis. A debugging " +
       "surface, not a session one; reach it with `octogen api`.",
   ),
-  diversity: unsupported(
-    "Result diversification. Changes ranking, so exposing it as a flag would " +
-      "make two runs of the same command incomparable by default.",
+  exclude_facets: unsupported(
+    "Not yet a flag on `search`; send it with `octogen api POST /products/search`.",
   ),
   facets: { flag: "--facet k=v (repeatable)" },
   limit: { flag: "--limit" },
+  omit_generated_facets: unsupported(
+    "Corrects an understood facet visible only in `effectiveQuery`, which this " +
+      "command does not request.",
+  ),
   price_max: { flag: "--price-max" },
   price_min: { flag: "--price-min" },
   q: { flag: "<query> (positional)" },
   relax: unsupported(
     "Opt-in query relaxation changes matching. Use `octogen api` when you need it.",
   ),
-  text_search_query: unsupported(
-    "The full 18-field search query object. `octogen api POST /products/search` " +
-      "is the right shape for it — a flag per field would be a second API.",
+  similar_to_brands: unsupported(
+    "Ranks by brand aesthetic rather than filtering; reach it with `octogen api`.",
+  ),
+  understand: unsupported(
+    "Literal matching changes what the positional query means; reach it with " +
+      "`octogen api`.",
   ),
 } satisfies FieldMap<SearchRequest>;
 

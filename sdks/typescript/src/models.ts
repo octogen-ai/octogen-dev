@@ -114,87 +114,110 @@ export interface Facet {
   values: string[];
 }
 
-export interface TextSearchQuery {
-  searchId?: string;
-  text: string;
-  limit?: number;
-  rankingText?: string;
-  retrievalEmbeddingColumns?: EmbeddingColumn[];
-  rankingEmbeddingColumns?: EmbeddingColumn[];
+export interface SearchProductsParams {
+  /**
+   * Free-text query. Omit to browse by filters alone. By default it is
+   * understood: rewritten for retrieval, with category, gender, colour, brand,
+   * price and attribute filters derived from it.
+   */
+  q?: string;
+  /**
+   * Run query understanding on `q` (the server default). Set `false` to match
+   * `q` as written and filter only by the facets and bounds you send. Requires
+   * `q`.
+   */
+  understand?: boolean;
+  /**
+   * Filters a product must match: every facet, and any value within a facet.
+   * A facet you send replaces any understood facet of the same name. Each name
+   * at most once.
+   */
   facets?: Facet[];
-  exclusionFacets?: Facet[];
+  /**
+   * Filters a product must not match: products with any listed value of any
+   * listed facet are removed. Each name at most once.
+   */
+  excludeFacets?: Facet[];
+  /**
+   * Names of understood facets to drop before searching (use the names
+   * `effectiveQuery` reports with `source: "generated"`). Requires understood
+   * `q`; a name may not also appear in `facets`.
+   */
+  omitGeneratedFacets?: string[];
+  /** Inclusive minimum price, `>= 0`. */
   priceMin?: number;
+  /** Inclusive maximum price, `>= priceMin`. */
   priceMax?: number;
+  /** Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). */
   brandQualityMin?: number;
+  /** Inclusive maximum brand quality score, 1 to 6. */
   brandQualityMax?: number;
+  /**
+   * 1–10 brand names whose style to favour. Ranks by similarity to their
+   * aesthetic; it does not filter. Replaces any brands understood from `q`.
+   */
   similarToBrands?: string[];
-  brandSimilarityWeight?: number;
-  textSimilarityWeight?: number;
-  searchAfter?: unknown[];
-  browseMenuUuid?: string;
-  compactMode?: "card" | "compact" | "medium" | "enriched";
+  /**
+   * Restrict results to these catalog keys (1–500). Omit to search every
+   * catalog your key can access. Keys are sent as given; one outside your
+   * grants simply matches nothing.
+   */
+  catalogs?: readonly string[];
+  /** Maximum results per page, 1–100 (default 50). */
+  limit?: number;
+  /** `nextCursor` from the previous page, with the same request otherwise. */
+  cursor?: string;
+  /**
+   * When an understood `q` returns nothing, retry with understood filters
+   * dropped in stages. Facets you send are never dropped. Requires understood
+   * `q`; replay a relaxed page's cursor with `relax: true`.
+   */
+  relax?: boolean;
+  /** Include {@link ProgrammaticProductSearchPage.effectiveQuery} in the response. */
+  debug?: boolean;
 }
 
-export interface TextSearchQueryPayload {
-  search_id?: string;
-  text: string;
-  limit?: number;
-  ranking_text?: string;
-  retrieval_embedding_columns?: EmbeddingColumn[];
-  ranking_embedding_columns?: EmbeddingColumn[];
+/** The `POST /v1/products/search` body, under its wire names. */
+export interface ProgrammaticProductSearchRequest {
+  q?: string;
+  understand?: boolean;
   facets?: Facet[];
-  exclusion_facets?: Facet[];
+  exclude_facets?: Facet[];
+  omit_generated_facets?: string[];
   price_min?: number;
   price_max?: number;
   brand_quality_min?: number;
   brand_quality_max?: number;
   similar_to_brands?: string[];
-  brand_similarity_weight?: number;
-  text_similarity_weight?: number;
-  search_after?: unknown[];
-  browse_menu_uuid?: string;
-  compact_mode?: "card" | "compact" | "medium" | "enriched";
-}
-
-export interface SearchProductsParams {
-  /**
-   * Restrict results to these catalog keys (1–500). Omit to search every
-   * active catalog. Keys are sent as given; one outside your grants simply
-   * matches nothing.
-   */
-  catalogs?: readonly string[];
-  /**
-   * @deprecated Use `catalogs: [key]`. The API is retiring the single-valued
-   * `catalog` field on search; it will be removed from this SDK in a future
-   * release. Cannot be combined with `catalogs`.
-   */
-  catalog?: string;
-  cursor?: string;
-  limit?: number;
-  q?: string;
-  /**
-   * @deprecated The API is retiring the pre-generated `text_search_query` on
-   * search; pass `q` (with `facets`, `priceMin`, `priceMax`) instead. It will be
-   * removed from this SDK in a future release.
-   */
-  textSearchQuery?: TextSearchQuery;
-  facets?: Facet[];
-  priceMin?: number;
-  priceMax?: number;
-}
-
-export interface ProgrammaticProductSearchRequest {
   catalogs?: string[];
-  /** @deprecated Retiring on the API; send `catalogs`. */
-  catalog?: string;
-  cursor?: string;
   limit: number;
-  q?: string;
-  /** @deprecated Retiring on the API; send `q`. */
-  text_search_query?: TextSearchQueryPayload;
-  facets?: Facet[];
-  price_min?: number;
-  price_max?: number;
+  cursor?: string;
+  relax?: boolean;
+  debug?: boolean;
+}
+
+/** One facet that ran, and where it came from (`caller` or `generated`). */
+export type ProgrammaticProductSearchEffectiveFacet =
+  components["schemas"]["ProgrammaticProductSearchEffectiveFacet"];
+
+/** What relaxation did on a `relax: true` request. */
+export type ProgrammaticProductSearchRelaxation =
+  components["schemas"]["ProgrammaticProductSearchRelaxation"];
+
+/**
+ * The search that actually ran, in the request's own vocabulary. A report, not
+ * a request fragment: understood facets of one name can AND together, which a
+ * request cannot express.
+ */
+export type ProgrammaticProductSearchEffectiveQuery =
+  components["schemas"]["ProgrammaticProductSearchEffectiveQuery"];
+
+/** One page of `searchProducts` results. */
+export interface ProgrammaticProductSearchPage extends MerchantProductListPage {
+  /** Server-generated UUID for this execution, matching `X-Request-ID`. */
+  requestId: string;
+  /** Present with `debug: true`. */
+  effectiveQuery?: ProgrammaticProductSearchEffectiveQuery | null;
 }
 
 export type ProgrammaticProductLookupRequest =

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   API_KEY_ENV_VAR,
   DEPRECATED_API_KEY_ENV_VAR,
-  EmbeddingColumn,
   FacetName,
   MissingAPIKeyError,
   OctogenAPIError,
@@ -134,26 +133,6 @@ describe("OctogenClient", () => {
     });
   });
 
-  it("serializes text search query options to API field names", async () => {
-    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    await client.searchProducts({
-      catalogs: ["acme"],
-      textSearchQuery: {
-        retrievalEmbeddingColumns: [EmbeddingColumn.STYLE_EMBEDDING],
-        text: "relaxed cotton shirts",
-      },
-    });
-
-    expect(requestBodyJson(lastCall(calls))).toMatchObject({
-      text_search_query: {
-        retrieval_embedding_columns: ["style_embedding"],
-        text: "relaxed cotton shirts",
-      },
-    });
-  });
-
   it("sends catalogs verbatim", async () => {
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
@@ -167,59 +146,211 @@ describe("OctogenClient", () => {
     });
   });
 
-  it("still sends the deprecated catalog as catalog, warning once", async () => {
-    // A fresh module instance, so the once-per-process warning has not fired.
-    vi.resetModules();
-    const fresh = await import("../src/index.js");
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
-      const client = new fresh.OctogenClient({ apiKey: "key", fetch: fetchMock });
+  it("sends every search control under its wire name", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      nextCursor: null,
+      requestId: "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11",
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-      await client.searchProducts({ catalog: "acme", q: "dress" });
-      await client.searchProducts({ catalog: "acme", q: "shirt" });
+    await client.searchProducts({
+      q: "black hoodie",
+      understand: true,
+      facets: [{ name: "color", values: ["black"] }],
+      excludeFacets: [{ name: "brand_name", values: ["acme"] }],
+      omitGeneratedFacets: ["fit"],
+      priceMin: 50,
+      priceMax: 300,
+      brandQualityMin: 3,
+      brandQualityMax: 6,
+      similarToBrands: ["Warren Lotas"],
+      catalogs: ["warrenlotas"],
+      limit: 25,
+      cursor: "cursor-1",
+      relax: true,
+      debug: true,
+    });
 
-      // Not translated to `catalogs`: the server's count of `catalog` traffic
-      // is how the rollout knows who still has to migrate.
-      expect(requestBodyJson(lastCall(calls))).toEqual({
-        catalog: "acme",
-        limit: 50,
-        q: "shirt",
-      });
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0]?.[0]).toMatch(/catalog is deprecated.*catalogs/);
-    } finally {
-      warn.mockRestore();
-    }
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      q: "black hoodie",
+      understand: true,
+      facets: [{ name: "color", values: ["black"] }],
+      exclude_facets: [{ name: "brand_name", values: ["acme"] }],
+      omit_generated_facets: ["fit"],
+      price_min: 50,
+      price_max: 300,
+      brand_quality_min: 3,
+      brand_quality_max: 6,
+      similar_to_brands: ["Warren Lotas"],
+      catalogs: ["warrenlotas"],
+      limit: 25,
+      cursor: "cursor-1",
+      relax: true,
+      debug: true,
+    });
   });
 
-  it("warns that textSearchQuery is deprecated", async () => {
-    vi.resetModules();
-    const fresh = await import("../src/index.js");
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const { fetchMock } = createFetchMock({ items: [], nextCursor: null });
-      const client = new fresh.OctogenClient({ apiKey: "key", fetch: fetchMock });
+  it("sends understand: false for a literal match", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-      await client.searchProducts({
-        textSearchQuery: { text: "relaxed cotton shirts" },
-      });
+    await client.searchProducts({
+      q: "black hoodie",
+      understand: false,
+      facets: [{ name: "color", values: ["black"] }],
+    });
 
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0]?.[0]).toMatch(/textSearchQuery is deprecated/);
-    } finally {
-      warn.mockRestore();
-    }
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      q: "black hoodie",
+      understand: false,
+      facets: [{ name: "color", values: ["black"] }],
+      limit: 50,
+    });
   });
 
-  it("rejects catalog and catalogs together before making a request", async () => {
+  it("refuses the removed catalog, diversity and textSearchQuery fields", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    const removed = [
+      [
+        { catalog: "acme", q: "dress" },
+        "searchProducts takes catalogs: [key], not catalog",
+      ],
+      [{ diversity: true, q: "dress" }, "no longer takes diversity"],
+      [{ textSearchQuery: { text: "dress" } }, "pass q with understand: false"],
+    ] as const;
+
+    for (const [params, message] of removed) {
+      // A JavaScript caller, or a TypeScript one casting past the type.
+      await expect(
+        client.searchProducts(
+          params as unknown as Parameters<typeof client.searchProducts>[0],
+        ),
+      ).rejects.toThrow(message);
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it.each([
+    [{ understand: false }, "understand: false requires q"],
+    [{ q: "   ", understand: false }, "understand: false requires q"],
+    [{ relax: true }, "relax requires an understood q"],
+    [{ q: "dress", understand: false, relax: true }, "relax requires an understood q"],
+    [
+      { omitGeneratedFacets: ["color"] },
+      "omitGeneratedFacets requires an understood q",
+    ],
+    [
+      { q: "dress", understand: false, omitGeneratedFacets: ["color"] },
+      "omitGeneratedFacets requires an understood q",
+    ],
+    [
+      {
+        q: "dress",
+        facets: [{ name: "color", values: ["black"] }],
+        omitGeneratedFacets: ["color"],
+      },
+      'facet "color" is in both facets and omitGeneratedFacets',
+    ],
+    [
+      {
+        facets: [
+          { name: "color", values: ["black"] },
+          { name: "color", values: ["navy"] },
+        ],
+      },
+      'facets lists facet "color" more than once',
+    ],
+    [
+      {
+        excludeFacets: [
+          { name: "brand_name", values: ["a"] },
+          { name: "brand_name", values: ["b"] },
+        ],
+      },
+      'excludeFacets lists facet "brand_name" more than once',
+    ],
+    [
+      {
+        facets: Array.from({ length: 51 }, (_, i) => ({
+          name: `f${String(i)}`,
+          values: ["x"],
+        })),
+      },
+      "facets accepts at most 50 facets",
+    ],
+    [{ priceMin: -1 }, "priceMin must be a number >= 0"],
+    [{ priceMin: 300, priceMax: 50 }, "priceMin must not exceed priceMax"],
+    [{ brandQualityMin: 0 }, "brandQualityMin must be a number between 1 and 6"],
+    [{ brandQualityMax: 7 }, "brandQualityMax must be a number between 1 and 6"],
+    [
+      { brandQualityMin: 5, brandQualityMax: 2 },
+      "brandQualityMin must not exceed brandQualityMax",
+    ],
+    [
+      { similarToBrands: [] },
+      "similarToBrands must contain between 1 and 10 brand names",
+    ],
+    [
+      { similarToBrands: Array.from({ length: 11 }, (_, i) => `b${String(i)}`) },
+      "similarToBrands must contain between 1 and 10 brand names",
+    ],
+    [
+      { similarToBrands: ["Acme", " "] },
+      "similarToBrands must contain only non-empty brand names",
+    ],
+  ] as const)("rejects %j before making a request", async (params, message) => {
     const { calls, fetchMock } = createFetchMock();
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     await expect(
-      client.searchProducts({ catalog: "acme", catalogs: ["acme"] }),
-    ).rejects.toThrow("Pass catalogs or catalog, not both");
+      client.searchProducts(params as Parameters<typeof client.searchProducts>[0]),
+    ).rejects.toThrow(message);
     expect(calls).toHaveLength(0);
+  });
+
+  it("allows a facet name in both facets and excludeFacets", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchProducts({
+      facets: [{ name: "color_family", values: ["blue"] }],
+      excludeFacets: [{ name: "color_family", values: ["green"] }],
+    });
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it("types the debug effectiveQuery", async () => {
+    const { fetchMock } = createFetchMock(SEARCH_DEBUG_PAGE);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.searchProducts({
+      q: "black hoodie under $300",
+      catalogs: ["warrenlotas"],
+      facets: [{ name: "color", values: ["black"] }],
+      relax: true,
+      debug: true,
+    });
+
+    expect(page.requestId).toBe("3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11");
+    const effective = page.effectiveQuery;
+    expect(effective?.understood).toBe(true);
+    expect(effective?.text).toBe("black hoodie");
+    expect(effective?.facets?.map((facet) => [facet.name, facet.source])).toEqual([
+      ["color", "caller"],
+      ["product_type", "generated"],
+    ]);
+    expect(effective?.excludeFacets).toEqual([]);
+    expect(effective?.priceMax).toBe(300);
+    expect(effective?.catalogs).toEqual(["warrenlotas"]);
+    expect(effective?.relaxation?.rounds).toBe(1);
+    expect(effective?.relaxation?.droppedFacets?.[0]).toEqual({
+      name: "fit",
+      values: ["oversized"],
+      source: "generated",
+    });
   });
 
   it("rejects an empty or malformed catalogs list before making a request", async () => {
@@ -905,3 +1036,42 @@ function requestBodyJson(call: FetchCall): unknown {
 it("does not expose the retired refresh method", () => {
   expect("refreshProducts" in OctogenClient.prototype).toBe(false);
 });
+
+/**
+ * A `debug: true` search page in the shape of the published
+ * `ProgrammaticProductSearchPage` / `ProgrammaticProductSearchEffectiveQuery`
+ * schemas, with values from the contract's `POST /products/search` example.
+ */
+const SEARCH_DEBUG_PAGE = {
+  items: [
+    {
+      uuid: "prod_01HX...",
+      title: "Black Hoodie",
+      productUrl: "https://warrenlotas.com/products/black-hoodie",
+      currentPrice: 180,
+      isActive: true,
+    },
+  ],
+  nextCursor: "eyJzZWFyY2hBZnRlciI6Wy4uLl19",
+  requestId: "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11",
+  effectiveQuery: {
+    text: "black hoodie",
+    understood: true,
+    facets: [
+      { name: "color", values: ["black"], source: "caller" },
+      { name: "product_type", values: ["hoodie"], source: "generated" },
+    ],
+    excludeFacets: [],
+    priceMin: null,
+    priceMax: 300,
+    brandQualityMin: null,
+    brandQualityMax: null,
+    similarToBrands: null,
+    catalogs: ["warrenlotas"],
+    relaxation: {
+      rounds: 1,
+      droppedFacets: [{ name: "fit", values: ["oversized"], source: "generated" }],
+      declinedRounds: 0,
+    },
+  },
+};

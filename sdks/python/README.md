@@ -98,8 +98,10 @@ if that stops being true — see
   covered hosts, with `ETag` revalidation and host normalization.
 - `search_products(...)` searches every active catalog by default, or only the
   catalogs in `catalogs` (1–500 keys) when it is provided. The query field is
-  `q`; results come back as `items` + `next_cursor`, each item carrying
-  `product_url`. `catalog` and `text_search_query` are deprecated (see below).
+  `q`, understood by default; `understand`, `facets`, `exclude_facets`, the
+  price and brand-quality bounds, `relax`, and `debug` refine it (see below).
+  Results come back as `items` + `next_cursor`, each item carrying
+  `product_url`, plus `effective_query` with `debug=True`.
 - `more_like_this_products(...)` finds products similar to a source product URL
   or UUID, optionally restricted to `catalogs` (1–100 keys).
 - `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
@@ -153,26 +155,46 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
     print(result.url_count, [r.code for r in result.rejected])
 ```
 
-### Narrowing to catalogs
+### Search controls
 
-Pass `catalogs` — a list of catalog keys — to restrict results. Omit it to
-search everything; an empty list is refused rather than sent.
+Each `search_products` keyword controls one thing. `q` says what to find and is
+understood by default — rewritten for retrieval, with category, colour, brand,
+price, and attribute filters derived from it. `facets`, `exclude_facets`, and
+the bounds say what to keep; `catalogs` says where to look.
 
 ```python
 async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
-    dresses = await client.search_products(catalogs=["macys", "jcrew"], q="linen dress")
+    page = await client.search_products(
+        q="black hoodie",
+        catalogs=["warrenlotas"],  # omit to search every catalog your key can access
+        facets=[{"name": "color", "values": ["black"]}],
+        exclude_facets=[{"name": "brand_name", "values": ["acme"]}],
+        price_min=50,
+        price_max=300,
+        brand_quality_min=4,  # 1 (very poor) to 6 (exceptional)
+        similar_to_brands=["Warren Lotas"],  # ranks, does not filter
+        relax=True,  # drop understood filters in stages if nothing matches
+        debug=True,
+    )
+    if page.effective_query is not None:
+        for facet in page.effective_query.facets or []:
+            print(facet.name, facet.values, facet.source)  # "caller" | "generated"
 ```
 
-**Deprecated in 0.4.0**, still sent as-is with a `DeprecationWarning`:
+- `understand=False` matches `q` as written and filters only by what you send.
+- `omit_generated_facets=["fit"]` drops an understood facet that is wrong when
+  you have no value of your own for it; to replace one, send a facet of that
+  name instead. Use the names `effective_query` reports.
+- `debug=True` adds `effective_query`, the search that actually ran.
 
-- `catalog="macys"` on `search_products` → use `catalogs=["macys"]`. Passing
-  both raises `ValueError`.
-- `text_search_query=...` on `search_products` → use `q` with `facets`,
-  `price_min`, and `price_max`.
+Contradictions the API would refuse — `relax` or `understand=False` without a
+`q`, a facet name sent twice, `price_min` above `price_max` — raise
+`pydantic.ValidationError` before any request.
 
-The API is retiring both fields on search, so they will be removed from a later
-SDK release. `more_like_this_products` already takes only `catalogs`: the
-endpoint stopped accepting `catalog`, so 0.4.0 removed the keyword.
+**Removed in 0.5.0** (the API now answers them with `422`): `catalog=` → use
+`catalogs=[key]`; `text_search_query=` → use `q` with `understand=False` and
+your filters in `facets` and `exclude_facets`. See the
+[CHANGELOG](./CHANGELOG.md#050--2026-10-14) for the migration.
 
 ## Coverage URL lists CLI
 

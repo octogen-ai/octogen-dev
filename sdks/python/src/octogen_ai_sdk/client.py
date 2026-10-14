@@ -36,7 +36,6 @@ from octogen_ai_sdk.models import (
     Facet,
     ListDomainsResponse,
     ListDomainsResult,
-    MerchantProductListPage,
     MerchantProductUrlLookupResponse,
     MeResponse,
     PricePreference,
@@ -47,10 +46,10 @@ from octogen_ai_sdk.models import (
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
+    ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
     StartVoyageResult,
-    TextSearchQuery,
     VoyageListResponse,
     VoyageStartRequest,
     VoyageStatus,
@@ -80,7 +79,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.4.0"
+        return "0.5.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -331,66 +330,59 @@ class OctogenClient:
     async def search_products(
         self,
         *,
-        catalogs: Sequence[str] | None = None,
-        catalog: str | None = None,
         q: str | None = None,
-        text_search_query: TextSearchQuery | dict[str, Any] | None = None,
+        understand: bool | None = None,
         facets: Sequence[Facet | dict[str, Any]] | None = None,
+        exclude_facets: Sequence[Facet | dict[str, Any]] | None = None,
+        omit_generated_facets: Sequence[str] | None = None,
         price_min: float | None = None,
         price_max: float | None = None,
-        cursor: str | None = None,
+        brand_quality_min: float | None = None,
+        brand_quality_max: float | None = None,
+        similar_to_brands: Sequence[str] | None = None,
+        catalogs: Sequence[str] | None = None,
         limit: int = 50,
-    ) -> MerchantProductListPage:
-        """Search products, restricted to ``catalogs`` when given.
+        cursor: str | None = None,
+        relax: bool | None = None,
+        debug: bool | None = None,
+    ) -> ProgrammaticProductSearchPage:
+        """Search indexed products by free text, filters, or both.
 
-        ``catalogs`` is an allowlist of 1-500 catalog keys, sent as given; omit
-        it to search every active catalog.
+        ``q`` is understood by default — rewritten for retrieval, with filters
+        derived from it; ``understand=False`` matches it as written. ``facets``
+        and ``exclude_facets`` say what to keep and drop, ``catalogs`` (1-500
+        keys) where to look; omit it to search every catalog your key can
+        access. ``debug=True`` adds ``effective_query``, the search that ran.
 
-        ``catalog`` and ``text_search_query`` are deprecated and emit a
-        ``DeprecationWarning``: the API is retiring both on search. Use
-        ``catalogs=[key]`` and ``q`` instead. ``catalog`` cannot be combined
-        with ``catalogs``.
+        Contradictions the server would refuse with a ``422`` — ``relax``
+        without an understood ``q``, a facet name sent twice, ``price_min``
+        above ``price_max`` — raise ``pydantic.ValidationError`` before any
+        request.
         """
-        # `catalog` is deliberately not rewritten to `catalogs`: the deprecated
-        # field goes out as itself, so the server-side count of `catalog`
-        # traffic stays an honest measure of who still has to migrate.
-        if catalog is not None:
-            warnings.warn(
-                "search_products(catalog=...) is deprecated; "
-                "pass catalogs=[key] instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        resolved_text_search_query: TextSearchQuery | None = None
-        if text_search_query is not None:
-            warnings.warn(
-                "search_products(text_search_query=...) is deprecated; "
-                "pass q (with facets, price_min, price_max) instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            resolved_text_search_query = _coerce_text_search_query(text_search_query)
-
-        resolved_facets: list[Facet] | None = None
-        if facets is not None:
-            resolved_facets = [_coerce_facet(facet) for facet in facets]
-
         request = ProgrammaticProductSearchRequest(
-            catalogs=_catalog_list(catalogs),
-            catalog=catalog,
-            cursor=cursor,
-            limit=limit,
             q=q,
-            text_search_query=resolved_text_search_query,
-            facets=resolved_facets,
+            understand=understand,
+            facets=_facet_list(facets),
+            exclude_facets=_facet_list(exclude_facets),
+            omit_generated_facets=_string_list(
+                omit_generated_facets, "omit_generated_facets"
+            ),
             price_min=price_min,
             price_max=price_max,
+            brand_quality_min=brand_quality_min,
+            brand_quality_max=brand_quality_max,
+            similar_to_brands=_string_list(similar_to_brands, "similar_to_brands"),
+            catalogs=_catalog_list(catalogs),
+            limit=limit,
+            cursor=cursor,
+            relax=relax,
+            debug=debug,
         )
         data = await self._json(
             "searchProducts",
             json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
-        return MerchantProductListPage.model_validate(data)
+        return ProgrammaticProductSearchPage.model_validate(data)
 
     async def more_like_this_products(
         self,
@@ -624,12 +616,18 @@ def _catalog_list(catalogs: Sequence[str] | None) -> list[str] | None:
     return None if catalogs is None else list(catalogs)
 
 
-def _coerce_text_search_query(
-    value: TextSearchQuery | dict[str, Any],
-) -> TextSearchQuery:
-    if isinstance(value, TextSearchQuery):
-        return value
-    return TextSearchQuery.model_validate(value)
+def _string_list(values: Sequence[str] | None, field: str) -> list[str] | None:
+    # A bare string is a Sequence[str] too; refuse it rather than send one
+    # entry per character.
+    if isinstance(values, str):
+        raise TypeError(f"{field} must be a list of strings, not a string")
+    return None if values is None else list(values)
+
+
+def _facet_list(
+    facets: Sequence[Facet | dict[str, Any]] | None,
+) -> list[Facet] | None:
+    return None if facets is None else [_coerce_facet(facet) for facet in facets]
 
 
 def _coerce_facet(value: Facet | dict[str, Any]) -> Facet:
