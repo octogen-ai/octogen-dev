@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -38,6 +38,13 @@ MeOrganization = _contract.MeOrganization
 MeQuotas = _contract.MeQuotas
 MeRateLimit = _contract.MeRateLimit
 MeResponse = _contract.MeResponse
+ProgrammaticProductSearchEffectiveFacet = (
+    _contract.ProgrammaticProductSearchEffectiveFacet
+)
+ProgrammaticProductSearchEffectiveQuery = (
+    _contract.ProgrammaticProductSearchEffectiveQuery
+)
+ProgrammaticProductSearchRelaxation = _contract.ProgrammaticProductSearchRelaxation
 VoyageError = _contract.VoyageError
 VoyageListResponse = _contract.VoyageListResponse
 VoyageQuotas = _contract.VoyageQuotas
@@ -151,29 +158,6 @@ class Facet(_RequestModel):
     values: list[str]
 
 
-class TextSearchQuery(_RequestModel):
-    """Pre-generated semantic search query for product search."""
-
-    search_id: str | None = None
-    text: str
-    limit: int = 10
-    ranking_text: str | None = None
-    retrieval_embedding_columns: list[EmbeddingColumn] | None = None
-    ranking_embedding_columns: list[EmbeddingColumn] | None = None
-    facets: list[Facet] | None = None
-    exclusion_facets: list[Facet] | None = None
-    price_min: float | None = None
-    price_max: float | None = None
-    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
-    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
-    similar_to_brands: list[str] | None = None
-    brand_similarity_weight: float | None = Field(default=0.7, ge=0.0, le=1.0)
-    text_similarity_weight: float | None = Field(default=0.3, ge=0.0, le=1.0)
-    search_after: list[Any] | None = None
-    browse_menu_uuid: str | None = None
-    compact_mode: Literal["card", "compact", "medium", "enriched"] | None = None
-
-
 def _validate_catalog_keys(catalogs: list[str] | None) -> list[str] | None:
     # Length bounds live on the field; this rejects the blank key the contract
     # would accept and then match nothing with. Keys are otherwise sent as given.
@@ -182,33 +166,88 @@ def _validate_catalog_keys(catalogs: list[str] | None) -> list[str] | None:
     return catalogs
 
 
-class ProgrammaticProductSearchRequest(_RequestModel):
-    """Product search request targeting a catalog allowlist or every catalog.
+def _validate_brand_names(brands: list[str] | None) -> list[str] | None:
+    if brands is not None and any(not brand.strip() for brand in brands):
+        raise ValueError("similar_to_brands must contain only non-empty brand names")
+    return brands
 
-    ``catalog`` and ``text_search_query`` are deprecated: the API is retiring
-    both on search. Use ``catalogs=[key]`` and ``q`` instead.
+
+def _facet_names(facets: list[Facet] | None, field: str) -> set[str]:
+    """Reject a repeated facet name; return the names for cross-field checks."""
+    names: set[str] = set()
+    for facet in facets or ():
+        if facet.name in names:
+            raise ValueError(
+                f"{field} lists facet {facet.name!r} more than once; "
+                "put every value in one entry"
+            )
+        names.add(facet.name)
+    return names
+
+
+class ProgrammaticProductSearchRequest(_RequestModel):
+    """Body for ``POST /v1/products/search``: free text, filters, or both.
+
+    Each field controls one thing. The combinations the server refuses with a
+    ``422`` and that are cheap to mirror — ``relax`` without an understood
+    ``q``, a facet name sent twice, ``price_min`` above ``price_max`` — fail
+    here instead. The server stays the source of truth for everything else.
     """
 
-    # An empty list is refused rather than sent: the server is retiring "empty
-    # means everything", and omitting the field already says that.
-    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
-    catalog: str | None = Field(default=None, min_length=1)
-    cursor: str | None = None
-    limit: int = Field(default=50, ge=1, le=100)
     q: str | None = None
-    text_search_query: TextSearchQuery | None = None
-    facets: list[Facet] | None = None
-    price_min: float | None = None
-    price_max: float | None = None
+    understand: bool | None = None
+    facets: list[Facet] | None = Field(default=None, max_length=50)
+    exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    omit_generated_facets: list[str] | None = Field(default=None, max_length=50)
+    price_min: float | None = Field(default=None, ge=0)
+    price_max: float | None = Field(default=None, ge=0)
+    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
+    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
+    similar_to_brands: list[str] | None = Field(
+        default=None, min_length=1, max_length=10
+    )
+    # An empty list is refused rather than sent: omitting the field already
+    # means every catalog.
+    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
+    limit: int = Field(default=50, ge=1, le=100)
+    cursor: str | None = None
+    relax: bool | None = None
+    debug: bool | None = None
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+    _check_brand_names = field_validator("similar_to_brands")(_validate_brand_names)
 
     @model_validator(mode="after")
-    def reject_catalog_with_catalogs(self) -> ProgrammaticProductSearchRequest:
-        if self.catalog is not None and self.catalogs is not None:
+    def reject_contradictions(self) -> ProgrammaticProductSearchRequest:
+        # The server treats a blank `q` as omitted.
+        has_query = self.q is not None and bool(self.q.strip())
+        understood = self.understand is not False
+        if not understood and not has_query:
+            raise ValueError("understand=False requires q")
+        if self.relax and not (has_query and understood):
             raise ValueError(
-                "Pass catalogs or catalog, not both; catalog is deprecated"
+                "relax requires an understood q (q set, understand not False)"
             )
+        if self.omit_generated_facets and not (has_query and understood):
+            raise ValueError(
+                "omit_generated_facets requires an understood q "
+                "(q set, understand not False)"
+            )
+
+        facet_names = _facet_names(self.facets, "facets")
+        _facet_names(self.exclude_facets, "exclude_facets")
+        for name in self.omit_generated_facets or ():
+            if name in facet_names:
+                raise ValueError(
+                    f"facet {name!r} is in both facets and omit_generated_facets; "
+                    "a facet you send already replaces the understood one"
+                )
+
+        for field in ("price", "brand_quality"):
+            low = getattr(self, f"{field}_min")
+            high = getattr(self, f"{field}_max")
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{field}_min must not exceed {field}_max")
         return self
 
 
@@ -512,6 +551,17 @@ class MerchantProductListItem(_ResponseModel):
 class MerchantProductListPage(_ResponseModel):
     items: list[MerchantProductListItem] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, alias="nextCursor")
+
+
+class ProgrammaticProductSearchPage(MerchantProductListPage):
+    """One page of ``search_products`` results."""
+
+    request_id: str | None = Field(default=None, alias="requestId")
+    #: The search that actually ran; present with ``debug=True``.
+    effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
+        default=None,
+        alias="effectiveQuery",
+    )
 
 
 class MerchantProductView(MerchantProductListItem):

@@ -148,8 +148,10 @@ Four URL fields describe how the result was reached, each with one meaning:
 
 ### `POST /products/search` — search products
 
-Searches products across all active crawled catalogs. To restrict the search
-to specific catalogs, include `catalogs`; everything else is optional.
+Searches indexed products by free text, filters, or both. Results span every
+catalog your key can access unless `catalogs` narrows them. Each field controls
+one thing, and a request that combines fields in a contradictory way is a `422`
+rather than being resolved silently. Every field is optional.
 
 ```bash
 curl -sS https://api.storerouter.ai/v1/products/search \
@@ -157,10 +159,8 @@ curl -sS https://api.storerouter.ai/v1/products/search \
   -H "Content-Type: application/json" \
   -d '{
     "q": "black hoodie",
-    "facets": [
-      {"name": "color", "values": ["black"]},
-      {"name": "category", "values": ["hoodies"]}
-    ],
+    "catalogs": ["warrenlotas"],
+    "facets": [{"name": "color", "values": ["black"]}],
     "price_min": 50,
     "price_max": 300,
     "limit": 25
@@ -169,17 +169,26 @@ curl -sS https://api.storerouter.ai/v1/products/search \
 
 Request fields:
 
-| Field               | Type    | Notes                                                                                           |
-| ------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `catalogs`          | array   | Optional allowlist of 1–500 catalog keys. When omitted, searches all active crawled catalogs.   |
-| `catalog`           | string  | **Deprecated** — send `catalogs: ["<key>"]`. Being retired; cannot be combined with `catalogs`. |
-| `q`                 | string  | Free-text keyword query. Omit to browse without filtering.                                      |
-| `facets`            | array   | Structured filters (brand, category, color, product attributes).                                |
-| `price_min`         | number  | Inclusive minimum price.                                                                        |
-| `price_max`         | number  | Inclusive maximum price.                                                                        |
-| `cursor`            | string  | Opaque pagination cursor from a previous response's `nextCursor`.                               |
-| `limit`             | integer | Page size, 1..100. Defaults to 50.                                                              |
-| `text_search_query` | object  | **Deprecated** — send `q` (with `facets`, `price_min`, `price_max`). Being retired.             |
+| Field                                    | Type    | Notes                                                                                                                                                                                                       |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`                                      | string  | Free text. Omit (or send blank) to browse by filters alone. Understood by default: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it.              |
+| `understand`                             | boolean | Defaults to `true`. `false` matches `q` as written and filters only by what you send. Requires `q`.                                                                                                         |
+| `facets`                                 | array   | Filters a product must match: every facet, any value within a facet. Replaces any understood facet of the same name and is never relaxed. Each name at most once.                                           |
+| `exclude_facets`                         | array   | Filters a product must not match. Each name at most once.                                                                                                                                                   |
+| `omit_generated_facets`                  | array   | Names of understood facets to drop, for a derived filter that is wrong and that you have no value for. Use the names `effectiveQuery` reports. Requires understood `q`; a name may not also be in `facets`. |
+| `price_min`, `price_max`                 | number  | Inclusive, at least 0, min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                              |
+| `brand_quality_min`, `brand_quality_max` | number  | Brand quality score bounds from 1 (very poor) to 6 (exceptional), min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                   |
+| `similar_to_brands`                      | array   | 1 to 10 brand names whose style to favour. Ranks, does not filter. Replaces brands understood from `q`.                                                                                                     |
+| `catalogs`                               | array   | 1 to 500 catalog keys. Omit to search everything your key can access; keys you cannot access match nothing.                                                                                                 |
+| `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                   |
+| `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body.                                                                                                                                               |
+| `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                        |
+| `debug`                                  | boolean | Adds `effectiveQuery`: the text, filters and bounds that ran, each facet tagged `caller` or `generated`.                                                                                                    |
+
+`catalog`, `text_search_query`, and `diversity` were removed and are now a
+`422` whose message names the replacement: send `catalogs: ["<key>"]` for
+`catalog`, and `q` with `understand: false` (filters in `facets` and
+`exclude_facets`) for `text_search_query`.
 
 Response:
 
@@ -207,7 +216,8 @@ Response:
       "updatedAt": "2026-05-19T18:04:10Z"
     }
   ],
-  "nextCursor": "eyJzZWFyY2hBZnRlciI6Wy4uLl19"
+  "nextCursor": "eyJzZWFyY2hBZnRlciI6Wy4uLl19",
+  "requestId": "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11"
 }
 ```
 
@@ -215,12 +225,26 @@ When `nextCursor` is non-null, pass it as `cursor` on the next request — with
 the same filters — to advance pagination. A null `nextCursor` means the page
 is the last one.
 
+With `"debug": true` the page adds `effectiveQuery`, the search that actually
+ran: `text` (the understood rewrite of `q`, `q` itself with `understand: false`,
+or empty when browsing), `understood`, `facets` and `excludeFacets` (each
+`{name, values, source}` with `source` `caller` or `generated`), `priceMin`,
+`priceMax`, `brandQualityMin`, `brandQualityMax`, `similarToBrands`,
+`catalogs`, and — with `relax: true` — `relaxation` (`rounds`,
+`droppedFacets`, `declinedRounds`). It is a report, not a request fragment:
+understood facets of one name can AND together, which a request cannot
+express.
+
 #### Facets
 
-Facet `name` values accept both base facet keys and product attribute keys.
-Attribute facets may be sent either as the bare attribute key (e.g. `fit`) or
-as a fully qualified key (e.g. `attribute_facets.fit`). Facet `values` should
-be lowercase; phrase values may contain spaces.
+Facet names are the ones the coverage snapshot publishes as filterable, one
+spelling each: `gender`, `age_groups`, `product_type`, `brand_name`,
+`brand_slug`, `raw_brand_name`, `color`, `color_family`, `is_activewear`,
+`category_path.depth_0` to `category_path.depth_6`, brand profile facets such
+as `brand_origin_country`, and taxonomy attribute handles such as `fit`. The
+attribute named `color` is `attribute_facets.color`; any other
+`attribute_facets.` prefix and unknown names are a `422`. Values are canonical
+lowercase handles and may contain spaces.
 
 ### `POST /products/more-like-this` — find similar products
 

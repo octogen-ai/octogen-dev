@@ -88,8 +88,10 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   hosts, with `ETag` revalidation and host normalization.
 - `searchProducts(params)` searches every active catalog by default, or only
   the catalogs in `catalogs` (1–500 keys) when it is provided. The query field
-  is `q`; results come back as `items` + `nextCursor`, each item carrying
-  `productUrl`. `catalog` and `textSearchQuery` are deprecated (see below).
+  is `q`, understood by default; `understand`, `facets`, `excludeFacets`, the
+  price and brand-quality bounds, `relax`, and `debug` refine it (see below).
+  Results come back as `items` + `nextCursor`, each item carrying `productUrl`,
+  plus `effectiveQuery` with `debug: true`.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
   or UUID, optionally restricted to `catalogs` (1–100 keys).
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
@@ -145,29 +147,46 @@ console.log(
 );
 ```
 
-### Narrowing to catalogs
+### Search controls
 
-Pass `catalogs` — a list of catalog keys — to restrict results. Omit it to
-search everything; an empty list is refused rather than sent.
+Each `searchProducts` field controls one thing. `q` says what to find and is
+understood by default — rewritten for retrieval, with category, colour, brand,
+price, and attribute filters derived from it. `facets`, `excludeFacets`, and the
+bounds say what to keep; `catalogs` says where to look.
 
 ```ts
-const dresses = await client.searchProducts({
-  catalogs: ["macys", "jcrew"],
-  q: "linen dress",
+const page = await client.searchProducts({
+  q: "black hoodie",
+  catalogs: ["warrenlotas"], // omit to search every catalog your key can access
+  facets: [{ name: "color", values: ["black"] }],
+  excludeFacets: [{ name: "brand_name", values: ["acme"] }],
+  priceMin: 50,
+  priceMax: 300,
+  brandQualityMin: 4, // 1 (very poor) to 6 (exceptional)
+  similarToBrands: ["Warren Lotas"], // ranks, does not filter
+  relax: true, // drop understood filters in stages if nothing matches
+  debug: true,
 });
+
+for (const facet of page.effectiveQuery?.facets ?? []) {
+  console.log(facet.name, facet.values, facet.source); // "caller" | "generated"
+}
 ```
 
-**Deprecated in 0.4.0**, still sent as-is and warned about once per process:
+- `understand: false` matches `q` as written and filters only by what you send.
+- `omitGeneratedFacets: ["fit"]` drops an understood facet that is wrong when
+  you have no value of your own for it; to replace one, send a facet of that
+  name instead. Use the names `effectiveQuery` reports.
+- `debug: true` adds `effectiveQuery`, the search that actually ran.
 
-- `catalog: "macys"` on `searchProducts` → use `catalogs: ["macys"]`. Passing
-  both is a `TypeError`.
-- `textSearchQuery` on `searchProducts` → use `q` with `facets`, `priceMin`,
-  and `priceMax`.
+Contradictions the API would refuse — `relax` or `understand: false` without a
+`q`, a facet name sent twice, `priceMin` above `priceMax` — throw a `TypeError`
+before any request.
 
-The API is retiring both fields on search, so they will be removed from a later
-SDK release. `moreLikeThisProducts` already takes only `catalogs`: the endpoint
-stopped accepting `catalog`, and 0.4.0 refuses it locally instead of sending a
-request that would fail.
+**Removed in 0.5.0** (the API now answers them with `422`): `catalog` → use
+`catalogs: [key]`; `textSearchQuery` → use `q` with `understand: false` and your
+filters in `facets` and `excludeFacets`. See the
+[CHANGELOG](./CHANGELOG.md#050--2026-10-14) for the migration.
 
 ## Development
 

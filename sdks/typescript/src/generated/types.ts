@@ -291,20 +291,12 @@ export interface paths {
         put?: never;
         /**
          * Search products
-         * @description Search catalog products with a Catalog partner API key.
+         * @description Search indexed products by free text, filters, or both.
          *
-         *     Full corpus by default: a ``catalog`` in the request narrows to one
-         *     catalog and a ``catalogs`` allowlist restricts results to those catalogs
-         *     (more-like-this semantics, #8505); otherwise the search spans every
-         *     catalog the caller's resolved scope permits (no per-org grant
-         *     *enumeration* — see ``require_programmatic_product_search_authorization``
-         *     — but a ``catalog_partner`` caller is still bounded to
-         *     ``catalog_type = 'CRAWLED'`` per OCT-3674).
-         *
-         *     **All** branches carry the resolved scope (OCT-3675). The named-catalog
-         *     branch was already refused at the dependency, so the predicate here is the
-         *     backstop that keeps the two enforcing independently — and on the allowlist
-         *     branch the predicate is the *only* per-key enforcement, by design.
+         *     Results span every catalog your key can access unless `catalogs` narrows
+         *     them. Page 1 is ranked by relevance; later pages continue in quality-score
+         *     order from page 1's last result, so a product can repeat across pages —
+         *     de-duplicate by `uuid`.
          */
         post: operations["searchProducts"];
         delete?: never;
@@ -738,20 +730,15 @@ export interface components {
         Facet: {
             /**
              * Name
-             * @description Facet key. Accepts base facets (FacetName) or attribute keys. Attribute facets may be provided as '<key>' (e.g., 'fit') or fully qualified 'attribute_facets.<key>'.
+             * @description Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.
              */
-            name: components["schemas"]["FacetName"] | string;
+            name: string;
             /**
              * Values
-             * @description List of values to filter by. They should all be lowercase. Facet values can be phrases, so make sure to include the spaces.
+             * @description Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.
              */
             values: string[];
         };
-        /**
-         * FacetName
-         * @enum {string}
-         */
-        FacetName: "brand_name" | "brand_slug" | "raw_brand_name" | "product_type" | "gender" | "age_groups" | "color" | "color_family" | "is_activewear" | "category_path.depth_0" | "category_path.depth_1" | "category_path.depth_2" | "category_path.depth_3" | "category_path.depth_4" | "category_path.depth_5" | "category_path.depth_6";
         /**
          * Gender
          * @enum {string}
@@ -1450,7 +1437,7 @@ export interface components {
             exclude_facets?: components["schemas"]["Facet"][] | null;
             /**
              * Include Facets
-             * @description Additional include facets to append after generated facets.
+             * @description Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.
              */
             include_facets?: components["schemas"]["Facet"][] | null;
             /**
@@ -1460,7 +1447,7 @@ export interface components {
             limit: number;
             /**
              * Omit Generated Facets
-             * @description Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery (include_facets only appends). Unknown names are ignored; caller include_facets and exclude_facets are never affected.
+             * @description Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.
              */
             omit_generated_facets?: string[] | null;
             /**
@@ -1658,11 +1645,63 @@ export interface components {
             warnings?: string[];
         };
         /**
+         * ProgrammaticProductSearchEffectiveFacet
+         * @description One facet that ran, and where it came from.
+         */
+        ProgrammaticProductSearchEffectiveFacet: {
+            /** Name */
+            name: string;
+            /**
+             * Source
+             * @description `caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.
+             */
+            source?: ("caller" | "generated") | null;
+            /** Values */
+            values: string[];
+        };
+        /**
+         * ProgrammaticProductSearchEffectiveQuery
+         * @description The search that actually ran, in the request's own vocabulary.
+         */
+        ProgrammaticProductSearchEffectiveQuery: {
+            /** Brandqualitymax */
+            brandQualityMax?: number | null;
+            /** Brandqualitymin */
+            brandQualityMin?: number | null;
+            /**
+             * Catalogs
+             * @description The `catalogs` allowlist as received, normalized and deduped.
+             */
+            catalogs?: string[] | null;
+            /** Excludefacets */
+            excludeFacets?: components["schemas"]["ProgrammaticProductSearchEffectiveFacet"][];
+            /** Facets */
+            facets?: components["schemas"]["ProgrammaticProductSearchEffectiveFacet"][];
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            relaxation?: components["schemas"]["ProgrammaticProductSearchRelaxation"] | null;
+            /** Similartobrands */
+            similarToBrands?: string[] | null;
+            /**
+             * Text
+             * @description Text matched against products: the understood rewrite of `q`, `q` itself with `understand: false`, or empty when browsing.
+             */
+            text: string;
+            /**
+             * Understood
+             * @description Whether query understanding ran.
+             */
+            understood: boolean;
+        };
+        /**
          * ProgrammaticProductSearchPage
-         * @description Search page plus the debug effective query (parity with more-like-this).
+         * @description One page of search results.
          */
         ProgrammaticProductSearchPage: {
-            effectiveQuery?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveQuery"] | null;
+            /** @description Present with `debug: true`. */
+            effectiveQuery?: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"] | null;
             /**
              * Items
              * @default []
@@ -1680,70 +1719,116 @@ export interface components {
             requestId: string;
         };
         /**
+         * ProgrammaticProductSearchRelaxation
+         * @description What relaxation did on this request (`relax: true` only).
+         */
+        ProgrammaticProductSearchRelaxation: {
+            /**
+             * Declinedrounds
+             * @description Stages tried that still returned nothing.
+             * @default 0
+             */
+            declinedRounds: number;
+            /**
+             * Droppedfacets
+             * @description Understood facets dropped to produce this page.
+             */
+            droppedFacets?: components["schemas"]["ProgrammaticProductSearchEffectiveFacet"][];
+            /**
+             * Rounds
+             * @description Stages applied to produce this page; 0 if none.
+             */
+            rounds: number;
+        };
+        /**
          * ProgrammaticProductSearchRequest
-         * @description Programmatic product search request.
+         * @description Search indexed products by free text, filters, or both.
+         *
+         *     Each field controls one thing. ``q`` says what to find; ``facets``,
+         *     ``exclude_facets`` and the bounds say what to keep; ``catalogs`` says
+         *     where to look; ``limit`` and ``cursor`` page. Combinations that would
+         *     contradict each other are rejected with 422 rather than resolved silently.
          */
         ProgrammaticProductSearchRequest: {
             /**
-             * Catalog
-             * @description Optional catalog to narrow the search to. When omitted, search runs across the entire indexed corpus (all active catalogs), not just catalogs granted to the API key organization. Mutually exclusive with `catalogs`.
+             * Brand Quality Max
+             * @description Inclusive maximum brand quality score, 1 to 6. Combined with any understood bound by keeping the stricter one.
              */
-            catalog?: string | null;
+            brand_quality_max?: number | null;
+            /**
+             * Brand Quality Min
+             * @description Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). Combined with any understood bound by keeping the stricter one.
+             */
+            brand_quality_min?: number | null;
             /**
              * Catalogs
-             * @description Optional catalog allowlist to narrow the search — same contract as the more-like-this `catalogs` field. Restricts results to these catalogs only. Keys are not validated against the caller's grants: a key outside the caller's resolved scope simply matches nothing. Mutually exclusive with `catalog`. When omitted or empty, search spans every catalog the caller's scope permits. Bounds stay the inherited max_length=500 with an empty list meaning no allowlist, so request shapes accepted before this field was honored keep working.
+             * @description Catalog keys to search. Omit to search every catalog your key can access. Keys your key cannot access match nothing.
              */
             catalogs?: string[] | null;
             /**
              * Cursor
-             * @description Opaque pagination cursor
+             * @description `nextCursor` from the previous page, passed back verbatim with the same request body.
              */
             cursor?: string | null;
             /**
              * Debug
-             * @description Include the effective query in the response, mirroring more-like-this: the EXECUTED text/facets/price bounds/embedding columns — after query understanding AND after caller facets (which win over same-name generated facets) and price bounds are merged. Browse-all requests report the raw browse query. Makes search usable as a controlled comparison against more-like-this.
+             * @description Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.
              * @default false
              */
             debug: boolean;
             /**
-             * Diversity
-             * @description Enable result diversification (parity with Shop Agent / conversational search). Defaults off to preserve stable merchant-browse ordering across pages.
-             * @default false
+             * Exclude Facets
+             * @description Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.
              */
-            diversity: boolean;
+            exclude_facets?: components["schemas"]["Facet"][] | null;
             /**
              * Facets
-             * @description Structured facet filters to apply to the product list.
+             * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.
              */
             facets?: components["schemas"]["Facet"][] | null;
             /**
              * Limit
+             * @description Maximum results per page.
              * @default 50
              */
             limit: number;
             /**
+             * Omit Generated Facets
+             * @description Names of understood facets to drop before searching, for a derived filter that is wrong and that you have no value of your own for. To replace a derived filter instead, send a facet of that name. Use the names shown in `effectiveQuery`; colour is omitted per axis (`color` or `color_family`). Requires understood `q`; a name may not also appear in `facets`.
+             */
+            omit_generated_facets?: string[] | null;
+            /**
              * Price Max
-             * @description Maximum price filter
+             * @description Inclusive maximum price. Combined with any understood maximum by keeping the lower one.
              */
             price_max?: number | null;
             /**
              * Price Min
-             * @description Minimum price filter
+             * @description Inclusive minimum price. Combined with any understood minimum by keeping the higher one.
              */
             price_min?: number | null;
             /**
              * Q
-             * @description Keyword search query
+             * @description Free-text query. Omit to browse by filters alone. By default it is understood: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it. Blank is the same as omitted.
              */
             q?: string | null;
             /**
              * Relax
-             * @description Opt-in zero-result facet relaxation. When a `q` search's LLM-generated facet filters match nothing, the least-trusted generated facet families are dropped cumulatively (brand enrichment, then attributes, then color/deep categories) and the search retried; the response's `nextCursor` records the converged round so later pages continue the exact relaxed result set. Facets you provide yourself (`facets` or `text_search_query`) are NEVER dropped — with no generated facets in play this flag is a no-op. Defaults off: an empty result stays an exact answer unless relaxation is requested. Cursors from a relaxed page must be replayed with `relax: true`; with `debug: true` the applied rounds are reported in `effectiveQuery`.
+             * @description When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.
              * @default false
              */
             relax: boolean;
-            /** @description Pre-generated semantic search query. When provided, the service uses this query directly instead of re-running query understanding. */
-            text_search_query?: components["schemas"]["TextSearchQuery"] | null;
+            /**
+             * Similar To Brands
+             * @description Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.
+             */
+            similar_to_brands?: string[] | null;
+            /**
+             * Understand
+             * @description Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.
+             * @default true
+             */
+            understand: boolean;
         };
         /**
          * ProgrammaticResolveFromHtmlRequest
@@ -1790,102 +1875,6 @@ export interface components {
             publishedAt?: string | null;
             /** Rating */
             rating?: number | null;
-        };
-        /** TextSearchQuery */
-        TextSearchQuery: {
-            /**
-             * Maximum brand quality
-             * @description Inclusive upper bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).
-             */
-            brand_quality_max?: number | null;
-            /**
-             * Minimum brand quality
-             * @description Inclusive lower bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).
-             */
-            brand_quality_min?: number | null;
-            /**
-             * Brand similarity weight
-             * @description Weight for brand similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to brand style similarity. Default is 0.7.
-             * @default 0.7
-             */
-            brand_similarity_weight: number | null;
-            /**
-             * Browse menu UUID
-             * @description UUID of the browse menu item that matches this query's facets (gender, age_group, category_path).
-             */
-            browse_menu_uuid?: string | null;
-            /**
-             * Search output mode
-             * @description Optional response shape for product search results. Use 'card' for catalog grids that only need display fields; omit for full products.
-             */
-            compact_mode?: ("card" | "compact" | "medium" | "enriched") | null;
-            /**
-             * Exclusion facets filter
-             * @description Facets that will be excluded from the search results.
-             */
-            exclusion_facets?: components["schemas"]["Facet"][] | null;
-            /**
-             * Facets filter
-             * @description The search results will be filtered by the specified facets.
-             */
-            facets?: components["schemas"]["Facet"][] | null;
-            /**
-             * Search results limit
-             * @description The maximum number of results to return from the search. The default is 10.
-             * @default 10
-             */
-            limit: number;
-            /**
-             * Maximum price
-             * @description The products will be filtered to have a price less than or equal to the specified value.
-             */
-            price_max?: number | null;
-            /**
-             * Minimum price
-             * @description The products will be filtered to have a price greater than or equal to the specified value.
-             */
-            price_min?: number | null;
-            /**
-             * Ranking embedding columns
-             * @description The columns to use for the ranking embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `ranking_text` parameter.
-             */
-            ranking_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
-            /**
-             * Ranking text
-             * @description The text is converted to a vector embedding and used to rank the search results. It will be matched against the embeddings from ranking_embedding_columns during ranking.
-             */
-            ranking_text?: string | null;
-            /**
-             * Retrieval embedding columns
-             * @description The columns to use for the retrieval embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `text` parameter.
-             */
-            retrieval_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
-            /**
-             * Search after cursor
-             * @description Cursor for pagination. Pass the 'next_cursor' value from the previous response to fetch the next page of results. This enables efficient 'load more' functionality.
-             */
-            search_after?: unknown[] | null;
-            /**
-             * Search identifier
-             * @description Unique identifier (UUID) for this search query. Used to link agent recommendations back to specific search results.
-             */
-            search_id?: string | null;
-            /**
-             * Similar to brands
-             * @description List of brand names to find products similar to. When provided, embeddings for the specified brands are fetched, averaged, and used to boost products with similar style characteristics. This enables finding products that match the aesthetic of certain brands.
-             */
-            similar_to_brands?: string[] | null;
-            /**
-             * Product search query text
-             * @description The text is converted to a vector embedding and used to search for products in the e-commerce catalog with pre-computed product embeddings. It will be matched against the embeddings from retrieval_embedding_columns during retrieval.
-             */
-            text: string;
-            /**
-             * Text similarity weight
-             * @description Weight for text query similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to text query matching. Default is 0.3.
-             * @default 0.3
-             */
-            text_similarity_weight: number | null;
         };
         /** ValidationError */
         ValidationError: {

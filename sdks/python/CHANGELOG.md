@@ -1,5 +1,76 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.5.0 — 2026-10-14
+
+`search_products` now exposes the redesigned `/v1` search contract: one control
+per intent. **Breaking:** the keywords the API stopped accepting are gone from
+the SDK, because every request carrying them now fails with a `422`.
+
+### Added
+
+- `search_products` takes `understand`, `exclude_facets`,
+  `omit_generated_facets`, `brand_quality_min`, `brand_quality_max`,
+  `similar_to_brands`, `relax`, and `debug`, sent under those wire names.
+- `search_products` returns `ProgrammaticProductSearchPage`, a
+  `MerchantProductListPage` subclass that adds `request_id` and, with
+  `debug=True`, a typed `effective_query`
+  (`ProgrammaticProductSearchEffectiveQuery`) — the text, facets (each with
+  `source` `"caller"` or `"generated"`), bounds, catalogs, and `relaxation`
+  (`rounds`, `dropped_facets`, `declined_rounds`) that actually ran. The
+  effective-query models are re-exported from the generated contract mirror.
+- `ProgrammaticProductSearchRequest` rejects the contradictions the API
+  refuses, raising `pydantic.ValidationError` before any request:
+  `understand=False`, `relax=True`, or a non-empty `omit_generated_facets`
+  without a `q` (and the latter two with `understand=False`); a facet name
+  repeated within `facets` or `exclude_facets`; a name in both `facets` and
+  `omit_generated_facets`; more than 50 entries in any of the three; a
+  negative price or `price_min > price_max`; brand quality outside 1–6 or
+  min > max; and `similar_to_brands` that is empty, longer than 10, or has a
+  blank name. The server remains the source of truth for everything else.
+
+### Removed
+
+- `search_products(catalog=...)`, deprecated in 0.4.0. Use `catalogs=[key]`.
+- `search_products(text_search_query=...)`, deprecated in 0.4.0, and the
+  `TextSearchQuery` model. Send `q` with `understand=False` to match the text
+  as written, with your filters in `facets` and `exclude_facets` (formerly
+  `exclusion_facets`), and the bounds and brands as top-level `price_min`,
+  `price_max`, `brand_quality_min`, `brand_quality_max`, and
+  `similar_to_brands`.
+- `ProgrammaticProductSearchRequest` drops `catalog` and `text_search_query`;
+  it forbids extra fields, so passing either is a `ValidationError`.
+
+Passing a removed keyword to `search_products` is a `TypeError`.
+
+### Migrating from 0.4.0
+
+```python
+# 0.4.0
+await client.search_products(catalog="macys", q="linen dress")
+await client.search_products(
+    text_search_query={
+        "text": "linen dress",
+        "facets": [{"name": "color_family", "values": ["blue"]}],
+        "exclusion_facets": [{"name": "brand_name", "values": ["acme"]}],
+        "price_max": 200,
+    }
+)
+
+# 0.5.0
+await client.search_products(catalogs=["macys"], q="linen dress")
+await client.search_products(
+    q="linen dress",
+    understand=False,
+    facets=[{"name": "color_family", "values": ["blue"]}],
+    exclude_facets=[{"name": "brand_name", "values": ["acme"]}],
+    price_max=200,
+)
+```
+
+`text_search_query`'s retrieval tuning (`search_id`, `ranking_text`, embedding
+columns, similarity weights, `search_after`, `browse_menu_uuid`,
+`compact_mode`) has no replacement on `/v1` search.
+
 ## 0.4.0 — 2026-10-14
 
 The `/v1` search API is moving to one control per intent. Narrowing to catalogs

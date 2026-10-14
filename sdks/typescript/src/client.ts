@@ -26,24 +26,23 @@ import type {
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
   LookupProductOptions,
-  MerchantProductListPage,
   MerchantProductUrlLookupResponse,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductLookupRequestBody,
+  ProgrammaticProductSearchPage,
   ProgrammaticProductSearchRequest,
   ProgrammaticResolveFromHtmlRequest,
   ResolveProductFromHtmlParams,
   SearchProductsParams,
+  Facet,
   StartVoyageResult,
-  TextSearchQuery,
-  TextSearchQueryPayload,
   VoyageListResponse,
   VoyageTask,
 } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.4.0";
+export const SDK_VERSION = "0.5.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -295,10 +294,20 @@ export class OctogenClient {
     return data as VoyageTask;
   }
 
-  async searchProducts(params: SearchProductsParams): Promise<MerchantProductListPage> {
+  /**
+   * Search indexed products by free text, filters, or both
+   * (`POST /v1/products/search`).
+   *
+   * Contradictory combinations the server would refuse with `422` — `relax`
+   * without an understood `q`, a facet name sent twice, `priceMin` above
+   * `priceMax` — throw a `TypeError` here instead, before any request.
+   */
+  async searchProducts(
+    params: SearchProductsParams,
+  ): Promise<ProgrammaticProductSearchPage> {
     const body = toSearchPayload(params);
     const data = await this.json("searchProducts", { body });
-    return data as MerchantProductListPage;
+    return data as ProgrammaticProductSearchPage;
   }
 
   async moreLikeThisProducts(
@@ -651,17 +660,6 @@ function assertUrlBatch(urls: string[]): void {
   }
 }
 
-const warnedDeprecatedParams = new Set<string>();
-
-/** Warn once per process that a still-working parameter is on its way out. */
-function warnDeprecatedParam(name: string, message: string): void {
-  if (warnedDeprecatedParams.has(name)) {
-    return;
-  }
-  warnedDeprecatedParams.add(name);
-  console.warn(`[octogen] ${name} is deprecated: ${message}`);
-}
-
 /**
  * Validate a `catalogs` allowlist. An empty list is refused rather than sent:
  * the server is retiring "empty means everything", and omitting the field is
@@ -681,122 +679,210 @@ function assertCatalogs(catalogs: unknown, max: number): void {
   }
 }
 
+/**
+ * Search fields removed in 0.5.0 because the API now answers them with `422`.
+ * A JavaScript caller still passing one is told the replacement here rather
+ * than having it dropped and the search silently widened.
+ */
+const REMOVED_SEARCH_PARAMS: Readonly<Record<string, string>> = Object.freeze({
+  catalog: "searchProducts takes catalogs: [key], not catalog",
+  diversity: "searchProducts no longer takes diversity; the API removed it",
+  textSearchQuery:
+    "searchProducts no longer takes textSearchQuery; pass q with understand: false, " +
+    "and your filters in facets and excludeFacets",
+});
+
+const MAX_SEARCH_FACETS = 50;
+
 function toSearchPayload(
   params: SearchProductsParams,
 ): ProgrammaticProductSearchRequest {
-  // `catalog` is deliberately not rewritten to `catalogs`: the deprecated field
-  // goes out as itself, so the server-side count of `catalog` traffic stays an
-  // honest measure of who still has to migrate.
-  /* eslint-disable @typescript-eslint/no-deprecated -- reading the deprecated params is the point */
-  const { catalog, textSearchQuery } = params;
-  /* eslint-enable @typescript-eslint/no-deprecated */
-  if (catalog !== undefined && params.catalogs !== undefined) {
-    throw new TypeError("Pass catalogs or catalog, not both; catalog is deprecated");
+  for (const [name, message] of Object.entries(REMOVED_SEARCH_PARAMS)) {
+    if (name in params) {
+      throw new TypeError(message);
+    }
   }
   if (params.catalogs !== undefined) {
     assertCatalogs(params.catalogs, 500);
-  }
-  if (catalog !== undefined) {
-    assertNonEmptyString(catalog, "catalog");
-    warnDeprecatedParam("catalog", "pass catalogs: [key] to searchProducts instead.");
-  }
-  if (textSearchQuery !== undefined) {
-    warnDeprecatedParam(
-      "textSearchQuery",
-      "pass q (with facets, priceMin, priceMax) to searchProducts instead.",
-    );
   }
   const limit = params.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("limit must be an integer between 1 and 100");
   }
+  assertSearchControls(params);
 
   const payload: ProgrammaticProductSearchRequest = { limit };
-  if (params.catalogs !== undefined) {
-    payload.catalogs = [...params.catalogs];
+  if (params.q !== undefined) {
+    payload.q = params.q;
   }
-  if (catalog !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    payload.catalog = catalog;
-  }
-  if (params.cursor !== undefined) {
-    payload.cursor = params.cursor;
+  if (params.understand !== undefined) {
+    payload.understand = params.understand;
   }
   if (params.facets !== undefined) {
     payload.facets = params.facets;
   }
-  if (params.priceMax !== undefined) {
-    payload.price_max = params.priceMax;
+  if (params.excludeFacets !== undefined) {
+    payload.exclude_facets = params.excludeFacets;
+  }
+  if (params.omitGeneratedFacets !== undefined) {
+    payload.omit_generated_facets = [...params.omitGeneratedFacets];
   }
   if (params.priceMin !== undefined) {
     payload.price_min = params.priceMin;
   }
-  if (params.q !== undefined) {
-    payload.q = params.q;
+  if (params.priceMax !== undefined) {
+    payload.price_max = params.priceMax;
   }
-  if (textSearchQuery !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    payload.text_search_query = toTextSearchQueryPayload(textSearchQuery);
+  if (params.brandQualityMin !== undefined) {
+    payload.brand_quality_min = params.brandQualityMin;
+  }
+  if (params.brandQualityMax !== undefined) {
+    payload.brand_quality_max = params.brandQualityMax;
+  }
+  if (params.similarToBrands !== undefined) {
+    payload.similar_to_brands = [...params.similarToBrands];
+  }
+  if (params.catalogs !== undefined) {
+    payload.catalogs = [...params.catalogs];
+  }
+  if (params.cursor !== undefined) {
+    payload.cursor = params.cursor;
+  }
+  if (params.relax !== undefined) {
+    payload.relax = params.relax;
+  }
+  if (params.debug !== undefined) {
+    payload.debug = params.debug;
   }
   return payload;
 }
 
-function toTextSearchQueryPayload(query: TextSearchQuery): TextSearchQueryPayload {
-  const payload: TextSearchQueryPayload = {
-    text: query.text,
-  };
-  if (query.brandQualityMax !== undefined) {
-    payload.brand_quality_max = query.brandQualityMax;
+/**
+ * The search rules that are cheap and certain to mirror. The server stays the
+ * source of truth — anything not checked here still comes back as a `422`.
+ */
+function assertSearchControls(params: SearchProductsParams): void {
+  // The server treats a blank `q` as omitted.
+  const hasQuery = params.q !== undefined && params.q.trim().length > 0;
+  const understood = params.understand !== false;
+
+  if (!understood && !hasQuery) {
+    throw new TypeError("understand: false requires q");
   }
-  if (query.brandQualityMin !== undefined) {
-    payload.brand_quality_min = query.brandQualityMin;
+  if (params.relax === true) {
+    if (!hasQuery || !understood) {
+      throw new TypeError(
+        "relax requires an understood q (q set, understand not false)",
+      );
+    }
   }
-  if (query.brandSimilarityWeight !== undefined) {
-    payload.brand_similarity_weight = query.brandSimilarityWeight;
+
+  const facetNames = assertFacetList(params.facets, "facets");
+  assertFacetList(params.excludeFacets, "excludeFacets");
+
+  const omitted = params.omitGeneratedFacets;
+  if (omitted !== undefined) {
+    assertStringArray(omitted, "omitGeneratedFacets");
+    if (omitted.length > MAX_SEARCH_FACETS) {
+      throw new TypeError(
+        `omitGeneratedFacets accepts at most ${String(MAX_SEARCH_FACETS)} names`,
+      );
+    }
+    if (omitted.length > 0 && (!hasQuery || !understood)) {
+      throw new TypeError(
+        "omitGeneratedFacets requires an understood q (q set, understand not false)",
+      );
+    }
+    for (const name of omitted) {
+      if (facetNames.has(name)) {
+        throw new TypeError(
+          `facet ${JSON.stringify(name)} is in both facets and omitGeneratedFacets; ` +
+            "a facet you send already replaces the understood one",
+        );
+      }
+    }
   }
-  if (query.browseMenuUuid !== undefined) {
-    payload.browse_menu_uuid = query.browseMenuUuid;
+
+  assertBounds(params.priceMin, params.priceMax, "price", 0, undefined);
+  assertBounds(params.brandQualityMin, params.brandQualityMax, "brandQuality", 1, 6);
+
+  const brands = params.similarToBrands;
+  if (brands !== undefined) {
+    assertStringArray(brands, "similarToBrands");
+    if (brands.length < 1 || brands.length > 10) {
+      throw new TypeError("similarToBrands must contain between 1 and 10 brand names");
+    }
+    if (
+      brands.some((brand) => typeof brand !== "string" || brand.trim().length === 0)
+    ) {
+      throw new TypeError("similarToBrands must contain only non-empty brand names");
+    }
   }
-  if (query.compactMode !== undefined) {
-    payload.compact_mode = query.compactMode;
+}
+
+/**
+ * Refuse a bare string where a list is expected: spreading it would send one
+ * entry per character instead of failing.
+ */
+function assertStringArray(value: unknown, field: string): void {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new TypeError(`${field} must be an array of strings, not a string`);
   }
-  if (query.exclusionFacets !== undefined) {
-    payload.exclusion_facets = query.exclusionFacets;
+}
+
+/** Reject a repeated facet name; return the names for cross-list checks. */
+function assertFacetList(facets: Facet[] | undefined, field: string): Set<string> {
+  const names = new Set<string>();
+  if (facets === undefined) {
+    return names;
   }
-  if (query.facets !== undefined) {
-    payload.facets = query.facets;
+  if (!Array.isArray(facets)) {
+    throw new TypeError(`${field} must be an array of facets`);
   }
-  if (query.limit !== undefined) {
-    payload.limit = query.limit;
+  if (facets.length > MAX_SEARCH_FACETS) {
+    throw new TypeError(`${field} accepts at most ${String(MAX_SEARCH_FACETS)} facets`);
   }
-  if (query.priceMax !== undefined) {
-    payload.price_max = query.priceMax;
+  for (const facet of facets) {
+    if (names.has(facet.name)) {
+      throw new TypeError(
+        `${field} lists facet ${JSON.stringify(facet.name)} more than once; ` +
+          "put every value in one entry",
+      );
+    }
+    names.add(facet.name);
   }
-  if (query.priceMin !== undefined) {
-    payload.price_min = query.priceMin;
+  return names;
+}
+
+function assertBounds(
+  min: number | undefined,
+  max: number | undefined,
+  field: string,
+  lowest: number,
+  highest: number | undefined,
+): void {
+  const range =
+    highest === undefined
+      ? `>= ${String(lowest)}`
+      : `between ${String(lowest)} and ${String(highest)}`;
+  for (const [name, value] of [
+    [`${field}Min`, min],
+    [`${field}Max`, max],
+  ] as const) {
+    if (value === undefined) {
+      continue;
+    }
+    if (
+      !Number.isFinite(value) ||
+      value < lowest ||
+      (highest !== undefined && value > highest)
+    ) {
+      throw new TypeError(`${name} must be a number ${range}`);
+    }
   }
-  if (query.rankingEmbeddingColumns !== undefined) {
-    payload.ranking_embedding_columns = query.rankingEmbeddingColumns;
+  if (min !== undefined && max !== undefined && min > max) {
+    throw new TypeError(`${field}Min must not exceed ${field}Max`);
   }
-  if (query.rankingText !== undefined) {
-    payload.ranking_text = query.rankingText;
-  }
-  if (query.retrievalEmbeddingColumns !== undefined) {
-    payload.retrieval_embedding_columns = query.retrievalEmbeddingColumns;
-  }
-  if (query.searchAfter !== undefined) {
-    payload.search_after = query.searchAfter;
-  }
-  if (query.searchId !== undefined) {
-    payload.search_id = query.searchId;
-  }
-  if (query.similarToBrands !== undefined) {
-    payload.similar_to_brands = query.similarToBrands;
-  }
-  if (query.textSimilarityWeight !== undefined) {
-    payload.text_similarity_weight = query.textSimilarityWeight;
-  }
-  return payload;
 }
 
 function toMoreLikeThisPayload(

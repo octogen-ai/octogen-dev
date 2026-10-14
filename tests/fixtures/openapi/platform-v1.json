@@ -1144,22 +1144,16 @@
       "Facet": {
         "properties": {
           "name": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FacetName"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "description": "Facet key. Accepts base facets (FacetName) or attribute keys. Attribute facets may be provided as '<key>' (e.g., 'fit') or fully qualified 'attribute_facets.<key>'.",
-            "title": "Name"
+            "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+            "title": "Name",
+            "type": "string"
           },
           "values": {
-            "description": "List of values to filter by. They should all be lowercase. Facet values can be phrases, so make sure to include the spaces.",
+            "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
             "items": {
               "type": "string"
             },
+            "minItems": 1,
             "title": "Values",
             "type": "array"
           }
@@ -1170,28 +1164,6 @@
         ],
         "title": "Facet",
         "type": "object"
-      },
-      "FacetName": {
-        "enum": [
-          "brand_name",
-          "brand_slug",
-          "raw_brand_name",
-          "product_type",
-          "gender",
-          "age_groups",
-          "color",
-          "color_family",
-          "is_activewear",
-          "category_path.depth_0",
-          "category_path.depth_1",
-          "category_path.depth_2",
-          "category_path.depth_3",
-          "category_path.depth_4",
-          "category_path.depth_5",
-          "category_path.depth_6"
-        ],
-        "title": "FacetName",
-        "type": "string"
       },
       "Gender": {
         "enum": [
@@ -2995,7 +2967,7 @@
                 "type": "null"
               }
             ],
-            "description": "Additional include facets to append after generated facets.",
+            "description": "Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.",
             "title": "Include Facets"
           },
           "limit": {
@@ -3017,7 +2989,7 @@
                 "type": "null"
               }
             ],
-            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery (include_facets only appends). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
             "title": "Omit Generated Facets"
           },
           "price_preference": {
@@ -3456,18 +3428,175 @@
         "title": "ProgrammaticProductLookupResponse",
         "type": "object"
       },
-      "ProgrammaticProductSearchPage": {
-        "description": "Search page plus the debug effective query (parity with more-like-this).",
+      "ProgrammaticProductSearchEffectiveFacet": {
+        "description": "One facet that ran, and where it came from.",
         "properties": {
-          "effectiveQuery": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProgrammaticMoreLikeThisEffectiveQuery"
+                "enum": [
+                  "caller",
+                  "generated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.",
+            "title": "Source"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "ProgrammaticProductSearchEffectiveFacet",
+        "type": "object"
+      },
+      "ProgrammaticProductSearchEffectiveQuery": {
+        "description": "The search that actually ran, in the request's own vocabulary.",
+        "properties": {
+          "brandQualityMax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brandqualitymax"
+          },
+          "brandQualityMin": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brandqualitymin"
+          },
+          "catalogs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The `catalogs` allowlist as received, normalized and deduped.",
+            "title": "Catalogs"
+          },
+          "excludeFacets": {
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveFacet"
+            },
+            "title": "Excludefacets",
+            "type": "array"
+          },
+          "facets": {
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveFacet"
+            },
+            "title": "Facets",
+            "type": "array"
+          },
+          "priceMax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemax"
+          },
+          "priceMin": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemin"
+          },
+          "relaxation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgrammaticProductSearchRelaxation"
               },
               {
                 "type": "null"
               }
             ]
+          },
+          "similarToBrands": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similartobrands"
+          },
+          "text": {
+            "description": "Text matched against products: the understood rewrite of `q`, `q` itself with `understand: false`, or empty when browsing.",
+            "title": "Text",
+            "type": "string"
+          },
+          "understood": {
+            "description": "Whether query understanding ran.",
+            "title": "Understood",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "understood"
+        ],
+        "title": "ProgrammaticProductSearchEffectiveQuery",
+        "type": "object"
+      },
+      "ProgrammaticProductSearchPage": {
+        "description": "One page of search results.",
+        "properties": {
+          "effectiveQuery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveQuery"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present with `debug: true`."
           },
           "items": {
             "default": [],
@@ -3501,22 +3630,66 @@
         "title": "ProgrammaticProductSearchPage",
         "type": "object"
       },
+      "ProgrammaticProductSearchRelaxation": {
+        "description": "What relaxation did on this request (`relax: true` only).",
+        "properties": {
+          "declinedRounds": {
+            "default": 0,
+            "description": "Stages tried that still returned nothing.",
+            "title": "Declinedrounds",
+            "type": "integer"
+          },
+          "droppedFacets": {
+            "description": "Understood facets dropped to produce this page.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveFacet"
+            },
+            "title": "Droppedfacets",
+            "type": "array"
+          },
+          "rounds": {
+            "description": "Stages applied to produce this page; 0 if none.",
+            "title": "Rounds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rounds"
+        ],
+        "title": "ProgrammaticProductSearchRelaxation",
+        "type": "object"
+      },
       "ProgrammaticProductSearchRequest": {
         "additionalProperties": false,
-        "description": "Programmatic product search request.",
+        "description": "Search indexed products by free text, filters, or both.\n\nEach field controls one thing. ``q`` says what to find; ``facets``,\n``exclude_facets`` and the bounds say what to keep; ``catalogs`` says\nwhere to look; ``limit`` and ``cursor`` page. Combinations that would\ncontradict each other are rejected with 422 rather than resolved silently.",
         "properties": {
-          "catalog": {
+          "brand_quality_max": {
             "anyOf": [
               {
-                "minLength": 1,
-                "type": "string"
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional catalog to narrow the search to. When omitted, search runs across the entire indexed corpus (all active catalogs), not just catalogs granted to the API key organization. Mutually exclusive with `catalogs`.",
-            "title": "Catalog"
+            "description": "Inclusive maximum brand quality score, 1 to 6. Combined with any understood bound by keeping the stricter one.",
+            "title": "Brand Quality Max"
+          },
+          "brand_quality_min": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). Combined with any understood bound by keeping the stricter one.",
+            "title": "Brand Quality Min"
           },
           "catalogs": {
             "anyOf": [
@@ -3525,13 +3698,14 @@
                   "type": "string"
                 },
                 "maxItems": 500,
+                "minItems": 1,
                 "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Optional catalog allowlist to narrow the search — same contract as the more-like-this `catalogs` field. Restricts results to these catalogs only. Keys are not validated against the caller's grants: a key outside the caller's resolved scope simply matches nothing. Mutually exclusive with `catalog`. When omitted or empty, search spans every catalog the caller's scope permits. Bounds stay the inherited max_length=500 with an empty list meaning no allowlist, so request shapes accepted before this field was honored keep working.",
+            "description": "Catalog keys to search. Omit to search every catalog your key can access. Keys your key cannot access match nothing.",
             "title": "Catalogs"
           },
           "cursor": {
@@ -3543,20 +3717,30 @@
                 "type": "null"
               }
             ],
-            "description": "Opaque pagination cursor",
+            "description": "`nextCursor` from the previous page, passed back verbatim with the same request body.",
             "title": "Cursor"
           },
           "debug": {
             "default": false,
-            "description": "Include the effective query in the response, mirroring more-like-this: the EXECUTED text/facets/price bounds/embedding columns — after query understanding AND after caller facets (which win over same-name generated facets) and price bounds are merged. Browse-all requests report the raw browse query. Makes search usable as a controlled comparison against more-like-this.",
+            "description": "Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
             "title": "Debug",
             "type": "boolean"
           },
-          "diversity": {
-            "default": false,
-            "description": "Enable result diversification (parity with Shop Agent / conversational search). Defaults off to preserve stable merchant-browse ordering across pages.",
-            "title": "Diversity",
-            "type": "boolean"
+          "exclude_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Facet"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
+            "title": "Exclude Facets"
           },
           "facets": {
             "anyOf": [
@@ -3564,74 +3748,107 @@
                 "items": {
                   "$ref": "#/components/schemas/Facet"
                 },
+                "maxItems": 50,
                 "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Structured facet filters to apply to the product list.",
+            "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
             "title": "Facets"
           },
           "limit": {
             "default": 50,
+            "description": "Maximum results per page.",
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Limit",
             "type": "integer"
           },
+          "omit_generated_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Names of understood facets to drop before searching, for a derived filter that is wrong and that you have no value of your own for. To replace a derived filter instead, send a facet of that name. Use the names shown in `effectiveQuery`; colour is omitted per axis (`color` or `color_family`). Requires understood `q`; a name may not also appear in `facets`.",
+            "title": "Omit Generated Facets"
+          },
           "price_max": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Maximum price filter",
+            "description": "Inclusive maximum price. Combined with any understood maximum by keeping the lower one.",
             "title": "Price Max"
           },
           "price_min": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Minimum price filter",
+            "description": "Inclusive minimum price. Combined with any understood minimum by keeping the higher one.",
             "title": "Price Min"
           },
           "q": {
             "anyOf": [
               {
+                "maxLength": 1000,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Keyword search query",
+            "description": "Free-text query. Omit to browse by filters alone. By default it is understood: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it. Blank is the same as omitted.",
             "title": "Q"
           },
           "relax": {
             "default": false,
-            "description": "Opt-in zero-result facet relaxation. When a `q` search's LLM-generated facet filters match nothing, the least-trusted generated facet families are dropped cumulatively (brand enrichment, then attributes, then color/deep categories) and the search retried; the response's `nextCursor` records the converged round so later pages continue the exact relaxed result set. Facets you provide yourself (`facets` or `text_search_query`) are NEVER dropped — with no generated facets in play this flag is a no-op. Defaults off: an empty result stays an exact answer unless relaxation is requested. Cursors from a relaxed page must be replayed with `relax: true`; with `debug: true` the applied rounds are reported in `effectiveQuery`.",
+            "description": "When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.",
             "title": "Relax",
             "type": "boolean"
           },
-          "text_search_query": {
+          "similar_to_brands": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/TextSearchQuery"
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "minItems": 1,
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Pre-generated semantic search query. When provided, the service uses this query directly instead of re-running query understanding."
+            "description": "Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
+            "title": "Similar To Brands"
+          },
+          "understand": {
+            "default": true,
+            "description": "Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
+            "title": "Understand",
+            "type": "boolean"
           }
         },
         "title": "ProgrammaticProductSearchRequest",
@@ -3784,250 +4001,6 @@
           }
         },
         "title": "ReviewView",
-        "type": "object"
-      },
-      "TextSearchQuery": {
-        "properties": {
-          "brand_quality_max": {
-            "anyOf": [
-              {
-                "maximum": 6.0,
-                "minimum": 1.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Inclusive upper bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).",
-            "title": "Maximum brand quality"
-          },
-          "brand_quality_min": {
-            "anyOf": [
-              {
-                "maximum": 6.0,
-                "minimum": 1.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Inclusive lower bound for brand_quality_score (1=VERY_POOR, 6=EXCEPTIONAL).",
-            "title": "Minimum brand quality"
-          },
-          "brand_similarity_weight": {
-            "anyOf": [
-              {
-                "maximum": 1.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": 0.7,
-            "description": "Weight for brand similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to brand style similarity. Default is 0.7.",
-            "title": "Brand similarity weight"
-          },
-          "browse_menu_uuid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "UUID of the browse menu item that matches this query's facets (gender, age_group, category_path).",
-            "title": "Browse menu UUID"
-          },
-          "compact_mode": {
-            "anyOf": [
-              {
-                "enum": [
-                  "card",
-                  "compact",
-                  "medium",
-                  "enriched"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional response shape for product search results. Use 'card' for catalog grids that only need display fields; omit for full products.",
-            "title": "Search output mode"
-          },
-          "exclusion_facets": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Facet"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Facets that will be excluded from the search results.",
-            "title": "Exclusion facets filter"
-          },
-          "facets": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Facet"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The search results will be filtered by the specified facets.",
-            "title": "Facets filter"
-          },
-          "limit": {
-            "default": 10,
-            "description": "The maximum number of results to return from the search. The default is 10.",
-            "title": "Search results limit",
-            "type": "integer"
-          },
-          "price_max": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The products will be filtered to have a price less than or equal to the specified value.",
-            "title": "Maximum price"
-          },
-          "price_min": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The products will be filtered to have a price greater than or equal to the specified value.",
-            "title": "Minimum price"
-          },
-          "ranking_embedding_columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/EmbeddingColumn"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The columns to use for the ranking embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `ranking_text` parameter.",
-            "title": "Ranking embedding columns"
-          },
-          "ranking_text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The text is converted to a vector embedding and used to rank the search results. It will be matched against the embeddings from ranking_embedding_columns during ranking.",
-            "title": "Ranking text"
-          },
-          "retrieval_embedding_columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/EmbeddingColumn"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The columns to use for the retrieval embeddings. If not specified, defaults to ['embedding']. Pick the column that best corresponds to the `text` parameter.",
-            "title": "Retrieval embedding columns"
-          },
-          "search_after": {
-            "anyOf": [
-              {
-                "items": {},
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Cursor for pagination. Pass the 'next_cursor' value from the previous response to fetch the next page of results. This enables efficient 'load more' functionality.",
-            "title": "Search after cursor"
-          },
-          "search_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Unique identifier (UUID) for this search query. Used to link agent recommendations back to specific search results.",
-            "title": "Search identifier"
-          },
-          "similar_to_brands": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "List of brand names to find products similar to. When provided, embeddings for the specified brands are fetched, averaged, and used to boost products with similar style characteristics. This enables finding products that match the aesthetic of certain brands.",
-            "title": "Similar to brands"
-          },
-          "text": {
-            "description": "The text is converted to a vector embedding and used to search for products in the e-commerce catalog with pre-computed product embeddings. It will be matched against the embeddings from retrieval_embedding_columns during retrieval.",
-            "title": "Product search query text",
-            "type": "string"
-          },
-          "text_similarity_weight": {
-            "anyOf": [
-              {
-                "maximum": 1.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": 0.3,
-            "description": "Weight for text query similarity in the combined retrieval score (0.0 to 1.0). Higher values give more importance to text query matching. Default is 0.3.",
-            "title": "Text similarity weight"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "title": "TextSearchQuery",
         "type": "object"
       },
       "ValidationError": {
@@ -6670,7 +6643,7 @@
     },
     "/products/search": {
       "post": {
-        "description": "Search catalog products with a Catalog partner API key.\n\nFull corpus by default: a ``catalog`` in the request narrows to one\ncatalog and a ``catalogs`` allowlist restricts results to those catalogs\n(more-like-this semantics, #8505); otherwise the search spans every\ncatalog the caller's resolved scope permits (no per-org grant\n*enumeration* — see ``require_programmatic_product_search_authorization``\n— but a ``catalog_partner`` caller is still bounded to\n``catalog_type = 'CRAWLED'`` per OCT-3674).\n\n**All** branches carry the resolved scope (OCT-3675). The named-catalog\nbranch was already refused at the dependency, so the predicate here is the\nbackstop that keeps the two enforcing independently — and on the allowlist\nbranch the predicate is the *only* per-key enforcement, by design.",
+        "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. Page 1 is ranked by relevance; later pages continue in quality-score\norder from page 1's last result, so a product can repeat across pages —\nde-duplicate by `uuid`.",
         "operationId": "searchProducts",
         "parameters": [],
         "requestBody": {

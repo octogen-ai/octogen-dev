@@ -5,6 +5,8 @@ import type {
   MerchantProductImageMetadataView,
   MerchantProductListItem,
   MerchantProductView,
+  ProgrammaticProductSearchPage,
+  ProgrammaticProductSearchRequest,
 } from "../src/models.js";
 
 /**
@@ -18,6 +20,8 @@ import type {
 type GeneratedListItem = components["schemas"]["MerchantProductListItem"];
 type GeneratedProductView = components["schemas"]["MerchantProductView"];
 type GeneratedImageView = components["schemas"]["MerchantProductImageMetadataView"];
+type GeneratedSearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
+type GeneratedSearchPage = components["schemas"]["ProgrammaticProductSearchPage"];
 
 type Extends<A, B> = A extends B ? true : false;
 
@@ -42,6 +46,32 @@ const productViewKeysCovered: MissingProductViewKeys extends never
   ? true
   : MissingProductViewKeys = true;
 
+// The search body must carry exactly the contract's fields: a field the API
+// gains shows up as a missing key, and one it retires (as `catalog` and
+// `text_search_query` were in 0.5.0) as an extra one.
+type MissingSearchRequestKeys = Exclude<
+  keyof GeneratedSearchRequest,
+  keyof ProgrammaticProductSearchRequest
+>;
+type ExtraSearchRequestKeys = Exclude<
+  keyof ProgrammaticProductSearchRequest,
+  keyof GeneratedSearchRequest
+>;
+type MissingSearchPageKeys = Exclude<
+  keyof GeneratedSearchPage,
+  keyof ProgrammaticProductSearchPage
+>;
+
+const searchRequestKeysCovered: MissingSearchRequestKeys extends never
+  ? true
+  : MissingSearchRequestKeys = true;
+const searchRequestKeysCurrent: ExtraSearchRequestKeys extends never
+  ? true
+  : ExtraSearchRequestKeys = true;
+const searchPageKeysCovered: MissingSearchPageKeys extends never
+  ? true
+  : MissingSearchPageKeys = true;
+
 // The image fields must accept exactly what the contract sends.
 const imageViewParity: Extends<GeneratedImageView, MerchantProductImageMetadataView> =
   true;
@@ -61,5 +91,8 @@ describe("Unit: view model parity with the generated contract", () => {
     expect(imageViewParity).toBe(true);
     expect(listItemImagesParity).toBe(true);
     expect(listItemPrimaryImageParity).toBe(true);
+    expect(searchRequestKeysCovered).toBe(true);
+    expect(searchRequestKeysCurrent).toBe(true);
+    expect(searchPageKeysCovered).toBe(true);
   });
 });
