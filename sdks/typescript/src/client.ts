@@ -782,6 +782,7 @@ function assertSearchControls(params: SearchProductsParams): void {
 
   const omitted = params.omitGeneratedFacets;
   if (omitted !== undefined) {
+    assertStringArray(omitted, "omitGeneratedFacets");
     if (omitted.length > MAX_SEARCH_FACETS) {
       throw new TypeError(
         `omitGeneratedFacets accepts at most ${String(MAX_SEARCH_FACETS)} names`,
@@ -807,6 +808,7 @@ function assertSearchControls(params: SearchProductsParams): void {
 
   const brands = params.similarToBrands;
   if (brands !== undefined) {
+    assertStringArray(brands, "similarToBrands");
     if (brands.length < 1 || brands.length > 10) {
       throw new TypeError("similarToBrands must contain between 1 and 10 brand names");
     }
@@ -818,11 +820,24 @@ function assertSearchControls(params: SearchProductsParams): void {
   }
 }
 
+/**
+ * Refuse a bare string where a list is expected: spreading it would send one
+ * entry per character instead of failing.
+ */
+function assertStringArray(value: unknown, field: string): void {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new TypeError(`${field} must be an array of strings, not a string`);
+  }
+}
+
 /** Reject a repeated facet name; return the names for cross-list checks. */
 function assertFacetList(facets: Facet[] | undefined, field: string): Set<string> {
   const names = new Set<string>();
   if (facets === undefined) {
     return names;
+  }
+  if (!Array.isArray(facets)) {
+    throw new TypeError(`${field} must be an array of facets`);
   }
   if (facets.length > MAX_SEARCH_FACETS) {
     throw new TypeError(`${field} accepts at most ${String(MAX_SEARCH_FACETS)} facets`);

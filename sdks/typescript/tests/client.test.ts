@@ -310,6 +310,30 @@ describe("OctogenClient", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it.each([
+    [
+      { similarToBrands: "Warren Lotas" },
+      "similarToBrands must be an array of strings",
+    ],
+    [
+      { q: "dress", omitGeneratedFacets: "color" },
+      "omitGeneratedFacets must be an array",
+    ],
+    [{ facets: "color" }, "facets must be an array of facets"],
+    [{ excludeFacets: "color" }, "excludeFacets must be an array of facets"],
+  ])("refuses a bare string for a list: %j", async (params, message) => {
+    // A JavaScript caller, or a TypeScript one casting past the type.
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(
+      client.searchProducts(
+        params as unknown as Parameters<typeof client.searchProducts>[0],
+      ),
+    ).rejects.toThrow(message);
+    expect(calls).toHaveLength(0);
+  });
+
   it("allows a facet name in both facets and excludeFacets", async () => {
     const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
