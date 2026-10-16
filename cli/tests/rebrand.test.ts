@@ -126,6 +126,22 @@ describe("StoreRouter configuration compatibility", () => {
     },
   );
 
+  it.each(["", " ", "\t"])("ignores a blank StoreRouter cache directory", (value) => {
+    const options = { baseUrl: "https://api.storerouter.ai/v1", keyPrefix: undefined };
+    expect(
+      cachePath({
+        ...options,
+        env: { STOREROUTER_CACHE_DIR: value, OCTOGEN_CACHE_DIR: "/legacy" },
+      }),
+    ).toBe(cachePath({ ...options, env: { OCTOGEN_CACHE_DIR: "/legacy" } }));
+    expect(
+      cachePath({
+        ...options,
+        env: { STOREROUTER_CACHE_DIR: value, XDG_CACHE_HOME: "/xdg" },
+      }),
+    ).toContain("/xdg/octogen/domains/");
+  });
+
   it("preserves the default cache root and credential/base URL isolation", () => {
     const options = { baseUrl: "https://api.storerouter.ai/v1", keyPrefix: undefined };
     const legacy = cachePath({ ...options, env: { OCTOGEN_CACHE_DIR: "/legacy" } });

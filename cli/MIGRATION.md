@@ -65,7 +65,8 @@ and compatibility names. Only `OCTO_API_KEY` produces a deprecation notice.
 conveniences; neither changes the SDK. Empty environment URLs are skipped.
 Credentials are the only values read from `.env`.
 
-`STOREROUTER_CACHE_DIR` overrides `OCTOGEN_CACHE_DIR`. Otherwise the existing
+`STOREROUTER_CACHE_DIR` overrides `OCTOGEN_CACHE_DIR`; empty or whitespace-only
+StoreRouter cache values are ignored. Otherwise the existing
 `${XDG_CACHE_HOME:-$HOME/.cache}/octogen` location stays in use. Cache filenames
 include the base URL and key identifier: switching the default host does not
 reuse coverage from another host. There is no persisted credential store or
@@ -86,7 +87,10 @@ in this audit and are not assumed to be configured. See npm’s
 
 1. Review and merge this PR under the repository's normal policy.
 2. An npm owner with publish rights in the existing `storerouter` organization
-   must arrange the **first** public `@storerouter/cli` publish. Follow npm's
+   must arrange the **first** public `@storerouter/cli` publish. The npm team
+   “Add Existing Package” page assigns access to an existing package; it does
+   not create one. The `developers` team receives access to newly created
+   organization packages by default. Follow npm's
    current first-package/trusted-publishing setup; if a bootstrap publish is
    required before the package settings exist, use the owner's authenticated
    release session with `--tag next`, never commit a token. Local bootstrap

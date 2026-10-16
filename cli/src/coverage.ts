@@ -71,8 +71,9 @@ export function cachePath(options: {
   env?: Readonly<Record<string, string | undefined>>;
 }): string {
   const env = options.env ?? process.env;
+  const primaryRoot = env["STOREROUTER_CACHE_DIR"];
   const root =
-    env["STOREROUTER_CACHE_DIR"] ??
+    (primaryRoot?.trim() ? primaryRoot : undefined) ??
     env["OCTOGEN_CACHE_DIR"] ??
     join(env["XDG_CACHE_HOME"] ?? join(homedir(), ".cache"), "octogen");
   const scope = createHash("sha256")
