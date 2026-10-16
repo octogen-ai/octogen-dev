@@ -14,6 +14,9 @@ import type {
   SearchProductsParams,
 } from "@octogen-ai/sdk";
 
+import { contractFlags, contractRequest } from "../contract.js";
+import { SEARCH_FIELDS } from "../fields.js";
+
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
@@ -68,33 +71,19 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const params: SearchProductsParams = { q: query };
   const catalog = args.string("catalog");
-  if (catalog !== undefined) {
-    // The API is retiring the single-valued `catalog`; one key is a one-entry
-    // `catalogs` allowlist.
-    params.catalogs = [catalog];
-  }
-  const cursor = args.string("cursor");
-  if (cursor !== undefined) {
-    params.cursor = cursor;
-  }
-  const limit = args.integer("limit", { max: 100, min: 1 });
-  if (limit !== undefined) {
-    params.limit = limit;
-  }
   const facets = parseFacets(args.strings("facet"), "--facet");
-  if (facets.length > 0) {
-    params.facets = facets;
-  }
-  const priceMin = args.number("price-min");
-  if (priceMin !== undefined) {
-    params.priceMin = priceMin;
-  }
-  const priceMax = args.number("price-max");
-  if (priceMax !== undefined) {
-    params.priceMax = priceMax;
-  }
+  const params = contractRequest<SearchProductsParams>(
+    "searchProducts",
+    SEARCH_FIELDS,
+    args,
+    {
+      q: query,
+      ...(facets.length === 0 ? {} : { facets }),
+    },
+  );
+  const priceMin = params.priceMin;
+  const priceMax = params.priceMax;
   if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
     throw usageError(
       `--price-min ${String(priceMin)} is above --price-max ${String(priceMax)}.`,
@@ -162,41 +151,13 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
 }
 
 export const searchCommand = {
-  flags: {
-    catalog: {
-      describe: "Narrow the search to one catalog key.",
-      kind: "string",
-      placeholder: "key",
-    },
-    cursor: {
-      describe: "Opaque pagination cursor from a previous nextCursor.",
-      kind: "string",
-      placeholder: "cursor",
-    },
-    facet: {
-      describe: "Filter, as name=value (repeatable; comma-separate values).",
-      kind: "string",
-      multiple: true,
-      placeholder: "k=v",
-    },
-    limit: { describe: "Results per page, 1–100.", kind: "number", placeholder: "n" },
-    "price-max": {
-      describe: "Highest price to include.",
-      kind: "number",
-      placeholder: "n",
-    },
-    "price-min": {
-      describe: "Lowest price to include.",
-      kind: "number",
-      placeholder: "n",
-    },
-  },
+  flags: contractFlags("searchProducts", SEARCH_FIELDS),
   name: "search",
   notes: [
     "Exit 6 means the corpus was searched and nothing matched — the answer was",
     "empty, not refused.",
     "",
-    "The full 18-field search query object is deliberately not flagged; use",
+    "The full search query object is deliberately not flagged; use",
     "`storerouter api POST /products/search` for it. Keyless-eligible.",
   ],
   operations: ["searchProducts"] as const,

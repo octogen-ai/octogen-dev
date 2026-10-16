@@ -233,3 +233,6 @@ jobs:
           CLI_TARBALL: ${{ steps.pack.outputs.cli }}
           SDK_TARBALL: ${{ steps.pack.outputs.sdk }}
         run: bash cli/tests/package-smoke.sh
+
+      - name: Packed CLI request conformance against packed SDK
+        run: npm run test:cli-package

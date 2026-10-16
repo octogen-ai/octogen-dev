@@ -15,3 +15,6 @@ sdks/python
 
 # The published contract snapshot is fetched verbatim, not hand-formatted
 tests/fixtures/openapi
+
+# Generated from the exact help text, not Markdown formatting
+cli/REFERENCE.md

@@ -733,7 +733,7 @@
         "type": "object"
       },
       "CoverageAcceptedUrl": {
-        "description": "Per-URL success outcome (design \u00a71.2).",
+        "description": "Per-URL success outcome (design §1.2).",
         "properties": {
           "normalizedUrl": {
             "title": "Normalizedurl",
@@ -752,7 +752,7 @@
         "type": "object"
       },
       "CoverageContainsResponse": {
-        "description": "Response for ``checkUrlListUrls`` (design \u00a71.3).",
+        "description": "Response for ``checkUrlListUrls`` (design §1.3).",
         "properties": {
           "results": {
             "items": {
@@ -769,7 +769,7 @@
         "type": "object"
       },
       "CoverageContainsResult": {
-        "description": "Per-URL membership outcome (design \u00a71.3). A miss is ``present:\nfalse``, never an error.",
+        "description": "Per-URL membership outcome (design §1.3). A miss is ``present:\nfalse``, never an error.",
         "properties": {
           "addedAt": {
             "anyOf": [
@@ -806,7 +806,7 @@
         "type": "object"
       },
       "CoverageRejectedUrl": {
-        "description": "Per-URL refusal (design \u00a71.2).",
+        "description": "Per-URL refusal (design §1.2).",
         "properties": {
           "code": {
             "const": "invalid_url",
@@ -831,7 +831,7 @@
         "type": "object"
       },
       "CoverageUrlList": {
-        "description": "The URL List object (design \u00a71.1).",
+        "description": "The URL List object (design §1.1).",
         "properties": {
           "bigQuery": {
             "anyOf": [
@@ -888,7 +888,7 @@
         "type": "object"
       },
       "CoverageUrlListBigQuery": {
-        "description": "The ``bigQuery`` block of the URL List object (design \u00a71.1). ``null``\non the parent while the list is provisioning; ``lastExportedAt`` /\n``lastRowCount`` stay null until the first daily export lands.",
+        "description": "The ``bigQuery`` block of the URL List object (design §1.1). ``null``\non the parent while the list is provisioning; ``lastExportedAt`` /\n``lastRowCount`` stay null until the first daily export lands.",
         "properties": {
           "exchangeId": {
             "title": "Exchangeid",
@@ -948,7 +948,7 @@
       },
       "CoverageUrlListCreateRequest": {
         "additionalProperties": false,
-        "description": "Body for ``POST /v1/coverage/url-lists`` (design \u00a71.1).",
+        "description": "Body for ``POST /v1/coverage/url-lists`` (design §1.1).",
         "properties": {
           "name": {
             "description": "List name, unique among your live (provisioning/active) lists. Surrounding whitespace is trimmed. The name is released when a list is deleted.",
@@ -965,7 +965,7 @@
         "type": "object"
       },
       "CoverageUrlListListResponse": {
-        "description": "Response for ``GET /v1/coverage/url-lists`` (design \u00a71.3).",
+        "description": "Response for ``GET /v1/coverage/url-lists`` (design §1.3).",
         "properties": {
           "items": {
             "items": {
@@ -994,7 +994,7 @@
         "type": "object"
       },
       "CoverageUrlListUrl": {
-        "description": "One enumerated list entry (design \u00a71.3).",
+        "description": "One enumerated list entry (design §1.3).",
         "properties": {
           "addedAt": {
             "format": "date-time",
@@ -1019,7 +1019,7 @@
         "type": "object"
       },
       "CoverageUrlListUrlsResponse": {
-        "description": "Response for ``listUrlListUrls`` (design \u00a71.3).",
+        "description": "Response for ``listUrlListUrls`` (design §1.3).",
         "properties": {
           "items": {
             "items": {
@@ -1048,7 +1048,7 @@
         "type": "object"
       },
       "CoverageUrlMutationResponse": {
-        "description": "Response for ``addUrlListUrls`` / ``removeUrlListUrls`` (design \u00a71.2).\n\n``urlCount`` is the list's total size after the mutation \u2014 not the size\nof this request; idempotent no-ops contribute nothing to it.",
+        "description": "Response for ``addUrlListUrls`` / ``removeUrlListUrls`` (design §1.2).\n\n``urlCount`` is the list's total size after the mutation — not the size\nof this request; idempotent no-ops contribute nothing to it.",
         "properties": {
           "accepted": {
             "items": {
@@ -1084,7 +1084,7 @@
       },
       "CoverageUrlsRequest": {
         "additionalProperties": false,
-        "description": "Shared body for the URL mutations and the membership check\n(design \u00a71.2, \u00a71.3).",
+        "description": "Shared body for the URL mutations and the membership check\n(design §1.2, §1.3).",
         "properties": {
           "urls": {
             "description": "Product URLs, each at most 2,048 characters. Each entry must be an http(s) URL with a dotted hostname; invalid entries are rejected per-URL, not as a request error.",
@@ -1227,7 +1227,7 @@
         "type": "object"
       },
       "ListDomainsResponse": {
-        "description": "The full covered-domain set.\n\nSorted deterministically by ``(host, catalog)`` so the response \u2014 and the\nstrong ``ETag`` computed over it \u2014 is stable across requests while the\nunderlying catalog registry is unchanged.",
+        "description": "The full covered-domain set.\n\nSorted deterministically by ``(host, catalog)`` so the response — and the\nstrong ``ETag`` computed over it — is stable across requests while the\nunderlying catalog registry is unchanged.",
         "properties": {
           "domains": {
             "description": "Every covered host, one entry per `(host, catalog)` pair.",
@@ -1245,7 +1245,7 @@
         "type": "object"
       },
       "MeKey": {
-        "description": "The calling API key \u2014 identity and provenance, never the secret.",
+        "description": "The calling API key — identity and provenance, never the secret.",
         "properties": {
           "id": {
             "description": "Key id (the middle segment of the API key).",
@@ -1273,7 +1273,7 @@
                 "type": "null"
               }
             ],
-            "description": "How the key was created (`ui`, `coding_agent`, or `id_jag`). **Omitted entirely** \u2014 not `null` \u2014 while the backing column does not exist yet (agent-onboarding plan Phase 2). Treat an absent field as *unknown*, never as *no source*.",
+            "description": "How the key was created (`ui`, `coding_agent`, or `id_jag`). **Omitted entirely** — not `null` — while the backing column does not exist yet (agent-onboarding plan Phase 2). Treat an absent field as *unknown*, never as *no source*.",
             "title": "Source"
           }
         },
@@ -1355,7 +1355,7 @@
         "type": "object"
       },
       "MeResponse": {
-        "description": "``GET /v1/me`` \u2014 the caller's own identity and limits.\n\n``organization``, ``key`` and ``quotas`` are ``null`` for a super-admin\noperator bearer, which is org-less and key-less by construction.\n``principal`` says which case a client is looking at without making it\ninfer from nulls.",
+        "description": "``GET /v1/me`` — the caller's own identity and limits.\n\n``organization``, ``key`` and ``quotas`` are ``null`` for a super-admin\noperator bearer, which is org-less and key-less by construction.\n``principal`` says which case a client is looking at without making it\ninfer from nulls.",
         "properties": {
           "key": {
             "anyOf": [
@@ -1678,7 +1678,7 @@
                 "type": "null"
               }
             ],
-            "description": "For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results \u2014 we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
+            "description": "For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
             "title": "Canonicalurl"
           },
           "catalogDisplayName": {
@@ -1712,7 +1712,7 @@
                 "type": "null"
               }
             ],
-            "description": "Debug: which probe arm of the URL lookup ladder resolved the product \u2014 normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.",
+            "description": "Debug: which probe arm of the URL lookup ladder resolved the product — normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.",
             "title": "Matchedvia"
           },
           "normalizedUrl": {
@@ -1750,7 +1750,7 @@
                 "type": "null"
               }
             ],
-            "description": "The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them \u2014 key on this field when variants must stay distinct.",
+            "description": "The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them — key on this field when variants must stay distinct.",
             "title": "Requestedurl"
           },
           "resolution": {
@@ -1796,7 +1796,7 @@
             "title": "Sourcebaseurl"
           },
           "warnings": {
-            "description": "Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname\u2014often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits\u2014for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
+            "description": "Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
             "items": {
               "type": "string"
             },
@@ -2828,7 +2828,7 @@
       },
       "ProgrammaticMoreLikeThisImageSource": {
         "additionalProperties": false,
-        "description": "Source image for a More Like This request (OCT-3654 phase 1).\n\nThe image resolves through the generation pipeline (~5-8s typical) \u2014\nsee the MLT image-input proposal for the phased resolution ladder.",
+        "description": "Source image for a More Like This request (OCT-3654 phase 1).\n\nThe image resolves through the generation pipeline (~5-8s typical) —\nsee the MLT image-input proposal for the phased resolution ladder.",
         "properties": {
           "b64": {
             "anyOf": [
@@ -2907,7 +2907,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants \u2014 a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.",
+            "description": "Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants — a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.",
             "title": "Catalogs"
           },
           "cursor": {
@@ -2977,7 +2977,7 @@
                 "type": "null"
               }
             ],
-            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation \u2014 the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
             "title": "Omit Generated Facets"
           },
           "price_preference": {
@@ -3288,7 +3288,7 @@
                 "type": "null"
               }
             ],
-            "description": "For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results \u2014 we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
+            "description": "For catalog_extractor results this is null unless page-declared evidence is available. For shallow on-demand and client_html results: the canonical URL the product page declares (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url); when the page declares none the resolver falls back to the final fetched URL (on-demand) or the caller-supplied url (client_html), so a non-null value is not proof of a declaration. Null for indexed results — we do not yet store the page-declared canonical for indexed products. For follow-up lookups use normalizedUrl (indexed, catalog_extractor, and client_html results) or resolvedUrl (shallow on-demand results), not this field.",
             "title": "Canonicalurl"
           },
           "catalogDisplayName": {
@@ -3322,7 +3322,7 @@
                 "type": "null"
               }
             ],
-            "description": "Debug: which probe arm of the URL lookup ladder resolved the product \u2014 normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.",
+            "description": "Debug: which probe arm of the URL lookup ladder resolved the product — normalized_alias | exact | normalized_exact | loose | structural_alias | learned_alias:<rule_id>. Absent for on-demand results and legacy paths. Informational only; values may be extended.",
             "title": "Matchedvia"
           },
           "normalizedUrl": {
@@ -3354,7 +3354,7 @@
                 "type": "null"
               }
             ],
-            "description": "The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them \u2014 key on this field when variants must stay distinct.",
+            "description": "The URL the caller submitted, echoed verbatim. For client_html results this is the variant-qualified identity: storefronts commonly record a shopper's variant selection only in URL query parameters, and canonicalUrl conventionally drops them — key on this field when variants must stay distinct.",
             "title": "Requestedurl"
           },
           "resolution": {
@@ -3400,7 +3400,7 @@
             "title": "Sourcebaseurl"
           },
           "warnings": {
-            "description": "Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname\u2014often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits\u2014for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
+            "description": "Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
             "items": {
               "type": "string"
             },
@@ -3844,10 +3844,10 @@
       },
       "ProgrammaticResolveFromHtmlRequest": {
         "additionalProperties": false,
-        "description": "Resolve a product from caller-supplied HTML.\n\nStateless by contract: no index read, no outbound fetch, no caching \u2014 the\nresponse is derived entirely from the submitted document.",
+        "description": "Resolve a product from caller-supplied HTML.\n\nStateless by contract: no index read, no outbound fetch, no caching — the\nresponse is derived entirely from the submitted document.",
         "properties": {
           "html": {
-            "description": "Product page HTML to resolve. Capped at 5 MiB \u2014 the same bound the live on-demand fetch path enforces, so any page that path could retrieve is submittable here.",
+            "description": "Product page HTML to resolve. Capped at 5 MiB — the same bound the live on-demand fetch path enforces, so any page that path could retrieve is submittable here.",
             "maxLength": 5242880,
             "minLength": 1,
             "title": "Html",
@@ -3863,7 +3863,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl \u2014 on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url) or resolution fails with product_not_found.",
+            "description": "Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url) or resolution fails with product_not_found.",
             "title": "Url"
           }
         },
@@ -4215,7 +4215,7 @@
         ]
       },
       "post": {
-        "description": "Create a URL list.\n\nReturns `201` with the list in `provisioning`: the list exists\nsynchronously \u2014 a stable `urlListId` you can immediately `GET` and add\nURLs to \u2014 while its BigQuery resources are provisioned asynchronously\n(`status` flips to `active` when they exist).",
+        "description": "Create a URL list.\n\nReturns `201` with the list in `provisioning`: the list exists\nsynchronously — a stable `urlListId` you can immediately `GET` and add\nURLs to — while its BigQuery resources are provisioned asynchronously\n(`status` flips to `active` when they exist).",
         "operationId": "createUrlList",
         "parameters": [],
         "requestBody": {
@@ -4357,7 +4357,7 @@
     },
     "/coverage/url-lists/{urlListId}": {
       "delete": {
-        "description": "Delete a URL list.\n\nReturns `202` with the list in `delete_pending`: access revocation and\nresource teardown are asynchronous. There is no grace window and no\nrestore \u2014 the name is released immediately. Idempotent.",
+        "description": "Delete a URL list.\n\nReturns `202` with the list in `delete_pending`: access revocation and\nresource teardown are asynchronous. There is no grace window and no\nrestore — the name is released immediately. Idempotent.",
         "operationId": "deleteUrlList",
         "parameters": [
           {
@@ -4751,7 +4751,7 @@
         ]
       },
       "post": {
-        "description": "Add URLs to the list \u2014 an idempotent set-add.\n\nEach URL is normalized server-side; the normalized form is the\nmembership key. Invalid URLs come back per-URL in `rejected[]` on a\n`200`. Adding a URL already present is an accepted no-op, so blind\nre-syncs are safe. Capacity is batch-atomic: a batch that would cross\nthe 100,000-URL cap fails whole with `409`.",
+        "description": "Add URLs to the list — an idempotent set-add.\n\nEach URL is normalized server-side; the normalized form is the\nmembership key. Invalid URLs come back per-URL in `rejected[]` on a\n`200`. Adding a URL already present is an accepted no-op, so blind\nre-syncs are safe. Capacity is batch-atomic: a batch that would cross\nthe 100,000-URL cap fails whole with `409`.",
         "operationId": "addUrlListUrls",
         "parameters": [
           {
@@ -4859,7 +4859,7 @@
                     }
                   },
                   "migrating": {
-                    "summary": "Awaiting ruleset sweep \u2014 retry shortly",
+                    "summary": "Awaiting ruleset sweep — retry shortly",
                     "value": {
                       "detail": "url_list_migrating"
                     }
@@ -4867,7 +4867,7 @@
                 }
               }
             },
-            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or \u2014 on add \u2014 the batch would cross the per-list URL cap (batch-atomic)."
+            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic)."
           },
           "413": {
             "description": "Request body over the byte-level size cap."
@@ -4912,7 +4912,7 @@
     },
     "/coverage/url-lists/{urlListId}/urls/contains": {
       "post": {
-        "description": "Batched membership check.\n\nEach input is normalized server-side before checking. A miss is\n`present: false` \u2014 membership of your own list is not an error.",
+        "description": "Batched membership check.\n\nEach input is normalized server-side before checking. A miss is\n`present: false` — membership of your own list is not an error.",
         "operationId": "checkUrlListUrls",
         "parameters": [
           {
@@ -5020,7 +5020,7 @@
                     }
                   },
                   "migrating": {
-                    "summary": "Awaiting ruleset sweep \u2014 retry shortly",
+                    "summary": "Awaiting ruleset sweep — retry shortly",
                     "value": {
                       "detail": "url_list_migrating"
                     }
@@ -5028,7 +5028,7 @@
                 }
               }
             },
-            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or \u2014 on add \u2014 the batch would cross the per-list URL cap (batch-atomic)."
+            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic)."
           },
           "413": {
             "description": "Request body over the byte-level size cap."
@@ -5073,7 +5073,7 @@
     },
     "/coverage/url-lists/{urlListId}/urls/remove": {
       "post": {
-        "description": "Remove URLs from the list \u2014 an idempotent set-remove.\n\nRemoving a URL that is not present is an accepted no-op.",
+        "description": "Remove URLs from the list — an idempotent set-remove.\n\nRemoving a URL that is not present is an accepted no-op.",
         "operationId": "removeUrlListUrls",
         "parameters": [
           {
@@ -5181,7 +5181,7 @@
                     }
                   },
                   "migrating": {
-                    "summary": "Awaiting ruleset sweep \u2014 retry shortly",
+                    "summary": "Awaiting ruleset sweep — retry shortly",
                     "value": {
                       "detail": "url_list_migrating"
                     }
@@ -5189,7 +5189,7 @@
                 }
               }
             },
-            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or \u2014 on add \u2014 the batch would cross the per-list URL cap (batch-atomic)."
+            "description": "The list is being deleted, awaits the normalization-ruleset sweep (retryable within minutes), or — on add — the batch would cross the per-list URL cap (batch-atomic)."
           },
           "413": {
             "description": "Request body over the byte-level size cap."
@@ -5361,7 +5361,7 @@
     },
     "/me": {
       "get": {
-        "description": "Return the caller's own organization, key, quotas, and rate limit.\n\nRead-only and side-effect free: safe to call on startup, in CI, and in a\nhealth loop (subject to the ``/v1`` rate limit it reports). Never includes\nkey material \u2014 only the key id and its non-secret display prefix.",
+        "description": "Return the caller's own organization, key, quotas, and rate limit.\n\nRead-only and side-effect free: safe to call on startup, in CI, and in a\nhealth loop (subject to the ``/v1`` rate limit it reports). Never includes\nkey material — only the key id and its non-secret display prefix.",
         "operationId": "getMe",
         "parameters": [],
         "responses": {
@@ -5392,7 +5392,7 @@
                     }
                   },
                   "superAdmin": {
-                    "summary": "Octogen operator bearer \u2014 no organization, no key",
+                    "summary": "Octogen operator bearer — no organization, no key",
                     "value": {
                       "principal": "super_admin",
                       "rateLimit": {
@@ -5427,7 +5427,7 @@
                     }
                   },
                   "revokedKey": {
-                    "summary": "Key was valid but has been revoked \u2014 a different fix from an invalid key: it was turned off on purpose, so mint a new one",
+                    "summary": "Key was valid but has been revoked — a different fix from an invalid key: it was turned off on purpose, so mint a new one",
                     "value": {
                       "detail": "API key revoked"
                     }
@@ -6165,7 +6165,7 @@
     },
     "/products/resolve-from-html": {
       "post": {
-        "description": "Resolve a product from caller-supplied page HTML \u2014 no index or fetch.\n\nSame shallow deterministic extraction as lookup's on-demand path\n(JSON-LD \u2192 Open Graph \u2192 HTML meta), run over the submitted document\ninstead of a fetched one. Nothing is written to the product index or\nresolver cache. A uniformly sampled subset of authenticated submissions,\nincluding the supplied HTML and URL, may be retained for bounded internal\nanalysis.",
+        "description": "Resolve a product from caller-supplied page HTML — no index or fetch.\n\nSame shallow deterministic extraction as lookup's on-demand path\n(JSON-LD → Open Graph → HTML meta), run over the submitted document\ninstead of a fetched one. Nothing is written to the product index or\nresolver cache. A uniformly sampled subset of authenticated submissions,\nincluding the supplied HTML and URL, may be retained for bounded internal\nanalysis.",
         "operationId": "resolveProductFromHtml",
         "parameters": [],
         "requestBody": {
@@ -6288,7 +6288,7 @@
     },
     "/products/search": {
       "post": {
-        "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. Page 1 is ranked by relevance; later pages continue in quality-score\norder from page 1's last result, so a product can repeat across pages \u2014\nde-duplicate by `uuid`.",
+        "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. Page 1 is ranked by relevance; later pages continue in quality-score\norder from page 1's last result, so a product can repeat across pages —\nde-duplicate by `uuid`.",
         "operationId": "searchProducts",
         "parameters": [],
         "requestBody": {

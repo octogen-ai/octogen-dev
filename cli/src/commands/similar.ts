@@ -10,13 +10,14 @@
 import type {
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
-  PricePreference,
 } from "@octogen-ai/sdk";
+
+import { contractFlags, contractRequest } from "../contract.js";
 
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
-import { PRICE_PREFERENCES } from "../fields.js";
+import { SIMILAR_FIELDS } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 import { parseFacets } from "./search.js";
 
@@ -47,31 +48,18 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const params: MoreLikeThisProductsParams = { source: sourceFor(target) };
-  const catalogs = args.strings("catalog");
-  if (catalogs.length > 0) {
-    params.catalogs = catalogs;
-  }
-  const cursor = args.string("cursor");
-  if (cursor !== undefined) {
-    params.cursor = cursor;
-  }
-  const limit = args.integer("limit", { max: 100, min: 1 });
-  if (limit !== undefined) {
-    params.limit = limit;
-  }
   const include = parseFacets(args.strings("facet"), "--facet");
-  if (include.length > 0) {
-    params.includeFacets = include;
-  }
   const exclude = parseFacets(args.strings("exclude-facet"), "--exclude-facet");
-  if (exclude.length > 0) {
-    params.excludeFacets = exclude;
-  }
-  const preference = args.string("price-preference");
-  if (preference !== undefined) {
-    params.pricePreference = preference as PricePreference;
-  }
+  const params = contractRequest<MoreLikeThisProductsParams>(
+    "moreLikeThisProducts",
+    SIMILAR_FIELDS,
+    args,
+    {
+      source: sourceFor(target),
+      ...(include.length === 0 ? {} : { include_facets: include }),
+      ...(exclude.length === 0 ? {} : { exclude_facets: exclude }),
+    },
+  );
 
   const api = context.api();
   let response: MoreLikeThisProductsResponse;
@@ -150,38 +138,7 @@ function sourceMissOrRethrow(error: unknown, target: string): unknown {
 }
 
 export const similarCommand = {
-  flags: {
-    catalog: {
-      describe: "Restrict results to this catalog key.",
-      kind: "string",
-      multiple: true,
-      placeholder: "key",
-    },
-    cursor: {
-      describe: "Opaque pagination cursor.",
-      kind: "string",
-      placeholder: "cursor",
-    },
-    "exclude-facet": {
-      describe: "Exclude matches with this facet value (repeatable).",
-      kind: "string",
-      multiple: true,
-      placeholder: "k=v",
-    },
-    facet: {
-      describe: "Additional include facet (repeatable).",
-      kind: "string",
-      multiple: true,
-      placeholder: "k=v",
-    },
-    limit: { describe: "Results per page, 1–100.", kind: "number", placeholder: "n" },
-    "price-preference": {
-      choices: PRICE_PREFERENCES,
-      describe: "Bias results cheaper, similar, or dearer than the source.",
-      kind: "string",
-      placeholder: PRICE_PREFERENCES.join("|"),
-    },
-  },
+  flags: contractFlags("moreLikeThisProducts", SIMILAR_FIELDS),
   name: "similar",
   notes: [
     "The source must be an indexed product: more-like-this does not resolve on",

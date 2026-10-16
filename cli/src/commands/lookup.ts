@@ -8,16 +8,15 @@
 
 import type {
   LookupProductOptions,
-  ProductLookupCachePolicy,
-  ProductLookupMatchMode,
-  ProductLookupResolutionMode,
   MerchantProductUrlLookupResponse,
 } from "@octogen-ai/sdk";
+
+import { contractFlags, contractRequest } from "../contract.js";
 
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
-import { CACHE_POLICIES, MATCH_MODES, RESOLUTION_MODES } from "../fields.js";
+import { LOOKUP_FIELDS } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 
 async function runLookup(context: CommandContext): Promise<ExitCode> {
@@ -37,19 +36,13 @@ async function runLookup(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const options: LookupProductOptions = {};
-  const matchMode = args.string("match-mode");
-  if (matchMode !== undefined) {
-    options.matchMode = matchMode as ProductLookupMatchMode;
-  }
-  const resolutionMode = args.string("resolution-mode");
-  if (resolutionMode !== undefined) {
-    options.resolutionMode = resolutionMode as ProductLookupResolutionMode;
-  }
-  const cachePolicy = args.string("on-demand-cache-policy");
-  if (cachePolicy !== undefined) {
-    options.onDemandCachePolicy = cachePolicy as ProductLookupCachePolicy;
-  }
+  const options = contractRequest<LookupProductOptions>(
+    "lookupProduct",
+    LOOKUP_FIELDS,
+    args,
+    { url },
+  );
+  const cachePolicy = options.onDemandCachePolicy;
   // The SDK rejects this pair too, but as a `TypeError` that would surface as an
   // unexpected failure. Caught here it is what it is: a usage error.
   if (options.resolutionMode === "index_only" && cachePolicy === "refresh") {
@@ -158,28 +151,7 @@ function formatPrice(
 }
 
 export const lookupCommand = {
-  flags: {
-    "match-mode": {
-      choices: MATCH_MODES,
-      describe:
-        "Index match strictness. loose (server default) also resolves path-case, query-param, and Shopify collection aliases.",
-      kind: "string",
-      placeholder: MATCH_MODES.join("|"),
-    },
-    "on-demand-cache-policy": {
-      choices: CACHE_POLICIES,
-      describe: "Cache behavior when the request enters the on-demand path.",
-      kind: "string",
-      placeholder: CACHE_POLICIES.join("|"),
-    },
-    "resolution-mode": {
-      choices: RESOLUTION_MODES,
-      describe:
-        "auto checks the index then resolves on demand; index_only never fetches; on_demand_only skips the index.",
-      kind: "string",
-      placeholder: RESOLUTION_MODES.join("|"),
-    },
-  },
+  flags: contractFlags("lookupProduct", LOOKUP_FIELDS),
   name: "lookup",
   notes: [
     "Alias: parse. Uses the same /products/lookup request and lookup JSON command.",

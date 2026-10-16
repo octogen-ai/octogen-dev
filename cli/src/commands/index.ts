@@ -7,6 +7,11 @@
  * difference between a check and a comment.
  */
 
+import { assertBindings } from "../contract.js";
+import { assertOperationCoverage } from "../contract-coverage.js";
+import { FIELD_MAPS } from "../fields.js";
+import { mappedOperations } from "../registry.js";
+
 import type { OperationId } from "@octogen-ai/sdk";
 
 import { commandTable, EXCLUDED_OPERATIONS, type CommandSpec } from "../registry.js";
@@ -72,3 +77,15 @@ export type UnaccountedOperation = Exclude<
  * suite.
  */
 export const UNACCOUNTED_OPERATIONS: UnaccountedOperation[] = [];
+
+assertOperationCoverage(mappedOperations(COMMAND_LIST), EXCLUDED_OPERATIONS);
+for (const [operation, bindings] of Object.entries(FIELD_MAPS)) {
+  assertBindings(operation, bindings);
+}
+for (const command of COMMAND_LIST) {
+  for (const operation of command.operations) {
+    const bindings = FIELD_MAPS[operation];
+    if (bindings === undefined) throw new Error(`Missing field map: ${operation}`);
+    assertBindings(operation, bindings);
+  }
+}
