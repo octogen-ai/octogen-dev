@@ -38,7 +38,7 @@ import type {
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.5.0";
+export const SDK_VERSION = "0.6.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**

@@ -1,6 +1,6 @@
 /** Exercise the installed CLI and its actual SDK, without source aliases or API traffic. */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { run as SourceRun } from "../src/run.js";
@@ -27,6 +27,17 @@ const { CLI_VERSION, CLI_SDK_VERSION } = (await import(moduleUrl("version.js")))
 };
 assert.equal(CLI_VERSION, sourceManifest.version);
 assert.equal(CLI_SDK_VERSION, sourceManifest.dependencies["@octogen-ai/sdk"]);
+const installedDist = resolve(prefix, "node_modules/@storerouter/cli/dist");
+assert.ok(existsSync(resolve(installedDist, "contract.js")));
+assert.ok(
+  !readdirSync(installedDist, { recursive: true }).some((file) =>
+    String(file).toLowerCase().includes("voyage"),
+  ),
+  "retired Voyage files must not ship",
+);
+assert.throws(() => {
+  validate(requestSchema("searchProducts"), { price_min: -1 }, "searchProducts");
+}, /searchProducts.price_min must be at least 0/);
 const key =
   "octo_live_3f9c1a2b4d5e6f708192a3b4c5d6e7f8_sZ9wQ1x-Yv3TbN7mK2pRdL4gH6jF8cA0eU5iO1yW3qE";
 const cases = [

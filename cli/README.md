@@ -4,12 +4,12 @@ The StoreRouter CLI. Coverage, product lookup, and search from a terminal —
 or from an agent, which is the caller this is actually designed for.
 
 > **Pre-release.** Targets the `@next` dist-tag only. Set
-> `STOREROUTER_API_KEY`, use `--api-key-file <path>`, or use the keyless trial below.
+> `STOREROUTER_API_KEY` or use `--api-key-file <path>` with your StoreRouter API key.
 > See [MIGRATION.md](MIGRATION.md) for package migration and release steps.
 > `init`, skills, and MCP registration are not implemented.
 
 ```bash
-npx -y @storerouter/cli@next domains --check https://www.macys.com/shop/product/x
+npm exec --yes --package=@storerouter/cli@next -- storerouter domains --check https://www.macys.com/shop/product/x
 ```
 
 The primary executable is `storerouter`; `octogen` runs the same implementation.
@@ -65,7 +65,7 @@ prevent it.
 5. `OCTO_API_KEY` — deprecated, accepted with a notice
 6. `.env` in the current directory, then ancestors up to the `.git` boundary;
    within each file use the same three names in that order
-7. nothing → the keyless trial where the command supports it, else exit `3`
+7. nothing → no credential; authenticated service requests require a key
 
 **There is no `--api-key` flag.** argv is visible to every process on the box,
 lands in shell history, and gets echoed verbatim into agent transcripts.
@@ -168,16 +168,11 @@ first-class CLI is `octogen-url-lists` in the Python SDK, whose mutations are
 dry-run-by-default behind `--apply`; a second, differently-shaped CLI for the
 same mutating surface would be worse than none.
 
-## The keyless trial
+## Service credentials
 
-With no key, `domains`, `lookup`, and `search` answer anyway — 30 requests per IP
-per day, complete untruncated payloads. Everything else exits `3` and says so.
-
-Exhaustion is exit **`5`**, never `6`, and the body carries
-`"coverage": "unknown"`. Shared egress makes this common rather than exotic: CI
-runners, corporate NAT, and cloud sandboxes collide on one address, so the first
-keyless request an agent makes may already be over the cap. It says nothing about
-whether StoreRouter covers the merchant.
+Use a StoreRouter API key for service requests. The CLI can represent anonymous
+quota responses, but that does not guarantee anonymous service access. A missing
+or rejected credential exits `3`; throttling exits `5`, never `6`.
 
 ## How this stays honest
 

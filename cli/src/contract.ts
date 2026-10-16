@@ -1,6 +1,6 @@
 /** Runtime contract projection. No IO: reusable by a future browser command runtime. */
 import { type Args, type FlagSpecs, type FlagSpec } from "./args.js";
-import { usageError } from "./exit.js";
+import { CliError, ExitCode } from "./exit.js";
 import { PUBLIC_CONTRACT } from "./generated/contract.js";
 
 export interface Schema {
@@ -138,22 +138,57 @@ export function contractFlags(
   return flags;
 }
 
+/** Only these failures represent schema alternatives; runtime errors must escape. */
+class SchemaValidationError extends CliError {
+  constructor(message: string) {
+    super(message, { code: "invalid_option_value", exitCode: ExitCode.Usage });
+  }
+}
+
+function matchesType(schema: Schema, value: unknown): boolean {
+  if (schema.anyOf !== undefined)
+    return schema.anyOf.some((branch) => matchesType(branch, value));
+  switch (schema.type) {
+    case "null":
+      return value === null;
+    case "array":
+      return Array.isArray(value);
+    case "object":
+      return typeof value === "object" && value !== null && !Array.isArray(value);
+    case "integer":
+    case "number":
+      return typeof value === "number";
+    default:
+      return schema.type === undefined || typeof value === schema.type;
+  }
+}
+
 /** Validate the resolved public request schema, including nested facets/source. */
 export function validate(schema: Schema, value: unknown, label: string): void {
   const fail = (detail: string): never => {
-    throw usageError(`${label} ${detail}`, "invalid_option_value");
+    throw new SchemaValidationError(`${label} ${detail}`);
   };
   if (schema.anyOf !== undefined) {
     const { anyOf, ...siblings } = schema;
     validate(siblings, value, label);
+    const failures: { branch: Schema; error: SchemaValidationError }[] = [];
     for (const branch of anyOf) {
       try {
         validate(branch, value, label);
         return;
-      } catch {
-        /* Try next schema alternative. */
+      } catch (error) {
+        if (!(error instanceof SchemaValidationError)) throw error;
+        failures.push({ branch, error });
       }
     }
+    // Nullable fields retain the non-null constraint and nested path. Genuine
+    // unions report all type-compatible alternatives rather than picking one.
+    const matching = failures.filter(({ branch }) => matchesType(branch, value));
+    if (matching.length === 1 && matching[0] !== undefined) throw matching[0].error;
+    if (matching.length > 1)
+      throw new SchemaValidationError(
+        matching.map(({ error }) => error.message).join(" or "),
+      );
     fail("does not match the public request schema");
   }
   if (schema.enum !== undefined && !schema.enum.includes(value))
@@ -197,7 +232,8 @@ export function validate(schema: Schema, value: unknown, label: string): void {
       fail(`needs at least ${String(schema.minItems)} entries`);
     if (schema.maxItems !== undefined && list.length > schema.maxItems)
       fail(`allows at most ${String(schema.maxItems)} entries`);
-    for (const item of list) validate(schema.items ?? {}, item, label);
+    for (const [index, item] of list.entries())
+      validate(schema.items ?? {}, item, `${label}[${String(index)}]`);
   }
   if (schema.type === "object") {
     if (typeof value !== "object" || value === null || Array.isArray(value))
