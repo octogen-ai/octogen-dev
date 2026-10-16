@@ -194,20 +194,24 @@ whether StoreRouter covers the merchant.
 
 ## How this stays honest
 
-The CLI is not generated from the OpenAPI document — the spec cannot express
-which command an operation belongs to, that `resolve` must read from a file, or
-that `domains --check` has to normalize hosts. What is enforced instead:
+The public `/v1` snapshot generates SDK types and CLI runtime request schemas.
+The [complete command reference](REFERENCE.md) is generated from the same command
+registry and contract-backed help displayed by `storerouter <command> --help`.
 
-- **All `/v1` traffic goes through `@octogen-ai/sdk`**, pinned to an exact
-  version. No second HTTP client. The CLI is the SDK's most demanding customer,
-  which is how a route that does not exist gets found in an afternoon.
-- **The command table is bound to the SDK's `OPERATIONS` registry.** Every
-  published operation must be either mapped to a command or listed in
-  `EXCLUDED_OPERATIONS` with a stated reason — checked at compile time and by
-  `tests/operation-coverage.test.ts`.
-- **Request flags are derived from the generated types.** `src/fields.ts` has one
-  entry per property of every request body, so a newly published field is a
-  compile error until someone gives it a flag or writes down why not.
+- **All `/v1` traffic goes through `@octogen-ai/sdk`**, pinned to an exact version.
+- **Every public operation and request field is accounted for.** Add a binding
+  or a substantive exclusion reason; additions, removals and stale exclusions
+  fail generation, typecheck or conformance checks.
+- **Types, enums, bounds, defaults and descriptions come from the contract.**
+  `src/fields.ts` only declares flag/positional spelling, repeatability, codecs,
+  exclusions and SDK parameter name differences. Defaults on exposed fields
+  are passed explicitly so SDK defaults cannot override the selected contract.
+- **Custom handlers retain human semantics:** normalized domain checks, safe
+  HTML file/stdin input, facet merging, cross-field conflict checks, polling,
+  output envelopes and error/exit classification.
+- **Build and release drift gates** validate generated artifacts and the linked
+  reference. CI compares the complete CDN schema, including changes under an
+  unchanged API version. See [the contract and release guide](CONTRACT.md).
 - **Exit-code invariants are tested**, including that nothing classified ever
   produces `6` and that `ExitCode.NoResult` is named nowhere it should not be.
 

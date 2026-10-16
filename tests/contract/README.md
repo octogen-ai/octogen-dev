@@ -88,3 +88,8 @@ add the SDK methods for anything new, and commit:
 ```bash
 npm run codegen -- --fetch
 ```
+
+The CDN comparison also checks the complete document, including request and
+response schemas under an unchanged API version. `test_cli_codegen.py` mutates
+request constraints and checks the committed CLI projection. CLI runtime,
+serialization and packaging checks are documented in [cli/CONTRACT.md](../../cli/CONTRACT.md).

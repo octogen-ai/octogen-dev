@@ -32,12 +32,16 @@
   "files": [
     "dist",
     "README.md",
-    "MIGRATION.md"
+    "MIGRATION.md",
+    "REFERENCE.md",
+    "CONTRACT.md"
   ],
   "scripts": {
+    "prebuild": "tsx --tsconfig tsconfig.json tools/check-contract.ts --check",
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist coverage",
     "octogen": "tsx src/bin.ts",
+    "pretest": "tsx --tsconfig tsconfig.json tools/check-contract.ts --check",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "storerouter": "tsx src/bin.ts"

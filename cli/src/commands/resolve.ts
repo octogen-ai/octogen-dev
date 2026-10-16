@@ -12,7 +12,13 @@
 import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 
-import type { MerchantProductUrlLookupResponse } from "@octogen-ai/sdk";
+import type {
+  ResolveProductFromHtmlParams,
+  MerchantProductUrlLookupResponse,
+} from "@octogen-ai/sdk";
+
+import { contractFlags, contractRequest } from "../contract.js";
+import { RESOLVE_FIELDS } from "../fields.js";
 
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
@@ -77,10 +83,14 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
   let response: MerchantProductUrlLookupResponse;
   try {
     response = await call(api, "POST /products/resolve-from-html", () =>
-      api.client.resolveProductFromHtml({
-        html,
-        ...(url === undefined ? {} : { url }),
-      }),
+      api.client.resolveProductFromHtml(
+        contractRequest<ResolveProductFromHtmlParams>(
+          "resolveProductFromHtml",
+          RESOLVE_FIELDS,
+          args,
+          { html },
+        ),
+      ),
     );
   } catch (error) {
     throw unresolvableOrRethrow(error, source, url);
@@ -186,19 +196,7 @@ function message(error: unknown): string {
 }
 
 export const resolveCommand = {
-  flags: {
-    html: {
-      describe: "Path to a file of product-page HTML, or - for stdin.",
-      kind: "string",
-      placeholder: "file|-",
-    },
-    url: {
-      describe:
-        "The page's own URL. Strongly recommended: anchors relative images and keeps variant identity.",
-      kind: "string",
-      placeholder: "url",
-    },
-  },
+  flags: contractFlags("resolveProductFromHtml", RESOLVE_FIELDS),
   name: "resolve",
   notes: [
     "Stateless: no index read, no outbound fetch, no caching. The answer comes",

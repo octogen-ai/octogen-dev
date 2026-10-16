@@ -31,6 +31,8 @@
     "format:write": "prettier --write .",
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present && npm run test:contract",
+    "test:cli-package": "bash cli/tests/packed-contract.sh",
+    "test:cli-release": "RELEASE_GATE=1 bash cli/tests/packed-contract.sh",
     "test:contract": "vitest run --config vitest.config.ts",
     "test:published-contract": "vitest run --config vitest.published.config.ts",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:contract",

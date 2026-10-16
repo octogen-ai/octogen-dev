@@ -54,6 +54,10 @@ describe.skipIf(live === undefined && !REQUIRED)("published contract", () => {
     ).toEqual(snapshot);
   });
 
+  it("matches request and response schemas even without a version bump", () => {
+    expect(live).toEqual(readSnapshot());
+  });
+
   it("matches the committed snapshot's info.version", () => {
     expect(live?.info?.version).toBe(readSnapshot().info?.version);
   });

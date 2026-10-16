@@ -1,37 +1,8 @@
-/**
- * Request flags, derived from the generated request types.
- *
- * The problem this solves: `/v1` bodies are `extra="forbid"`, so a guessed
- * field name is a hard `422` — but the more expensive direction is the quiet
- * one. A field the API *gains* is a capability the CLI silently does not
- * expose, and nothing anywhere goes red.
- *
- * So every request body reachable from a command has a **field map keyed by the
- * generated type**: `satisfies FieldMap<T>` demands one entry per property of
- * `T` and rejects an entry for a property `T` does not have. A published field
- * therefore fails the CLI's typecheck the moment `npm run codegen` lands it,
- * and the fix is one line — a flag, or `unsupported()` with a reason.
- *
- * Enum *values* are derived the same way, by an `Exact<>` assertion against the
- * generated union rather than a hand-copied list, so a new `matchMode` cannot
- * be accepted by the type and rejected by the parser (or vice versa).
- *
- * What stays hand-written, on purpose: which flag a field maps to, its
- * spelling, whether it is positional, the human help text, and the validation
- * that turns a bad value into exit `2` instead of a `422`. None of that is in
- * the spec, and generating it would produce
- * `lookupProductProductsLookupPost(body)` — the thing the SDK exists not to be.
- */
-
+/** Declarative CLI presentation and SDK argument names. API shape lives in generated/contract.ts. */
 import type { components } from "@octogen-ai/sdk";
 
-/** How one request field reaches the CLI's surface. */
-export interface FieldBinding {
-  /** The flag or positional that carries it, e.g. `"--match-mode"`. */
-  flag: string;
-  /** Why the CLI does not expose it. Mutually exclusive with a flag. */
-  unsupported?: string;
-}
+import { CONTRACT, scalar, type Binding } from "./contract.js";
+export type FieldBinding = Binding;
 
 /** One entry per property of `T`. Missing or extra keys are type errors. */
 export type FieldMap<T> = Record<keyof T, FieldBinding>;
@@ -64,25 +35,14 @@ export const LOOKUP_FIELDS = {
   url: { flag: "<url> (positional)" },
 } satisfies FieldMap<LookupRequest>;
 
-export const MATCH_MODES = ["strict", "loose"] as const;
-export const RESOLUTION_MODES = ["auto", "index_only", "on_demand_only"] as const;
-export const CACHE_POLICIES = ["prefer_cache", "refresh"] as const;
-
-// Each of these fails to compile if the contract's enum gains, loses, or
-// renames a member — which is the only way a `--match-mode` the server accepts
-// and the CLI rejects (or the reverse) can be caught before a user finds it.
-export type _MatchModesExact = Assert<
-  Exact<(typeof MATCH_MODES)[number], NonNullable<LookupRequest["matchMode"]>>
->;
-export type _ResolutionModesExact = Assert<
-  Exact<(typeof RESOLUTION_MODES)[number], NonNullable<LookupRequest["resolutionMode"]>>
->;
-export type _CachePoliciesExact = Assert<
-  Exact<
-    (typeof CACHE_POLICIES)[number],
-    NonNullable<LookupRequest["onDemandCachePolicy"]>
-  >
->;
+function choices(operation: string, field: string): readonly string[] {
+  return (
+    scalar(CONTRACT.operations[operation]?.body.properties?.[field] ?? {}).enum ?? []
+  ).map(String);
+}
+export const MATCH_MODES = choices("lookupProduct", "matchMode");
+export const RESOLUTION_MODES = choices("lookupProduct", "resolutionMode");
+export const CACHE_POLICIES = choices("lookupProduct", "onDemandCachePolicy");
 
 // ── POST /products/search ──────────────────────────────────────────────────
 
@@ -93,7 +53,7 @@ export const SEARCH_FIELDS = {
   brand_quality_min: unsupported(
     "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
   ),
-  catalogs: { flag: "--catalog" },
+  catalogs: { flag: "--catalog", codec: "singleton" },
   cursor: { flag: "--cursor" },
   debug: unsupported(
     "Returns the effective query for query-understanding analysis. A debugging " +
@@ -102,14 +62,14 @@ export const SEARCH_FIELDS = {
   exclude_facets: unsupported(
     "Not yet a flag on `search`; send it with `storerouter api POST /products/search`.",
   ),
-  facets: { flag: "--facet k=v (repeatable)" },
+  facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects an understood facet visible only in `effectiveQuery`, which this " +
       "command does not request.",
   ),
-  price_max: { flag: "--price-max" },
-  price_min: { flag: "--price-min" },
+  price_max: { flag: "--price-max", sdkName: "priceMax" },
+  price_min: { flag: "--price-min", sdkName: "priceMin" },
   q: { flag: "<query> (positional)" },
   relax: unsupported(
     "Opt-in query relaxation changes matching. Use `storerouter api` when you need it.",
@@ -126,35 +86,40 @@ export const SEARCH_FIELDS = {
 // ── POST /products/more-like-this ──────────────────────────────────────────
 
 export const SIMILAR_FIELDS = {
-  catalogs: { flag: "--catalog (repeatable)" },
+  catalogs: { flag: "--catalog", multiple: true },
   cursor: { flag: "--cursor" },
   debug: unsupported("Effective-query debugging; reach it with `storerouter api`."),
-  exclude_facets: { flag: "--exclude-facet k=v (repeatable)" },
-  include_facets: { flag: "--facet k=v (repeatable)" },
+  exclude_facets: {
+    flag: "--exclude-facet",
+    sdkName: "excludeFacets",
+    codec: "facets",
+    multiple: true,
+    placeholder: "k=v",
+  },
+  include_facets: {
+    flag: "--facet",
+    sdkName: "includeFacets",
+    codec: "facets",
+    multiple: true,
+    placeholder: "k=v",
+  },
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects a server-generated facet visible only in `effectiveQuery`, which " +
       "this command does not request.",
   ),
-  price_preference: { flag: "--price-preference" },
+  price_preference: { flag: "--price-preference", sdkName: "pricePreference" },
   ranking_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
   retrieval_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
-  source: { flag: "<url|uuid> (positional)" },
+  source: { flag: "<url|uuid> (positional)", codec: "custom" },
 } satisfies FieldMap<MoreLikeThisRequest>;
 
-export const PRICE_PREFERENCES = ["lower", "any", "higher"] as const;
-
-export type _PricePreferencesExact = Assert<
-  Exact<
-    (typeof PRICE_PREFERENCES)[number],
-    NonNullable<MoreLikeThisRequest["price_preference"]>
-  >
->;
+export const PRICE_PREFERENCES = choices("moreLikeThisProducts", "price_preference");
 
 // ── POST /products/resolve-from-html ───────────────────────────────────────
 
 export const RESOLVE_FIELDS = {
-  html: { flag: "--html <file|->" },
+  html: { flag: "--html", codec: "custom", placeholder: "file|-" },
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
@@ -164,10 +129,15 @@ export const VOYAGE_START_FIELDS = {
   domain: { flag: "<url|domain> (positional)" },
 } satisfies FieldMap<VoyageStartRequest>;
 
-/**
- * Every field map, for the test that asserts each entry is either a flag or an
- * `unsupported` with a non-trivial reason.
- */
+/** Query and path bindings use the same generated parameter schema. */
+export const VOYAGE_LIST_FIELDS = {
+  cursor: { flag: "--cursor" },
+  limit: { flag: "--limit" },
+  status: { flag: "--status" },
+} satisfies Record<string, Binding>;
+export const VOYAGE_STATUS_FIELDS = {
+  task_id: { flag: "<task_id>", sdkName: "taskId" },
+};
 export const FIELD_MAPS: Readonly<
   Record<string, Readonly<Record<string, FieldBinding>>>
 > = Object.freeze({
@@ -176,4 +146,8 @@ export const FIELD_MAPS: Readonly<
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   startVoyage: VOYAGE_START_FIELDS,
+  listVoyages: VOYAGE_LIST_FIELDS,
+  getVoyage: VOYAGE_STATUS_FIELDS,
+  getMe: {},
+  listDomains: {},
 });

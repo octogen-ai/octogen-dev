@@ -1,30 +1,7 @@
 /**
- * The shape of a command, and the record of which published operations have no
- * command.
- *
- * This is half of what makes CLI/SDK/API drift impossible rather than
- * discouraged; the other half is `commands/index.ts`, which assembles the table
- * and runs the exhaustiveness check against `OPERATIONS`.
- *
- * The CLI is deliberately **not** generated from the OpenAPI document. The spec
- * cannot express which command an operation belongs to, that `resolve` must
- * read HTML from a file rather than argv, that `domains --check` has to
- * normalize hosts on both sides before comparing, or that eight mutating
- * operations already belong to a different CLI in another language. A naive
- * generator would emit eighteen commands and reproduce every one of those bugs,
- * including the coverage false negative that actually shipped.
- *
- * What is enforced instead: every operation in `OPERATIONS` is **either mapped
- * to a command or listed in {@link EXCLUDED_OPERATIONS} with a stated reason**.
- * The failure chain is the design —
- *
- * 1. an operation is published → the repo's contract-conformance test (P2, no
- *    allowlist) goes red until the SDK gains a method;
- * 2. the SDK method lands → `OPERATIONS` grows → the check in
- *    `commands/index.ts` goes red until someone writes a command or records, in
- *    one line, why there is not one.
- *
- * Nobody has to remember, and a red build names the owner.
+ * Intentional command presentation, custom workflows and public operation exclusions.
+ * Runtime request schemas come from the public contract; commands/index.ts checks
+ * exact coverage against both that projection and the existing SDK registry.
  */
 
 import type { OperationId } from "@octogen-ai/sdk";

@@ -11,5 +11,5 @@
       "@octogen-ai/sdk": ["../sdks/typescript/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "tools/**/*.ts", "vitest.config.ts"]
 }
