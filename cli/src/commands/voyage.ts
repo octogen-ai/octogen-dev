@@ -1,5 +1,5 @@
 /**
- * `octogen voyage <url>`, `voyage status <task_id>`, `voyage list` — onboard a
+ * `storerouter voyage <url>`, `voyage status <task_id>`, `voyage list` — onboard a
  * merchant Octogen does not cover yet.
  *
  * Voyages are shared per domain and run for hours to days, which shapes both
@@ -13,7 +13,7 @@
  *   failure, because the voyage is unaffected and `voyage status` resumes.
  *
  * `voyage list` is also the only place voyage quota is observable outside
- * `octogen status`.
+ * `storerouter status`.
  */
 
 import type {
@@ -49,7 +49,7 @@ async function runVoyageStart(context: CommandContext): Promise<ExitCode> {
   const domain = context.positionals[0];
   if (domain === undefined || domain.length === 0) {
     throw usageError(
-      "octogen voyage <url|domain> requires a merchant to onboard.",
+      "storerouter voyage <url|domain> requires a merchant to onboard.",
       "missing_argument",
     );
   }
@@ -90,7 +90,7 @@ async function runVoyageStart(context: CommandContext): Promise<ExitCode> {
     throw new CliError(
       final.timedOut
         ? `Still ${final.task.status} after ${String(deadlineSeconds)}s. The voyage is ` +
-            `unaffected: resume with \`octogen voyage status ${final.task.taskId}\`.`
+            `unaffected: resume with \`storerouter voyage status ${final.task.taskId}\`.`
         : `The voyage ${final.task.status}: ${final.task.error?.message ?? final.task.phaseLabel}`,
       {
         code: final.timedOut ? "wait_deadline" : "voyage_failed",
@@ -115,7 +115,7 @@ async function runVoyageStatus(context: CommandContext): Promise<ExitCode> {
   const taskId = context.positionals[0];
   if (taskId === undefined || taskId.length === 0) {
     throw usageError(
-      "octogen voyage status <task_id> requires a task id.",
+      "storerouter voyage status <task_id> requires a task id.",
       "missing_argument",
     );
   }
@@ -269,7 +269,7 @@ function unknownTaskOrRethrow(error: unknown, taskId: string): unknown {
       // A task belonging to another organization is reported the same way, so
       // this says "no such voyage for you" rather than "no such voyage".
       message: `No voyage ${taskId} belongs to this organization.`,
-      remediation: { command: "octogen voyage list" },
+      remediation: { command: "storerouter voyage list" },
       serverAnswered: true,
     });
   }
@@ -342,7 +342,7 @@ export const voyageCommand = {
     "it and consumes no quota. `created` in the output says which happened.",
     "",
     "With --wait: exit 0 completed, 7 still running at the deadline (the voyage",
-    "is unaffected — resume with `octogen voyage status`), 1 failed or",
+    "is unaffected — resume with `storerouter voyage status`), 1 failed or",
     "cancelled. Requires an API key.",
   ],
   operations: ["startVoyage", "getVoyage"] as const,
@@ -380,7 +380,7 @@ export const voyageListCommand = {
   },
   name: "voyage list",
   notes: [
-    "Also the only place voyage quota is observable outside `octogen status`,",
+    "Also the only place voyage quota is observable outside `storerouter status`,",
     "so it is reported even when the page is empty.",
   ],
   operations: ["listVoyages"] as const,

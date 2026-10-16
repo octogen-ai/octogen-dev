@@ -252,7 +252,7 @@ describe("classify", () => {
     const failure = classify(apiError(429, keylessDetail("keyless_trial_exhausted")), {
       coverageAdjacent: true,
     });
-    expect(failure.message).toMatch(/says nothing about whether Octogen covers/);
+    expect(failure.message).toMatch(/says nothing about whether StoreRouter covers/);
     expect(failure.coverage).toBe("unknown");
     expect(failure.exitCode).toBe(ExitCode.Throttled);
   });
@@ -348,11 +348,11 @@ describe("noResult", () => {
       coverage: "not_covered",
       data: { covered: false },
       message: "not covered",
-      remediation: { command: "octogen voyage example.com" },
+      remediation: { command: "storerouter voyage example.com" },
       serverAnswered: true,
     });
     expect(miss.coverage).toBe("not_covered");
     expect(miss.data).toEqual({ covered: false });
-    expect(miss.remediation?.command).toBe("octogen voyage example.com");
+    expect(miss.remediation?.command).toBe("storerouter voyage example.com");
   });
 });

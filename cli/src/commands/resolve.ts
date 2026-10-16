@@ -1,5 +1,5 @@
 /**
- * `octogen resolve --html <file|-> [--url <url>]` — resolve a product from HTML
+ * `storerouter resolve --html <file|-> [--url <url>]` — resolve a product from HTML
  * you already have.
  *
  * **The HTML never comes from an argument.** Not as a convenience omission: the
@@ -27,13 +27,13 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
   const source = args.string("html");
   if (source === undefined) {
     throw usageError(
-      "octogen resolve requires --html <file>, or --html - to read stdin.",
+      "storerouter resolve requires --html <file>, or --html - to read stdin.",
       "missing_option_value",
     );
   }
   if (context.positionals.length > 0) {
     throw usageError(
-      "octogen resolve reads HTML from --html <file> or --html -, never from an " +
+      "storerouter resolve reads HTML from --html <file> or --html -, never from an " +
         "argument: the body cap is 5 MiB and argv is the wrong channel for it.",
       "too_many_arguments",
     );
@@ -62,7 +62,7 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
     // in the query string loses that identity, and resolution can fail outright.
     writer.problem({
       code: "no_source_url",
-      fix: "octogen resolve --html page.html --url <the page's URL>",
+      fix: "storerouter resolve --html page.html --url <the page's URL>",
       message:
         "No --url given. Pass the page's own URL when you have it: it anchors " +
         "relative images and JSON-LD selection, and is the only " +
@@ -169,7 +169,11 @@ function unresolvableOrRethrow(
           ? " The page declared no canonical URL (JSON-LD url, og:url, or link rel=canonical); pass --url."
           : ""),
       ...(url === undefined
-        ? { remediation: { command: `octogen resolve --html ${source} --url <url>` } }
+        ? {
+            remediation: {
+              command: `storerouter resolve --html ${source} --url <url>`,
+            },
+          }
         : {}),
       serverAnswered: true,
     });

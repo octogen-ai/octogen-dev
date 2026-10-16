@@ -57,7 +57,7 @@ const SEARCH_BODY = {
   nextCursor: "cursor-1",
 };
 
-describe("octogen lookup", () => {
+describe("storerouter lookup", () => {
   it("sends `url` — the field name, which is not `productUrl`", async () => {
     const url = "https://lagence.com/products/akiya-satin-maxi-dress-merlot-red";
     const result = await runCli({
@@ -149,7 +149,7 @@ describe("octogen lookup", () => {
   });
 });
 
-describe("octogen search", () => {
+describe("storerouter search", () => {
   it("sends `q` — the field name, which is not `query`", async () => {
     const result = await runCli({
       argv: ["search", "paisley jackets", "--limit", "3"],
@@ -270,7 +270,7 @@ describe("octogen search", () => {
   });
 });
 
-describe("octogen similar", () => {
+describe("storerouter similar", () => {
   const SIMILAR_BODY = {
     items: SEARCH_BODY.items,
     nextCursor: null,
@@ -344,7 +344,7 @@ describe("octogen similar", () => {
   });
 });
 
-describe("octogen resolve", () => {
+describe("storerouter resolve", () => {
   it("reads HTML from a file, and never from an argument", async () => {
     const directory = mkdtempSync(join(tmpdir(), "octogen-html-"));
     const path = join(directory, "page.html");
@@ -407,7 +407,7 @@ describe("octogen resolve", () => {
   });
 });
 
-describe("octogen voyage", () => {
+describe("storerouter voyage", () => {
   const RUNNING = {
     domain: "example.com",
     phase: "discovering_site",
@@ -474,7 +474,7 @@ describe("octogen voyage", () => {
     const body = result.json();
     expect(body["code"]).toBe("wait_deadline");
     expect(body["message"]).toMatch(/voyage is unaffected/);
-    expect(body["message"]).toMatch(/octogen voyage status task-1/);
+    expect(body["message"]).toMatch(/storerouter voyage status task-1/);
   });
 
   it("exits 1 when the voyage itself failed", async () => {
@@ -553,7 +553,7 @@ describe("octogen voyage", () => {
   });
 });
 
-describe("octogen api", () => {
+describe("storerouter api", () => {
   it("issues the request verbatim, with no schema opinion", async () => {
     const result = await runCli({
       argv: ["api", "GET", "/coverage/url-lists", "--query", "limit=2"],
@@ -580,7 +580,7 @@ describe("octogen api", () => {
       routes: { "GET /brands/nike": { body: { brand_name: "Nike" } } },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
-    expect(result.requests[0]?.url).toBe("https://api.octogen.ai/v1/brands/nike");
+    expect(result.requests[0]?.url).toBe("https://api.storerouter.ai/v1/brands/nike");
   });
 
   it("takes a body inline, from a file, or from stdin", async () => {

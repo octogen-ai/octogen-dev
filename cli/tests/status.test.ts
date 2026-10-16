@@ -1,5 +1,5 @@
 /**
- * `octogen status`, whose output is a contract because an agent parses it to
+ * `storerouter status`, whose output is a contract because an agent parses it to
  * decide whether onboarding worked.
  *
  * The load-bearing test is the probe one. `GET /v1/domains` now answers `200`
@@ -26,7 +26,7 @@ describe("the auth probe", () => {
     // One request, and it is the identity question. `/domains` would answer 200
     // for a caller with no key at all, which is why it is not this.
     expect(result.requests).toHaveLength(1);
-    expect(result.requests[0]?.url).toBe("https://api.octogen.ai/v1/me");
+    expect(result.requests[0]?.url).toBe("https://api.storerouter.ai/v1/me");
     expect((result.json()["api"] as Record<string, unknown>)["probe"]).toBe("GET /me");
   });
 
@@ -39,7 +39,7 @@ describe("the auth probe", () => {
       routes: { "GET /domains": { body: DOMAINS_BODY }, "GET /me": { body: ME_BODY } },
     });
     expect(result.requests.map((request) => request.url)).toEqual([
-      "https://api.octogen.ai/v1/me",
+      "https://api.storerouter.ai/v1/me",
     ]);
   });
 
@@ -81,7 +81,7 @@ describe("the auth probe", () => {
     });
     expect(result.exitCode).toBe(ExitCode.Unexpected);
     expect(result.requests).toHaveLength(1);
-    expect(result.requests[0]?.url).toBe("https://api.octogen.ai/v1/me");
+    expect(result.requests[0]?.url).toBe("https://api.storerouter.ai/v1/me");
   });
 
   it("retries a 5xx three times before giving up", async () => {

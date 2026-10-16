@@ -1,5 +1,5 @@
 /**
- * `octogen similar <url|uuid>` — more like this.
+ * `storerouter similar <url|uuid>` — more like this.
  *
  * The source is a URL or a UUID and exactly one of them: the API takes
  * `{source: {url}}` or `{source: {uuid}}` and rejects both. Which one you meant
@@ -32,7 +32,7 @@ export function sourceFor(value: string): { url: string } | { uuid: string } {
     return { url: trimmed };
   }
   throw usageError(
-    `octogen similar takes a product URL or a UUID; ${trimmed} is neither.`,
+    `storerouter similar takes a product URL or a UUID; ${trimmed} is neither.`,
     "invalid_argument",
   );
 }
@@ -42,7 +42,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
   const target = context.positionals[0];
   if (target === undefined || target.length === 0) {
     throw usageError(
-      "octogen similar <url|uuid> requires a source product.",
+      "storerouter similar <url|uuid> requires a source product.",
       "missing_argument",
     );
   }
@@ -142,7 +142,7 @@ function sourceMissOrRethrow(error: unknown, target: string): unknown {
       code: "source_not_found",
       data: { source: target },
       message: `${target} is not an indexed product, so there is nothing to compare it to.`,
-      remediation: { command: `octogen lookup ${target}` },
+      remediation: { command: `storerouter lookup ${target}` },
       serverAnswered: true,
     });
   }

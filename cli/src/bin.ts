@@ -27,7 +27,7 @@ function fatal(error: unknown): never {
 process.on("uncaughtException", fatal);
 process.on("unhandledRejection", fatal);
 
-// A closed stdout (`octogen search x | head -1`) is not an error worth a stack.
+// A closed stdout (`storerouter search x | head -1`) is not an error worth a stack.
 process.stdout.on("error", (error: NodeJS.ErrnoException) => {
   if (error.code === "EPIPE") {
     process.exit(ExitCode.Success);

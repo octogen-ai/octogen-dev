@@ -1,5 +1,5 @@
 /**
- * `octogen domains [--check <url>]` — the coverage gate.
+ * `storerouter domains [--check <url>]` — the coverage gate.
  *
  * This is the highest-stakes command in the CLI, and `--check` earns its own
  * flag rather than making an agent grep JSON, because getting it wrong is the
@@ -22,7 +22,7 @@ async function runDomains(context: CommandContext): Promise<ExitCode> {
 
   if (context.positionals.length > 0) {
     throw usageError(
-      `octogen domains takes no positional arguments; did you mean --check ${
+      `storerouter domains takes no positional arguments; did you mean --check ${
         context.positionals[0] ?? ""
       }?`,
     );
@@ -31,7 +31,7 @@ async function runDomains(context: CommandContext): Promise<ExitCode> {
   const api = context.api();
 
   const snapshot = await fetchCoverage(api, {
-    baseUrl: args.string("base-url"),
+    baseUrl: api.baseUrl,
     env: context.env,
     noCache: args.flag("no-cache"),
   });
@@ -81,7 +81,7 @@ async function runDomains(context: CommandContext): Promise<ExitCode> {
       // rather than one that is present on a hit and absent on a miss.
       data: { catalogs: [], covered: false, source: provenance, url: check },
       message: `${check} is not covered: no catalog claims that host.`,
-      remediation: { command: `octogen voyage ${check}` },
+      remediation: { command: `storerouter voyage ${check}` },
       serverAnswered: true,
     });
   }

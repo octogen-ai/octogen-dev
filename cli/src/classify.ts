@@ -69,14 +69,14 @@ export function classify(error: unknown, options: ClassifyOptions = {}): CliErro
 
   if (error instanceof MissingAPIKeyError) {
     return noCredential(
-      "No Octogen API key found. Run `octogen init` to authorize one.",
+      "No StoreRouter API key found. Set STOREROUTER_API_KEY or use --api-key-file <path>.",
       "no_credential",
       coverage,
     );
   }
 
   if (error instanceof OctogenConnectionError) {
-    return new CliError(`Could not reach the Octogen API: ${error.message}`, {
+    return new CliError(`Could not reach the StoreRouter API: ${error.message}`, {
       code: "connection_failed",
       exitCode: ExitCode.Unexpected,
       ...(coverage === undefined ? {} : { coverage }),
@@ -125,7 +125,10 @@ function classifyApiError(
           ...base,
           code: "keyless_endpoint_not_included",
           exitCode: ExitCode.NoCredential,
-          remediation: { command: "octogen init", url: ONBOARDING_URL },
+          remediation: {
+            command: "storerouter status --api-key-file <path>",
+            url: ONBOARDING_URL,
+          },
         },
       );
     }
@@ -134,7 +137,10 @@ function classifyApiError(
         ...base,
         code: "keyless_capability_not_included",
         exitCode: ExitCode.NoCredential,
-        remediation: { command: "octogen init", url: ONBOARDING_URL },
+        remediation: {
+          command: "storerouter status --api-key-file <path>",
+          url: ONBOARDING_URL,
+        },
       });
     }
     // Platform-api distinguishes these as of P3: a revoked key that resolved
@@ -142,22 +148,25 @@ function classifyApiError(
     // said "invalid or revoked" and guessed at nothing.
     if (/revoked/i.test(message)) {
       return new CliError(
-        "This API key was revoked. Ask whoever revoked it, or run " +
-          "`octogen init` to authorize a new one.",
+        "This API key was revoked. Ask whoever revoked it, or " +
+          "set STOREROUTER_API_KEY to a new key.",
         {
           ...base,
           code: "credential_revoked",
           exitCode: ExitCode.NoCredential,
-          remediation: { command: "octogen init" },
+          remediation: { command: "storerouter status --api-key-file <path>" },
         },
       );
     }
-    return new CliError(`The Octogen API rejected this key as invalid: ${message}`, {
-      ...base,
-      code: "credential_invalid",
-      exitCode: ExitCode.NoCredential,
-      remediation: { command: "octogen init" },
-    });
+    return new CliError(
+      `The StoreRouter API rejected this key as invalid: ${message}`,
+      {
+        ...base,
+        code: "credential_invalid",
+        exitCode: ExitCode.NoCredential,
+        remediation: { command: "storerouter status --api-key-file <path>" },
+      },
+    );
   }
 
   if (status === 403 || error instanceof OctogenForbiddenError) {
@@ -179,7 +188,10 @@ function classifyApiError(
         ...base,
         code: "keyless_quota_exhausted",
         exitCode: ExitCode.Throttled,
-        remediation: { command: "octogen init", url: ONBOARDING_URL },
+        remediation: {
+          command: "storerouter status --api-key-file <path>",
+          url: ONBOARDING_URL,
+        },
       });
     }
     if (code === "keyless_trial_busy") {
@@ -190,7 +202,12 @@ function classifyApiError(
           code: "keyless_busy",
           exitCode: ExitCode.Throttled,
           ...(keyless
-            ? { remediation: { command: "octogen init", url: ONBOARDING_URL } }
+            ? {
+                remediation: {
+                  command: "storerouter status --api-key-file <path>",
+                  url: ONBOARDING_URL,
+                },
+              }
             : {}),
         },
       );
@@ -207,12 +224,15 @@ function classifyApiError(
       ...base,
       code: "keyless_unavailable",
       exitCode: ExitCode.Unexpected,
-      remediation: { command: "octogen init", url: ONBOARDING_URL },
+      remediation: {
+        command: "storerouter status --api-key-file <path>",
+        url: ONBOARDING_URL,
+      },
     });
   }
 
   if (status === 422) {
-    return new CliError(`The Octogen API rejected the request: ${message}`, {
+    return new CliError(`The StoreRouter API rejected the request: ${message}`, {
       ...base,
       code: code ?? "invalid_request",
       exitCode: ExitCode.Usage,
@@ -243,10 +263,10 @@ function keylessExhaustedMessage(retryAfter: number | undefined): string {
       : `The allowance refills continuously; retry in ~${String(retryAfter)}s.`;
   return [
     "Keyless trial exhausted: 30 requests per IP per day.",
-    "This says nothing about whether Octogen covers this merchant — the",
+    "This says nothing about whether StoreRouter covers this merchant — the",
     "request was refused before any catalog was consulted. Coverage is unknown.",
     retry,
-    "Get a key (free, one browser click): octogen init",
+    "Get a key at https://platform.octogen.ai/agent-onboarding/SKILL.md; set STOREROUTER_API_KEY.",
   ].join("\n");
 }
 
@@ -259,7 +279,10 @@ function noCredential(
     code,
     exitCode: ExitCode.NoCredential,
     ...(coverage === undefined ? {} : { coverage }),
-    remediation: { command: "octogen init", url: ONBOARDING_URL },
+    remediation: {
+      command: "storerouter status --api-key-file <path>",
+      url: ONBOARDING_URL,
+    },
   });
 }
 

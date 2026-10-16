@@ -1,5 +1,5 @@
 /**
- * `octogen status` — D10. The command an agent parses to decide whether
+ * `storerouter status` — D10. The command an agent parses to decide whether
  * onboarding worked, which makes its output a contract.
  *
  * Two rules do most of the work here.
@@ -89,7 +89,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
   const { args, writer } = context;
   const cli = versionBlock();
   const api = context.api();
-  const baseUrl = args.string("base-url") ?? "https://api.octogen.ai/v1";
+  const baseUrl = api.baseUrl;
 
   const auth: AuthBlock = {
     keyId: null,
@@ -118,7 +118,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
         code: "no_credential",
         data: envelope,
         exitCode: ExitCode.NoCredential,
-        remediation: { command: "octogen init" },
+        remediation: { command: "storerouter status --api-key-file <path>" },
       });
     }
     writer.emit({
@@ -138,7 +138,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
     // so would be spending it for nothing.
     writer.problem({
       code: "no_credential",
-      fix: "octogen init",
+      fix: "Set STOREROUTER_API_KEY or use --api-key-file <path>",
       message:
         "No API key found. domains, lookup, and search work on the keyless " +
         "trial (30 requests/day per IP); everything else needs a key.",
@@ -148,7 +148,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
       code: "no_credential",
       data: envelope,
       exitCode: ExitCode.NoCredential,
-      remediation: { command: "octogen init" },
+      remediation: { command: "storerouter status --api-key-file <path>" },
     });
   }
 
@@ -281,7 +281,7 @@ function nullOrg(): OrgBlock {
 function render(envelope: StatusEnvelope): string {
   const { api, auth, cli, org, quota } = envelope;
   const lines = [
-    `Octogen  cli ${cli.version}  sdk ${cli.sdkVersion}`,
+    `StoreRouter  cli ${cli.version}  sdk ${cli.sdkVersion}`,
     `  auth      ok        ${auth.keyPrefix ?? "—"} (from ${auth.source})`,
     `  org       ${org.slug ?? "—"}   ${org.name ?? "—"} · ${org.typeLabel ?? "—"}`,
     `  api       ok        ${api.baseUrl}  ${String(api.latencyMs ?? 0)}ms`,
@@ -310,7 +310,7 @@ function render(envelope: StatusEnvelope): string {
 
 function renderOffline(cli: VersionBlock, auth: AuthBlock): string {
   return [
-    `Octogen  cli ${cli.version}  sdk ${cli.sdkVersion}  node ${cli.node}`,
+    `StoreRouter  cli ${cli.version}  sdk ${cli.sdkVersion}  node ${cli.node}`,
     `  auth      ${auth.state}  ${auth.keyPrefix ?? "no key found"} (${auth.source})`,
     "  api       not checked (--offline)",
   ].join("\n");

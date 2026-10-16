@@ -1,5 +1,5 @@
 /**
- * `octogen search <query>` — text search across the indexed corpus.
+ * `storerouter search <query>` — text search across the indexed corpus.
  *
  * The request field is **`q`**, not `query`; the response returns `items` plus
  * `nextCursor`, and each item carries `productUrl`. Bodies are
@@ -63,7 +63,7 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
   const query = context.positionals.join(" ").trim();
   if (query.length === 0) {
     throw usageError(
-      "octogen search <query> requires a query. Quote it if it has spaces.",
+      "storerouter search <query> requires a query. Quote it if it has spaces.",
       "missing_argument",
     );
   }
@@ -197,7 +197,7 @@ export const searchCommand = {
     "empty, not refused.",
     "",
     "The full 18-field search query object is deliberately not flagged; use",
-    "`octogen api POST /products/search` for it. Keyless-eligible.",
+    "`storerouter api POST /products/search` for it. Keyless-eligible.",
   ],
   operations: ["searchProducts"] as const,
   run: runSearch,

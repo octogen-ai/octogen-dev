@@ -1,7 +1,7 @@
 /**
  * The CLI's own version, and the SDK version it is pinned to.
  *
- * Both go into `--version`, into `octogen status`, and into every `--json`
+ * Both go into `--version`, into `storerouter status`, and into every `--json`
  * envelope's `cli` block, so a bug report identifies both halves of the thing
  * that failed. That matters more than usual here: the CLI depends on an *exact*
  * SDK version, so "1.2.3 against 0.3.0" is a complete description of a build.

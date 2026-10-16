@@ -74,7 +74,8 @@ export const GLOBAL_FLAGS: FlagSpecs = Object.freeze({
     placeholder: "seconds",
   },
   "base-url": {
-    describe: "Override the API base URL.",
+    describe:
+      "Override STOREROUTER_BASE_URL / OCTOGEN_BASE_URL (default https://api.storerouter.ai/v1).",
     kind: "string",
     placeholder: "url",
   },
@@ -83,7 +84,7 @@ export const GLOBAL_FLAGS: FlagSpecs = Object.freeze({
     kind: "boolean",
   },
   help: { describe: "Show help for this command.", kind: "boolean" },
-  // Handled before the strict parse (so `octogen --version` works with no
+  // Handled before the strict parse (so `storerouter --version` works with no
   // command at all), and declared here so it appears in `--help` and is not
   // rejected as an unknown option alongside a command.
   version: {

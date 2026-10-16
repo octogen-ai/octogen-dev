@@ -5,10 +5,10 @@
  *
  * 1. `--api-key-stdin` — one line from stdin.
  * 2. `--api-key-file <path>`.
- * 3. `OCTOGEN_PLATFORM_API_KEY` in the environment.
+ * 3. `STOREROUTER_API_KEY`, then `OCTOGEN_PLATFORM_API_KEY` in the environment.
  * 4. `OCTO_API_KEY` in the environment, with a deprecation notice.
  * 5. `.env` at the project root, then ancestors up to the repo boundary
- *    (`.git`) — `OCTOGEN_PLATFORM_API_KEY` first, then `OCTO_API_KEY`. Read,
+ *    (`.git`) — the same three names in the same order. Read,
  *    never exported into the child environment.
  * 6. Nothing → keyless where the command supports it, otherwise exit `3`.
  *
@@ -24,12 +24,16 @@
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-import { API_KEY_ENV_VAR, DEPRECATED_API_KEY_ENV_VAR } from "@octogen-ai/sdk";
+import {
+  API_KEY_ENV_VAR as LEGACY_API_KEY_ENV_VAR,
+  DEPRECATED_API_KEY_ENV_VAR,
+} from "@octogen-ai/sdk";
 
 import { CliError, ExitCode, usageError } from "./exit.js";
 import { keyPrefixOf, looksLikeApiKey } from "./redact.js";
 
-export { API_KEY_ENV_VAR, DEPRECATED_API_KEY_ENV_VAR };
+export const API_KEY_ENV_VAR = "STOREROUTER_API_KEY";
+export { LEGACY_API_KEY_ENV_VAR, DEPRECATED_API_KEY_ENV_VAR };
 
 /** Which rung of the precedence ladder produced the key. */
 export type KeySource =
@@ -82,7 +86,7 @@ export function resolveKey(options: ResolveKeyOptions = {}): ResolvedKey {
       throw new CliError("No API key on stdin (--api-key-stdin).", {
         code: "no_credential",
         exitCode: ExitCode.NoCredential,
-        remediation: { command: "octogen init" },
+        remediation: { command: "storerouter status --api-key-file <path>" },
       });
     }
     return accept(value, "stdin", undefined);
@@ -104,25 +108,26 @@ export function resolveKey(options: ResolveKeyOptions = {}): ResolvedKey {
       throw new CliError(`--api-key-file ${path} is empty.`, {
         code: "no_credential",
         exitCode: ExitCode.NoCredential,
-        remediation: { command: "octogen init" },
+        remediation: { command: "storerouter status --api-key-file <path>" },
       });
     }
     return accept(value, "file", path);
   }
 
-  const primary = env[API_KEY_ENV_VAR]?.trim();
-  if (primary !== undefined && primary.length > 0) {
-    return accept(primary, "env", undefined);
-  }
-
-  const deprecated = env[DEPRECATED_API_KEY_ENV_VAR]?.trim();
-  if (deprecated !== undefined && deprecated.length > 0) {
-    return accept(
-      deprecated,
-      "env-deprecated",
-      undefined,
-      `${DEPRECATED_API_KEY_ENV_VAR} is deprecated; set ${API_KEY_ENV_VAR} instead.`,
-    );
+  const names = [API_KEY_ENV_VAR, LEGACY_API_KEY_ENV_VAR, DEPRECATED_API_KEY_ENV_VAR];
+  for (const name of names) {
+    const value = env[name]?.trim();
+    if (value) {
+      return accept(
+        value,
+        name === DEPRECATED_API_KEY_ENV_VAR ? "env-deprecated" : "env",
+        undefined,
+        name === DEPRECATED_API_KEY_ENV_VAR
+          ? `${name} is deprecated; set ${API_KEY_ENV_VAR} instead.`
+          : undefined,
+        name,
+      );
+    }
   }
 
   for (const file of dotenvCandidates(cwd)) {
@@ -133,18 +138,19 @@ export function resolveKey(options: ResolveKeyOptions = {}): ResolvedKey {
       continue;
     }
     const values = parseDotenv(contents);
-    const fromDotenv = values.get(API_KEY_ENV_VAR);
-    if (fromDotenv !== undefined && fromDotenv.length > 0) {
-      return accept(fromDotenv, "dotenv", file);
-    }
-    const legacy = values.get(DEPRECATED_API_KEY_ENV_VAR);
-    if (legacy !== undefined && legacy.length > 0) {
-      return accept(
-        legacy,
-        "dotenv-deprecated",
-        file,
-        `${DEPRECATED_API_KEY_ENV_VAR} in ${file} is deprecated; rename it to ${API_KEY_ENV_VAR}.`,
-      );
+    for (const name of names) {
+      const value = values.get(name);
+      if (value) {
+        return accept(
+          value,
+          name === DEPRECATED_API_KEY_ENV_VAR ? "dotenv-deprecated" : "dotenv",
+          file,
+          name === DEPRECATED_API_KEY_ENV_VAR
+            ? `${name} in ${file} is deprecated; rename it to ${API_KEY_ENV_VAR}.`
+            : undefined,
+          file,
+        );
+      }
     }
   }
 
@@ -162,18 +168,19 @@ function accept(
   source: KeySource,
   path: string | undefined,
   notice?: string,
+  sourceLabel?: string,
 ): ResolvedKey {
   if (!looksLikeApiKey(value)) {
     // Never echo it. A value that is not a minted key might still be a secret,
     // and its length is the most that can be said safely.
     throw new CliError(
-      `The API key from ${describeSource(source, path)} is malformed ` +
+      `The API key from ${sourceLabel ?? describeSource(source, path)} is malformed ` +
         `(${String(value.length)} characters; expected ` +
         `octo_live_<32 hex>_<secret>). Not sending it.`,
       {
         code: "malformed_credential",
         exitCode: ExitCode.NoCredential,
-        remediation: { command: "octogen init" },
+        remediation: { command: "storerouter status --api-key-file <path>" },
       },
     );
   }
