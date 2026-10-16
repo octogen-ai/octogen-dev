@@ -27,7 +27,7 @@ const DOMAINS_OK = {
   "GET /domains": { body: DOMAINS_BODY, headers: { etag: '"v1"' } },
 };
 
-describe("octogen domains --check", () => {
+describe("storerouter domains --check", () => {
   it("reports a www. product URL as covered against an apex-only list", async () => {
     // The regression test for the shipped bug. Every one of these is covered,
     // and a client comparing raw hosts would call all of them uncovered.
@@ -142,9 +142,9 @@ describe("octogen domains --check", () => {
       },
     });
     expect(result.exitCode).toBe(ExitCode.Throttled);
-    expect(result.stdout).toMatch(/says nothing about whether Octogen covers/);
+    expect(result.stdout).toMatch(/says nothing about whether StoreRouter covers/);
     expect(result.stdout).toMatch(/Coverage is unknown/);
-    expect(result.stdout).toMatch(/octogen init/);
+    expect(result.stdout).toMatch(/STOREROUTER_API_KEY/);
   });
 
   it("caches with the ETag and revalidates with If-None-Match", async () => {

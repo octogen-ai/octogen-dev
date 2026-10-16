@@ -72,6 +72,7 @@ export function cachePath(options: {
 }): string {
   const env = options.env ?? process.env;
   const root =
+    env["STOREROUTER_CACHE_DIR"] ??
     env["OCTOGEN_CACHE_DIR"] ??
     join(env["XDG_CACHE_HOME"] ?? join(homedir(), ".cache"), "octogen");
   const scope = createHash("sha256")
@@ -157,7 +158,7 @@ export async function fetchCoverage(
   context: ApiContext,
   options: FetchCoverageOptions = {},
 ): Promise<CoverageSnapshot> {
-  const baseUrl = options.baseUrl ?? "https://api.octogen.ai/v1";
+  const baseUrl = options.baseUrl ?? context.baseUrl;
   const path = cachePath({
     baseUrl,
     keyPrefix: context.key.keyPrefix,

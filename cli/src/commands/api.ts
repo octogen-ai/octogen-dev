@@ -1,5 +1,5 @@
 /**
- * `octogen api <METHOD> <path>` — the escape hatch. **Unstable by construction:
+ * `storerouter api <METHOD> <path>` — the escape hatch. **Unstable by construction:
  * you own the request body.**
  *
  * It exists for three jobs, all of which are load-bearing:
@@ -36,7 +36,7 @@ async function runApi(context: CommandContext): Promise<ExitCode> {
   const [rawMethod, rawPath] = context.positionals;
   if (rawMethod === undefined || rawPath === undefined) {
     throw usageError(
-      "octogen api <METHOD> <path> — e.g. octogen api GET /coverage/url-lists",
+      "storerouter api <METHOD> <path> — e.g. storerouter api GET /coverage/url-lists",
       "missing_argument",
     );
   }

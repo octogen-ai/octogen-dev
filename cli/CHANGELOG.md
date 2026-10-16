@@ -1,4 +1,11 @@
-# Changelog — `@octogen-ai/cli`
+# Changelog — `@storerouter/cli`
+
+## 0.3.0 (unreleased, `next`)
+
+- Move the primary package to `@storerouter/cli`, with `storerouter` and `octogen` executables.
+- Default to the StoreRouter API, accept StoreRouter env names with legacy fallback, and preserve the cache directory.
+- Add `parse` as an exact alias of `lookup`; preserve JSON and exit-code contracts.
+- Document old-package migration, global bin collisions, and the first-release owner steps.
 
 ## 0.2.0 — 2026-10-14
 

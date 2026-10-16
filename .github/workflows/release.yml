@@ -2,7 +2,7 @@
 #
 # One file, on purpose. npm configures a trusted publisher *per package* and
 # PyPI configures one per project, so the workflow filename is a string that has
-# to match in three separate places (`@octogen-ai/sdk`, `@octogen-ai/cli`,
+# to match in three separate places (`@octogen-ai/sdk`, `@storerouter/cli`,
 # `octogen-ai-sdk`). One filename means one string to get right; three files
 # would mean three, and a typo only surfaces when a release fails.
 #
@@ -22,7 +22,7 @@ on:
     tags:
       - "sdk-ts-v*" # @octogen-ai/sdk
       - "sdk-py-v*" # octogen-ai-sdk
-      - "cli-v*" # @octogen-ai/cli
+      - "cli-v*" # @storerouter/cli
 
 # Read-only by default. `id-token: write` is granted per publishing job rather
 # than here, so the verification job below cannot mint an OIDC token it has no
@@ -128,7 +128,7 @@ jobs:
         run: npm publish --workspace @octogen-ai/sdk
 
   publish-cli-npm:
-    name: Publish @octogen-ai/cli
+    name: Publish @storerouter/cli
     # The dist-tag comes from `publishConfig.tag` in cli/package.json, which is
     # `next` for now: `@latest` is a promise an agent-facing document depends on,
     # so it is a promoted artifact (design D6) rather than the address a publish
@@ -160,7 +160,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Publish
-        run: npm publish --workspace @octogen-ai/cli
+        run: npm publish --workspace @storerouter/cli
 
   publish-sdk-pypi:
     name: Publish octogen-ai-sdk
