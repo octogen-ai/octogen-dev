@@ -92,6 +92,10 @@ format, as an installed CLI does in a shell. Piped and redirected stages, and
 any stage given `--json`, keep the one-line JSON envelope. The default (`false`)
 keeps every stage non-TTY, so stdout is always JSON.
 
+Keyless CLI calls print a credentials notice on stderr. The browser default says
+the transport is host-injected; pass `keylessNotice` to word it for your host, or
+`""` when the host's server proxy holds the key and the notice would only confuse.
+
 Idle workers retain loaded WASM modules. Each CLI stage gets a fresh QuickJS
 context/runtime with a 128 MiB guest allocation limit, 512 KiB stack limit, CPU
 interrupt deadline, promise job pump, and deterministic handle disposal. Network,

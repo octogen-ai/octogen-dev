@@ -17,6 +17,7 @@ export interface RunMessage {
   runId: string;
   line: string;
   terminal?: boolean;
+  keylessNotice?: string;
   files: Record<string, string>;
 }
 export interface ResponseMessage {
@@ -80,6 +81,7 @@ self.onmessage = (event: MessageEvent<RunMessage | ResponseMessage>) => {
             signal,
             runId,
             keylessNotice:
+              message.keylessNotice ??
               "Browser transport is host-injected. Anonymous production API access is not assumed.",
             version: {
               version: manifest.version,

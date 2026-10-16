@@ -22,6 +22,12 @@ export interface BrowserRuntimeOptions {
    * installed CLI does in a shell; piped and redirected stages keep JSON.
    */
   terminal?: boolean;
+  /**
+   * Replaces the stderr notice keyless CLI calls print. The default says the
+   * transport is host-injected; a host whose server proxy holds the key can
+   * pass its own wording, or "" for none.
+   */
+  keylessNotice?: string;
   /** Hard deadline also terminates synchronous jq programs; maximum two minutes. */
   timeoutMs?: number;
 }
@@ -175,6 +181,9 @@ export class BrowserRuntime {
         runId: id,
         line,
         terminal: this.options.terminal === true,
+        ...(this.options.keylessNotice === undefined
+          ? {}
+          : { keylessNotice: this.options.keylessNotice }),
         files: this.files.snapshot(),
       } satisfies RunMessage);
     });

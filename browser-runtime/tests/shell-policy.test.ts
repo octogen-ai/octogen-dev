@@ -83,6 +83,27 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     const headless = await shell("storerouter search 'linen dress' --limit 8", files);
     expect(JSON.parse(headless.stdout)).toMatchObject({ count: 1 });
   });
+  it("hosts can replace or silence the keyless notice", async () => {
+    const run = async (keylessNotice?: string) =>
+      executeWasm({
+        module: await engine,
+        argv: ["search", "linen dress", "--limit", "8"],
+        files: new VirtualFiles(),
+        signal: new AbortController().signal,
+        runId: "notice",
+        version: nodeHost.version,
+        emit: () => undefined,
+        transport: withDemoPolicy(fixtureTransport),
+        ...(keylessNotice === undefined ? {} : { keylessNotice }),
+      });
+    expect((await run()).stderr).toContain("No API key found");
+    expect((await run("Demo key held by the server.")).stderr).toBe(
+      "Demo key held by the server.\n",
+    );
+    const silent = await run("");
+    expect(silent.code).toBe(0);
+    expect(silent.stderr).toBe("");
+  });
   it("literal requested .data.items respects the existing flattened envelope", async () => {
     const result = await shell(
       "storerouter search 'linen dress' --limit 8 --json | jq '.data.items'",
