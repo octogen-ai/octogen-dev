@@ -1,11 +1,6 @@
 """Host normalization, shared by the covered-domain helpers.
 
-``GET /v1/domains`` returns hosts already normalized by the server —
-lowercased, with a leading ``www.`` stripped — so it reports ``macys.com`` and
-never ``www.macys.com``. Product URLs in the wild overwhelmingly *do* carry
-``www.``, so comparing a raw URL host against that list reports a covered
-merchant as uncovered: a silent false negative, not an error. Every comparison
-in this SDK runs both sides through :func:`normalize_host` first.
+Normalize both sides when comparing a URL against a caller-provided host set.
 """
 
 from __future__ import annotations
@@ -55,16 +50,12 @@ def is_host_covered(
     Both sides are normalized, so this answers correctly for a ``www.`` URL
     against the apex-only list the server returns.
 
-    ``hosts`` accepts host strings or the ``DomainEntry`` objects (and dicts)
-    ``GET /v1/domains`` returns, because passing ``response.domains`` straight
-    in is the obvious first call and a helper whose entire purpose is
-    preventing a silent false negative must not answer ``False`` to it.
+    ``hosts`` accepts host strings, objects with a ``host`` property, or dicts
+    with a ``host`` key.
     Anything else raises :class:`TypeError`: the return value decides whether a
     caller ever asks about a merchant again, so a shape this does not
     understand has to be loud rather than falsey.
 
-    Prefer :class:`~octogen_ai_sdk.domains.DomainCoverage` when you hold a
-    whole snapshot — it indexes the set once instead of rescanning per call.
     """
     host = normalize_host(url_or_host)
     if host is None:
@@ -73,7 +64,7 @@ def is_host_covered(
 
 
 class DomainEntryLike(Protocol):
-    """Anything carrying a ``host``, which is what ``GET /v1/domains`` returns."""
+    """A caller-provided entry carrying a ``host``."""
 
     @property
     def host(self) -> str: ...

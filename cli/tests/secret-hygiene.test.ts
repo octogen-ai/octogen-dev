@@ -26,7 +26,7 @@ import {
 } from "./harness.js";
 
 const ROUTES = {
-  "GET /domains": { body: DOMAINS_BODY, headers: { etag: '"v1"' } },
+  "POST /products/search": { body: DOMAINS_BODY, headers: { etag: '"v1"' } },
   "GET /me": { body: ME_BODY },
 };
 
@@ -72,10 +72,10 @@ describe("status output never carries key material", () => {
 
   it("keeps the Authorization header out of --verbose header dumps", async () => {
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x", "--verbose"],
+      argv: ["search", "dress", "--verbose"],
       env: { OCTOGEN_PLATFORM_API_KEY: TEST_KEY },
       routes: {
-        "GET /domains": { body: { detail: "Invalid API key" }, status: 401 },
+        "POST /products/search": { body: { detail: "Invalid API key" }, status: 401 },
       },
     });
     // The failing request's headers are traced; the credential must not be.

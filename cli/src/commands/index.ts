@@ -16,7 +16,6 @@ import type { OperationId } from "@octogen-ai/sdk";
 
 import { commandTable, EXCLUDED_OPERATIONS, type CommandSpec } from "../registry.js";
 import { apiCommand } from "./api.js";
-import { domainsCommand } from "./domains.js";
 import { lookupCommand } from "./lookup.js";
 import { resolveCommand } from "./resolve.js";
 import { searchCommand } from "./search.js";
@@ -30,7 +29,6 @@ import { statusCommand } from "./status.js";
  */
 export const ALL_COMMANDS = [
   statusCommand,
-  domainsCommand,
   lookupCommand,
   searchCommand,
   similarCommand,

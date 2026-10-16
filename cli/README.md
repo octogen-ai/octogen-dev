@@ -9,7 +9,7 @@ or from an agent, which is the caller this is actually designed for.
 > `init`, skills, and MCP registration are not implemented.
 
 ```bash
-npm exec --yes --package=@storerouter/cli@next -- storerouter domains --check https://www.macys.com/shop/product/x
+npm exec --yes --package=@storerouter/cli@next -- storerouter search "linen dress" --limit 3
 ```
 
 The primary executable is `storerouter`; `octogen` runs the same implementation.
@@ -91,25 +91,8 @@ resolved, the API answered, and the organization is entitled. `status` mutates
 nothing — no key minting, no file writes, no cache warming — so it is safe in a
 loop. `--offline` reports local state with no network calls.
 
-The probe is `GET /v1/me`, which requires a key. It is deliberately **not**
-`GET /v1/domains`: that route now answers `200` with no credential at all, so a
-`status` built on it would call a keyless install healthy.
-
-### `storerouter domains [--check <url>]`
-
-```bash
-storerouter domains --check https://www.macys.com/shop/product/x   # exit 0, macys.com
-storerouter domains --check https://www.not-a-merchant.example/p    # exit 6
-```
-
-The list comes back **normalized** — lowercased, leading `www.` stripped — so the
-server reports `macys.com` and never `www.macys.com`. Real product URLs
-overwhelmingly do carry `www.`, so `--check` normalizes both sides before
-comparing. A raw comparison reports a covered merchant as uncovered and nothing
-errors, which is exactly the silent false negative this flag exists to prevent.
-
-Exit `0` covered, `6` not covered, and never `6` for any other reason. Cached
-with its `ETag` and revalidated with `If-None-Match` (`--no-cache` to skip).
+The probe is `GET /v1/me`, which requires a key and returns calling identity
+and rate limits.
 
 ### `storerouter lookup <url>` (alias: `parse`)
 
@@ -122,7 +105,7 @@ storerouter lookup https://www.etro.com/us-en/cashmere-overshirt-MRBA008599TU2K3
 `--on-demand-cache-policy prefer_cache|refresh`.
 
 Exit `6` means the server looked and found nothing _for this URL_ — which is not
-the same as the merchant being uncovered. Ask that with `domains --check`.
+proof that every product from the merchant is unavailable.
 
 ### `storerouter search <query>`
 

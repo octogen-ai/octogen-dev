@@ -1,13 +1,7 @@
 /**
  * Host normalization, shared by the covered-domain helpers.
  *
- * `GET /v1/domains` returns hosts already normalized by the server —
- * lowercased, with a leading `www.` stripped — so it reports `macys.com` and
- * never `www.macys.com`. Product URLs in the wild overwhelmingly *do* carry
- * `www.`, so comparing a raw URL host against that list reports a covered
- * merchant as uncovered: a silent false negative, not an error. Every
- * comparison in this SDK therefore runs both sides through
- * {@link normalizeHost} first.
+ * Normalize both sides when comparing a URL against a caller-provided host set.
  */
 
 /**
@@ -48,7 +42,7 @@ export function normalizeHost(value: string | null | undefined): string | undefi
  * against the apex-only list the server returns.
  *
  * `hosts` accepts either host strings or the `DomainEntry` objects
- * `GET /v1/domains` returns, because passing `response.domains` straight in is
+ * caller-provided entries carry, because passing `response.domains` straight in is
  * the obvious first call and a helper whose entire purpose is preventing a
  * silent false negative must not answer `false` to it. Anything that is
  * neither is a `TypeError`: this function returns a boolean an agent uses to
@@ -74,7 +68,7 @@ export function isHostCovered(
   return false;
 }
 
-/** Anything carrying a `host`, which is what `GET /v1/domains` returns. */
+/** Anything carrying a `host`, which is what caller-provided entries carry. */
 export interface HostLike {
   host: string;
 }

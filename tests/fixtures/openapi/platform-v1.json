@@ -1104,33 +1104,6 @@
         "title": "CoverageUrlsRequest",
         "type": "object"
       },
-      "DomainEntry": {
-        "description": "One covered host and the catalog that claims it.\n\nMultiple hosts may map to one catalog, and (rarely) multiple catalogs may\nclaim the same host; each ``(host, catalog)`` pair is emitted once.",
-        "properties": {
-          "catalog": {
-            "description": "Catalog key covering the host.",
-            "title": "Catalog",
-            "type": "string"
-          },
-          "catalogDisplayName": {
-            "description": "Human-readable display name for the catalog.",
-            "title": "Catalogdisplayname",
-            "type": "string"
-          },
-          "host": {
-            "description": "Normalized host covered by a catalog (e.g. `allbirds.com`, `www.allbirds.com`). Match a page's host against this set before calling `/products/lookup`.",
-            "title": "Host",
-            "type": "string"
-          }
-        },
-        "required": [
-          "catalog",
-          "catalogDisplayName",
-          "host"
-        ],
-        "title": "DomainEntry",
-        "type": "object"
-      },
       "EmbeddingColumn": {
         "enum": [
           "embedding",
@@ -1224,24 +1197,6 @@
           }
         },
         "title": "IdentifiersView",
-        "type": "object"
-      },
-      "ListDomainsResponse": {
-        "description": "The full covered-domain set.\n\nSorted deterministically by ``(host, catalog)`` so the response — and the\nstrong ``ETag`` computed over it — is stable across requests while the\nunderlying catalog registry is unchanged.",
-        "properties": {
-          "domains": {
-            "description": "Every covered host, one entry per `(host, catalog)` pair.",
-            "items": {
-              "$ref": "#/components/schemas/DomainEntry"
-            },
-            "title": "Domains",
-            "type": "array"
-          }
-        },
-        "required": [
-          "domains"
-        ],
-        "title": "ListDomainsResponse",
         "type": "object"
       },
       "MeKey": {
@@ -5229,133 +5184,6 @@
         "tags": [
           "platform-catalog-api",
           "platform-coverage-api"
-        ]
-      }
-    },
-    "/domains": {
-      "get": {
-        "description": "List every host covered by an active crawled catalog.\n\nA client caches this set (revalidating with ``If-None-Match``) and only\nsends a URL to ``/products/lookup`` when its host is present, so\nclient-side coverage matching never disagrees with the server's own\ncoverage classification. Read-only and full-corpus, like search/lookup.",
-        "operationId": "listDomains",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "domains": {
-                    "summary": "Covered hosts",
-                    "value": {
-                      "domains": [
-                        {
-                          "catalog": "allbirds",
-                          "catalogDisplayName": "Allbirds",
-                          "host": "allbirds.com"
-                        },
-                        {
-                          "catalog": "macys",
-                          "catalogDisplayName": "Macy's",
-                          "host": "macys.com"
-                        }
-                      ]
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ListDomainsResponse"
-                }
-              }
-            },
-            "description": "The covered-domain set (also returns the strong `ETag`)."
-          },
-          "304": {
-            "description": "The client's `If-None-Match` matches the current list; body is empty. Reuse the cached response."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "invalidKey": {
-                    "summary": "Invalid API key",
-                    "value": {
-                      "detail": "Invalid API key"
-                    }
-                  },
-                  "missingBearer": {
-                    "summary": "Missing Bearer token",
-                    "value": {
-                      "detail": "Authorization Bearer token required"
-                    }
-                  }
-                }
-              }
-            },
-            "description": "Missing or invalid Bearer API key."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "wrongOrgType": {
-                    "summary": "Forbidden org type",
-                    "value": {
-                      "detail": "api_key_org_type_forbidden"
-                    }
-                  }
-                }
-              }
-            },
-            "description": "API key is valid but its organization may not use `/v1`."
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "rateLimited": {
-                    "summary": "Per-org request-rate limit",
-                    "value": {
-                      "detail": "rate_limit_exceeded"
-                    }
-                  }
-                }
-              }
-            },
-            "description": "Standard per-org request-rate limit."
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "registryUnavailable": {
-                    "summary": "Catalog registry unavailable",
-                    "value": {
-                      "detail": "catalog_registry_unavailable"
-                    }
-                  }
-                }
-              }
-            },
-            "description": "Catalog registry unavailable (fail closed, safe to retry)."
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          }
-        ],
-        "summary": "List covered domains",
-        "tags": [
-          "platform-catalog-api",
-          "platform-domains-api"
         ]
       }
     },

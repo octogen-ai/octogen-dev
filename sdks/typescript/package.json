@@ -33,7 +33,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist coverage",
-    "example:check-coverage": "tsx ../../examples/typescript/check_coverage.ts",
     "example:search-clothes": "tsx ../../examples/typescript/search_clothes.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"

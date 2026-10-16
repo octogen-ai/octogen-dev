@@ -44,7 +44,6 @@ languages:
 ```text
 published operations with no SDK method:
   getMe (GET /me)
-  listDomains (GET /domains)
   resolveProductFromHtml (POST /products/resolve-from-html)
 
 SDK methods naming an operation the contract does not publish:

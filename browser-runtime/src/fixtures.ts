@@ -4,17 +4,7 @@ export const fixtureTransport: Transport = (request, signal) => {
   signal.throwIfAborted();
   const path = new URL(request.url).pathname;
   let data: unknown;
-  if (path.endsWith("/domains"))
-    data = {
-      domains: [
-        {
-          host: "example.com",
-          catalog: "example",
-          catalogDisplayName: "Example fixture",
-        },
-      ],
-    };
-  else if (path.endsWith("/search"))
+  if (path.endsWith("/search"))
     data = {
       items: [
         {

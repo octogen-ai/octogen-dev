@@ -86,7 +86,7 @@ export interface CliFailureOptions {
    * Extra envelope fields for this failure.
    *
    * Exists so a *decided* answer that happens to be a failure can still carry
-   * its answer: `domains --check` on an uncovered host exits `6` and must emit
+   * its answer: lookup on a missing product exits `6` and must emit
    * `covered: false`, and routing that through the `noResult()` chokepoint is
    * better than letting the command emit its own envelope and bypass the one
    * constructor that can produce a `6`.

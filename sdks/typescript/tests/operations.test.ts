@@ -48,7 +48,7 @@ describe("resolveOperationPath", () => {
         urlListId: "task-1/../x",
       }),
     ).toBe("/coverage/url-lists/task-1%2F..%2Fx");
-    expect(resolveOperationPath("/domains")).toBe("/domains");
+    expect(resolveOperationPath("/me")).toBe("/me");
   });
 
   it("refuses a missing or blank path parameter", () => {

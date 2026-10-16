@@ -8,14 +8,6 @@ Run the clothes search example from the repository root:
 OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python/search_clothes.py
 ```
 
-Check coverage before looking products up — including the `www.` host
-normalization that makes a naive coverage check report covered merchants as
-uncovered:
-
-```bash
-OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python/check_coverage.py
-```
-
 Run the BigQuery autosubscribe cron tool in dry-run mode:
 
 ```bash
