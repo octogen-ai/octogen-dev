@@ -88,6 +88,13 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: Published contract is reachable and current
+        run: npm run test:published-contract
+        env:
+          OCTOGEN_REQUIRE_PUBLISHED_CONTRACT: "1"
+      - name: Packed CLI matches its exact registry SDK
+        if: startsWith(github.ref_name, 'cli-v')
+        run: npm run test:cli-release
       - name: Generated types are up to date
         run: npm run codegen:check
       - name: Python tests

@@ -23,6 +23,13 @@ import type {
   VoyageTask,
 } from "@octogen-ai/sdk";
 
+import { contractFlags, contractRequest } from "../contract.js";
+import {
+  VOYAGE_LIST_FIELDS,
+  VOYAGE_START_FIELDS,
+  VOYAGE_STATUS_FIELDS,
+} from "../fields.js";
+
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { CliError, ExitCode, noResult, usageError } from "../exit.js";
@@ -30,15 +37,6 @@ import type { CommandSpec } from "../registry.js";
 
 /** Terminal states: polling one of these is finished, whatever the outcome. */
 const TERMINAL: readonly VoyageStatus[] = ["completed", "failed", "cancelled"];
-const VOYAGE_STATUSES: readonly VoyageStatus[] = [
-  "queued",
-  "running",
-  "in_review",
-  "completed",
-  "failed",
-  "cancelled",
-];
-
 /** Poll cadence. The SDK's own guidance is five minutes or slower. */
 const FIRST_POLL_MS = 15_000;
 const MAX_POLL_MS = 300_000;
@@ -54,6 +52,7 @@ async function runVoyageStart(context: CommandContext): Promise<ExitCode> {
     );
   }
 
+  contractRequest("startVoyage", VOYAGE_START_FIELDS, args, { domain });
   const api = context.api();
   const started = await call(api, "POST /voyage", () => api.client.startVoyage(domain));
   const task = started.task;
@@ -120,6 +119,7 @@ async function runVoyageStatus(context: CommandContext): Promise<ExitCode> {
     );
   }
 
+  contractRequest("getVoyage", VOYAGE_STATUS_FIELDS, context.args, { task_id: taskId });
   const api = context.api();
   let task: VoyageTask;
   try {
@@ -142,18 +142,11 @@ async function runVoyageList(context: CommandContext): Promise<ExitCode> {
   const { args, writer } = context;
   const api = context.api();
   const status = args.string("status");
-  const params: ListVoyagesParams = {};
-  const cursor = args.string("cursor");
-  if (cursor !== undefined) {
-    params.cursor = cursor;
-  }
-  const limit = args.integer("limit", { max: 100, min: 1 });
-  if (limit !== undefined) {
-    params.limit = limit;
-  }
-  if (status !== undefined) {
-    params.status = status as VoyageStatus;
-  }
+  const params = contractRequest<ListVoyagesParams>(
+    "listVoyages",
+    VOYAGE_LIST_FIELDS,
+    args,
+  );
   const page: VoyageListResponse = await call(api, "GET /voyage", () =>
     api.client.listVoyages(params),
   );
@@ -364,20 +357,7 @@ export const voyageStatusCommand = {
 } satisfies CommandSpec;
 
 export const voyageListCommand = {
-  flags: {
-    cursor: {
-      describe: "Opaque pagination cursor.",
-      kind: "string",
-      placeholder: "cursor",
-    },
-    limit: { describe: "Voyages per page, 1–100.", kind: "number", placeholder: "n" },
-    status: {
-      choices: VOYAGE_STATUSES,
-      describe: "Only voyages in this state.",
-      kind: "string",
-      placeholder: "status",
-    },
-  },
+  flags: contractFlags("listVoyages", VOYAGE_LIST_FIELDS),
   name: "voyage list",
   notes: [
     "Also the only place voyage quota is observable outside `storerouter status`,",

@@ -64,8 +64,9 @@ deprecated fallback that warns once and will be removed.
 
 ### Generated versus hand-written
 
-**Hybrid: the types are generated, the method layer is hand-written, and CI
-enforces coverage.** This was an open question in this README; it is settled.
+**Hybrid: SDK types and CLI request definitions are generated; SDK methods and
+CLI presentation remain explicit. CI enforces coverage and artifact drift.**
+See [the CLI contract guide](cli/CONTRACT.md) and its generated [reference](cli/REFERENCE.md).
 
 | Layer                    | Where                                                                               | Who writes it                                       |
 | ------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------- |

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Emit committed SDK types from the published `/v1` OpenAPI contract.
 
-Two things are generated, both committed so a contract change lands as a
-reviewable diff rather than as a surprise at runtime:
+SDK types, CLI request schemas and a help reference are committed so a contract
+change lands as a reviewable diff rather than as a surprise at runtime:
 
 * ``sdks/typescript/src/generated/types.ts`` — ``openapi-typescript``
 * ``sdks/python/src/octogen_ai_sdk/generated/models.py`` — ``datamodel-code-generator``
+* ``cli/src/generated/contract.ts`` — resolved public request schemas
+* ``cli/REFERENCE.md`` — command registry and contract-backed help
 
 The input is the **committed snapshot** at
 ``tests/fixtures/openapi/platform-v1.json``, not the network, so codegen is
@@ -13,7 +15,7 @@ reproducible offline and in CI. ``--fetch`` refreshes that snapshot from
 ``cdn.storerouter.ai`` first; ``--check`` regenerates into a temporary directory and
 fails when the committed output is stale.
 
-Only the *types* are generated. The method layer in each SDK is hand-written —
+The method layer in each SDK remains hand-written —
 see "Generated versus hand-written" in the repository README.
 """
 
@@ -29,10 +31,14 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+from cli_contract import generate as generate_cli
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CONTRACT_URL = "https://cdn.storerouter.ai/openapi/platform/v1/openapi.json"
 SNAPSHOT = REPO_ROOT / "tests" / "fixtures" / "openapi" / "platform-v1.json"
+
+CLI_OUTPUT = REPO_ROOT / "cli" / "src" / "generated" / "contract.ts"
 
 TS_OUTPUT = REPO_ROOT / "sdks" / "typescript" / "src" / "generated" / "types.ts"
 PY_OUTPUT = (
@@ -229,15 +235,35 @@ def generate_python(destination: Path) -> None:
     print(f"generated {_display(destination)}")
 
 
+def generate_reference(*, check: bool = False) -> None:
+    subprocess.run(
+        [
+            str(REPO_ROOT / "node_modules" / ".bin" / "tsx"),
+            "--tsconfig",
+            "cli/tsconfig.json",
+            "cli/tools/reference.ts",
+            *(["--check"] if check else []),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+    )
+
+
 def run_check() -> int:
     """Regenerate into a temp tree and report any drift from what's committed."""
     stale: list[Path] = []
     with tempfile.TemporaryDirectory() as tmp:
         tmp_ts = Path(tmp) / "types.ts"
         tmp_py = Path(tmp) / "models.py"
+        tmp_cli = Path(tmp) / "contract.ts"
+        generate_cli(SNAPSHOT, tmp_cli)
         generate_typescript(tmp_ts)
         generate_python(tmp_py)
-        for committed, fresh in ((TS_OUTPUT, tmp_ts), (PY_OUTPUT, tmp_py)):
+        for committed, fresh in (
+            (TS_OUTPUT, tmp_ts),
+            (PY_OUTPUT, tmp_py),
+            (CLI_OUTPUT, tmp_cli),
+        ):
             if not committed.exists() or not filecmp.cmp(
                 committed, fresh, shallow=False
             ):
@@ -253,7 +279,8 @@ def run_check() -> int:
             file=sys.stderr,
         )
         return 1
-    print("generated types are up to date")
+    generate_reference(check=True)
+    print("generated types and CLI reference are up to date")
     return 0
 
 
@@ -283,8 +310,10 @@ def main() -> int:
     if args.check:
         return run_check()
 
+    generate_cli(SNAPSHOT, CLI_OUTPUT)
     generate_typescript(TS_OUTPUT)
     generate_python(PY_OUTPUT)
+    generate_reference()
     return 0
 
 
