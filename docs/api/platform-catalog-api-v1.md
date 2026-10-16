@@ -34,31 +34,21 @@ immediately on the next request.
 
 ## Endpoints
 
-The published contract carries **18 operations across 14 paths**. They use the
+The published contract carries **14 operations across 11 paths**. They use the
 same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `listDomains`, `resolveProductFromHtml`,
+SDK — `getMe`, `resolveProductFromHtml`,
 and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
 | Operation                          | What it is for                                                        |
 | ---------------------------------- | --------------------------------------------------------------------- |
-| `GET /domains`                     | Every covered host. Check this before `lookup` — see the note below.  |
 | `GET /me`                          | Your organization, key id and provenance, quotas, rate-limit posture. |
 | `POST /products/resolve-from-html` | Resolve a product from HTML you already have. No index, no fetch.     |
-
-> **`GET /domains` returns hosts normalized by the server** — lowercased, with a
-> leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
-> Product URLs in the wild usually _do_ carry `www.`, so comparing a raw URL
-> host against that list reports covered merchants as uncovered. Normalize your
-> side the same way, or use the SDK helpers (`isHostCovered` /
-> `is_host_covered`), which do it for you. The endpoint carries a strong `ETag`
-> and `Cache-Control: max-age=300`: revalidate with `If-None-Match` rather than
-> refetching.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -372,7 +362,7 @@ https://cdn.storerouter.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- All 15 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
+- Operation IDs including `getMe`, `searchProducts`,
   `moreLikeThisProducts`, `lookupProduct`,
   `resolveProductFromHtml`.
 - Full request and response schemas for code generation.

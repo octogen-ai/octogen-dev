@@ -145,15 +145,6 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}"
     },
-    "listDomains": {
-      "body": {
-        "properties": {},
-        "type": "object"
-      },
-      "method": "GET",
-      "parameters": [],
-      "path": "/domains"
-    },
     "listUrlListUrls": {
       "body": {
         "properties": {},
@@ -973,6 +964,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "66afee37b6364c6d90ef30a302ad1fb1dea4c4f5aca35612597412134806a6a7",
+  "sha256": "9162c3eb1e1d566658246ae68484a25612e44ed70b7c94ebf1550cdc7735c3b4",
   "version": "1.0.0"
 } as const;

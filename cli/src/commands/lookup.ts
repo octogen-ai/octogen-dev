@@ -129,11 +129,10 @@ function asMissOrRethrow(error: unknown, url: string): unknown {
       answeredWith: "404 product_not_found from POST /products/lookup",
       code: "product_not_found",
       // Not a coverage answer: the host may well be covered and this one URL
-      // not indexed. `storerouter domains --check` is the coverage question.
+      // not indexed. A product miss does not establish domain coverage.
       coverage: "unknown",
       data: { url },
       message: `No product found for ${url}.`,
-      remediation: { command: `storerouter domains --check ${url}` },
       serverAnswered: true,
     });
   }
@@ -157,7 +156,7 @@ export const lookupCommand = {
     "Alias: parse. Uses the same /products/lookup request and lookup JSON command.",
     "Exit 6 means the server looked and found nothing for this URL — which is",
     "not the same as the merchant being uncovered. Ask the coverage question",
-    "with `storerouter domains --check <url>`.",
+    "by contacting StoreRouter about merchant coverage.",
     "",
     "Keyless-eligible, except --resolution-mode on_demand_only, which makes",
     "StoreRouter fetch the page and needs a key.",

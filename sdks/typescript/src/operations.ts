@@ -32,7 +32,6 @@ export const OPERATIONS = {
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
-  listDomains: { method: "GET", path: "/domains" },
   listUrlListUrls: { method: "GET", path: "/coverage/url-lists/{urlListId}/urls" },
   listUrlLists: { method: "GET", path: "/coverage/url-lists" },
   lookupProduct: { method: "POST", path: "/products/lookup" },

@@ -120,7 +120,7 @@ function classifyApiError(
     if (code === "keyless_trial_endpoint_not_included") {
       return new CliError(
         `${message} (This command needs an API key; the keyless trial covers ` +
-          `only domains, lookup, and search.)`,
+          `only lookup and search.)`,
         {
           ...base,
           code: "keyless_endpoint_not_included",

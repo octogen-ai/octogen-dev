@@ -912,7 +912,7 @@ describe("the keyless metered trial", () => {
     const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
     expect(client.isKeyless).toBe(true);
 
-    await client.listDomains();
+    await client.searchProducts({ q: "dress" });
 
     const headers = lastCall(calls).init?.headers as Record<string, string>;
     expect(headers).not.toHaveProperty("Authorization");
@@ -925,7 +925,7 @@ describe("the keyless metered trial", () => {
     const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
     expect(client.isKeyless).toBe(false);
 
-    await client.listDomains();
+    await client.searchProducts({ q: "dress" });
 
     expect(lastCall(calls).init?.headers).toMatchObject({
       Authorization: "Bearer octo_test_key",
@@ -934,7 +934,6 @@ describe("the keyless metered trial", () => {
 
   it("names the three eligible operations, so a caller can ask before spending", () => {
     expect([...KEYLESS_TRIAL_OPERATIONS].sort()).toEqual([
-      "listDomains",
       "lookupProduct",
       "searchProducts",
     ]);

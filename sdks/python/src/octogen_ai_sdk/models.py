@@ -31,8 +31,6 @@ from octogen_ai_sdk.generated import models as _contract
 # `url` or `uuid`"), and constructor ergonomics — the generator turns a
 # `minLength`/`maxLength` string into a constrained root-model alias, so a
 # generated request body would not accept a plain `str`.
-DomainEntry = _contract.DomainEntry
-ListDomainsResponse = _contract.ListDomainsResponse
 MeKey = _contract.MeKey
 MeOrganization = _contract.MeOrganization
 MeQuotas = _contract.MeQuotas
@@ -696,19 +694,3 @@ class CoverageUrlListUrl(_ResponseModel):
 class CoverageUrlListUrlsPage(_ResponseModel):
     items: list[CoverageUrlListUrl]
     next_cursor: str | None = Field(default=None, alias="nextCursor")
-
-
-class ListDomainsResult(_ResponseModel):
-    """The outcome of ``GET /v1/domains``, including the revalidation case."""
-
-    not_modified: bool
-    """``True`` when the server answered ``304`` — reuse the cached snapshot."""
-
-    domains: list[DomainEntry] | None = None
-    """The covered-domain set; ``None`` on a ``304``."""
-
-    etag: str | None = None
-    """The strong ``ETag`` to revalidate with next time."""
-
-    max_age_seconds: int | None = None
-    """``max-age`` from ``Cache-Control``, in seconds, when the server sent one."""

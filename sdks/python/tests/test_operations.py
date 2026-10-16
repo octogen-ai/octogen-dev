@@ -46,7 +46,7 @@ def test_resolve_operation_path_substitutes_and_encodes() -> None:
         )
         == "/coverage/url-lists/task-1%2F..%2Fx"
     )
-    assert resolve_operation_path("/domains") == "/domains"
+    assert resolve_operation_path("/me") == "/me"
 
 
 @pytest.mark.parametrize("path_params", [{}, {"urlListId": "   "}])

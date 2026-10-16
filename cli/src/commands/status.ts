@@ -4,11 +4,7 @@
  *
  * Two rules do most of the work here.
  *
- * **The auth probe must be a key-required route, and `listDomains` is not one.**
- * That is the trap the keyless trial sets: `GET /v1/domains` now answers `200`
- * with no credential at all, so a `status` built on it would report a healthy
- * install to a caller that has no key — or an entitled org for a revoked one.
- * `status` probes `GET /v1/me`, which requires a key and returns identity.
+ * The auth probe is `GET /v1/me`, which returns the calling identity.
  *
  * **`status` never mutates anything.** No key minting, no file writes, no cache
  * warming. It is the one command an agent can run in a loop without
@@ -133,7 +129,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
       code: "no_credential",
       fix: "Set STOREROUTER_API_KEY or use --api-key-file <path>",
       message:
-        "No API key found. domains, lookup, and search work on the keyless " +
+        "No API key found. lookup and search work on the keyless " +
         "trial (30 requests/day per IP); everything else needs a key.",
       severity: "error",
     });
@@ -268,9 +264,7 @@ export const statusCommand = {
     "healthy, 3 no usable credential, 4 not entitled, 5 throttled, 1",
     "unreachable.",
     "",
-    "The probe is GET /v1/me, which requires a key. It is deliberately not",
-    "GET /v1/domains: that route now answers 200 with no credential at all, so",
-    "a status built on it would call a keyless install healthy.",
+    "The probe is GET /v1/me, which requires a key and returns calling identity.",
   ],
   operations: ["getMe"] as const,
   run: runStatus,

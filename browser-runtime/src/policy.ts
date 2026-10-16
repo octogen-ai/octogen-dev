@@ -8,7 +8,6 @@ export const DEMO_OPERATIONS = [
   "lookupProduct",
   "parseProductAlias",
   "moreLikeThisProducts",
-  "listDomains",
 ] as const satisfies readonly OperationId[];
 export function checkDemoRequest(request: TransportRequest): OperationId {
   const url = new URL(request.url);
@@ -26,9 +25,7 @@ export function checkDemoRequest(request: TransportRequest): OperationId {
   if (!operation) throw new Error("Browser policy: operation denied");
   // The current allowlist has no query inputs. Deny query smuggling through raw api.
   if (url.search) throw new Error("Browser policy: query parameters denied");
-  if (operation === "listDomains") {
-    if (request.body !== undefined) throw new Error("Browser policy: GET body denied");
-  } else {
+  {
     const body: unknown = JSON.parse(request.body ?? "null");
     validate(requestSchema(operation), body, "body");
     // Lookup's auto/refresh modes can populate or refresh server-side caches.

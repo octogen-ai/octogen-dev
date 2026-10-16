@@ -140,13 +140,11 @@ function announceKeyless(context: ApiContext): void {
   );
 }
 
-/** `domains, lookup and search`, derived from the SDK's own route list. */
+/** `lookup and search`, derived from the SDK's own route list. */
 const KEYLESS_ROUTES: string = humanList(KEYLESS_TRIAL_OPERATIONS.map(commandNameOf));
 
 function commandNameOf(operation: OperationId): string {
   switch (operation) {
-    case "listDomains":
-      return "domains";
     case "lookupProduct":
       return "lookup";
     case "searchProducts":
