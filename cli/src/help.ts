@@ -51,7 +51,7 @@ export function renderCommandHelp(command: CommandSpec): string {
   if (command.notes !== undefined && command.notes.length > 0) {
     lines.push("");
     for (const note of command.notes) {
-      lines.push(`  ${note}`);
+      lines.push(note.length === 0 ? "" : `  ${note}`);
     }
   }
   if (command.flags !== undefined && Object.keys(command.flags).length > 0) {

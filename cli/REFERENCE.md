@@ -14,12 +14,12 @@ storerouter status [--offline]
 
   Never mutates anything: no key minting, no file writes, no cache warming.
   Safe to run in a loop.
-  
+
   `ok` is the single boolean to branch on, and it is true only when a key
   resolved, the API answered, and the organization is entitled. Exit 0
   healthy, 3 no usable credential, 4 not entitled, 5 throttled, 1
   unreachable.
-  
+
   The probe is GET /v1/me, which requires a key. It is deliberately not
   GET /v1/domains: that route now answers 200 with no credential at all, so
   a status built on it would call a keyless install healthy.
@@ -44,7 +44,7 @@ storerouter domains [--check <url>] [--limit <n>] [--no-cache]
   your URL the same way before comparing, which is the difference between
   a correct answer and a silent false negative on almost every real
   product URL.
-  
+
   The snapshot is cached with its ETag and revalidated with If-None-Match;
   a 304 means the cache was current. Keyless-eligible.
 
@@ -69,14 +69,14 @@ storerouter lookup <url> [--match-mode …] [--resolution-mode …] [--on-demand
   Exit 6 means the server looked and found nothing for this URL — which is
   not the same as the merchant being uncovered. Ask the coverage question
   with `storerouter domains --check <url>`.
-  
+
   Keyless-eligible, except --resolution-mode on_demand_only, which makes
   StoreRouter fetch the page and needs a key.
 
 Options:
-  --match-mode <value>              Index match strictness. strict matches only exact/canonical URLs. loose (default) adds a lowest-priority fallback that ignores path case and query params, so a URL differing from an indexed product only by case (e.g. /Women/ vs /women/) or a non-indexed query param (e.g. Zara's ?v1=) still resolves. It also recognizes structural aliases: Shopify collection-scoped URLs (/collections/<x>/products/<handle>) resolve to the canonical /products/<handle> product. A strict/canonical hit always wins over a loose or alias one. Default: "loose".
-  --on-demand-cache-policy <value>  Cache behavior when the request enters the on-demand path. Default: "prefer_cache".
-  --resolution-mode <value>         Source selection policy. auto checks the index before resolving on demand; index_only never performs outbound work; on_demand_only skips the index. Default: "auto".
+  --match-mode <strict|loose>                         Index match strictness. strict matches only exact/canonical URLs. loose (default) adds a lowest-priority fallback that ignores path case and query params, so a URL differing from an indexed product only by case (e.g. /Women/ vs /women/) or a non-indexed query param (e.g. Zara's ?v1=) still resolves. It also recognizes structural aliases: Shopify collection-scoped URLs (/collections/<x>/products/<handle>) resolve to the canonical /products/<handle> product. A strict/canonical hit always wins over a loose or alias one. Default: "loose".
+  --on-demand-cache-policy <prefer_cache|refresh>     Cache behavior when the request enters the on-demand path. Default: "prefer_cache".
+  --resolution-mode <auto|index_only|on_demand_only>  Source selection policy. auto checks the index before resolving on demand; index_only never performs outbound work; on_demand_only skips the index. Default: "auto".
 
 Calls: lookupProduct (through @octogen-ai/sdk 0.5.0)
 
@@ -92,7 +92,7 @@ storerouter search <query> [--catalog <key>] [--facet k=v]… [--price-min <n>] 
 
   Exit 6 means the corpus was searched and nothing matched — the answer was
   empty, not refused.
-  
+
   The full search query object is deliberately not flagged; use
   `storerouter api POST /products/search` for it. Keyless-eligible.
 
@@ -119,16 +119,16 @@ storerouter similar <url|uuid> [--catalog <key>] [--facet k=v]… [--limit <n>]
   The source must be an indexed product: more-like-this does not resolve on
   demand. Exit 6 covers both 'the source is not indexed' and 'nothing was
   similar enough'; the `code` field separates them.
-  
+
   Requires an API key.
 
 Options:
-  --catalog <value>           Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants — a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.
-  --cursor <value>            Opaque pagination cursor
-  --exclude-facet <k=v>       Exclusion facets to apply to the similar-products search.
-  --facet <k=v>               Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.
-  --limit <n>                 Limit Default: 12. Minimum: 1. Maximum: 100.
-  --price-preference <value>  Relative price preference compared with the source product. Default: "any".
+  --catalog <value>                      Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants — a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.
+  --cursor <value>                       Opaque pagination cursor
+  --exclude-facet <k=v>                  Exclusion facets to apply to the similar-products search.
+  --facet <k=v>                          Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.
+  --limit <n>                            Limit Default: 12. Minimum: 1. Maximum: 100.
+  --price-preference <lower|any|higher>  Relative price preference compared with the source product. Default: "any".
 
 Calls: moreLikeThisProducts (through @octogen-ai/sdk 0.5.0)
 
@@ -144,11 +144,11 @@ storerouter resolve --html <file|-> [--url <url>]
 
   Stateless: no index read, no outbound fetch, no caching. The answer comes
   entirely from the document you submit.
-  
+
   HTML is never taken from an argument — the cap is 5 MiB and argv is the
   wrong channel for a payload that size, quite apart from what a
   multi-megabyte argv entry does to an agent transcript.
-  
+
   Requires an API key.
 
 Options:
@@ -169,7 +169,7 @@ storerouter voyage <url|domain> [--wait] [--wait-timeout <seconds>]
 
   Voyages are shared per domain: starting one that is already running joins
   it and consumes no quota. `created` in the output says which happened.
-  
+
   With --wait: exit 0 completed, 7 still running at the deadline (the voyage
   is unaffected — resume with `storerouter voyage status`), 1 failed or
   cancelled. Requires an API key.
@@ -209,9 +209,9 @@ storerouter voyage list [--status <status>] [--limit <n>] [--cursor <c>]
   so it is reported even when the page is empty.
 
 Options:
-  --cursor <value>  Opaque page cursor.
-  --limit <n>       Limit Default: 50. Minimum: 1. Maximum: 100.
-  --status <value>  Filter by public status.
+  --cursor <value>                                                Opaque page cursor.
+  --limit <n>                                                     Limit Default: 50. Minimum: 1. Maximum: 100.
+  --status <queued|running|in_review|completed|failed|cancelled>  Filter by public status.
 
 Calls: listVoyages (through @octogen-ai/sdk 0.5.0)
 
@@ -229,10 +229,10 @@ storerouter api <METHOD> <path> [--data @file|-|<json>] [--query k=v]…
   types, no defaults, and no promise the route exists — every other command
   names an operationId that is checked against the published contract, and
   this one takes the path from you.
-  
+
   You still get key resolution, retry, rate-limit surfacing, the exit-code
   taxonomy, and redaction.
-  
+
   This is how the eight coverage/url-lists operations stay reachable — their
   first-class CLI is `octogen-url-lists` in the Python SDK, whose mutations
   are dry-run-by-default behind --apply.

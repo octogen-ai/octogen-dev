@@ -127,9 +127,11 @@ export function contractFlags(
       kind,
       describe: detail,
       ...(binding.multiple === true ? { multiple: true } : {}),
-      ...(binding.placeholder === undefined
-        ? {}
-        : { placeholder: binding.placeholder }),
+      ...(binding.placeholder !== undefined
+        ? { placeholder: binding.placeholder }
+        : schema.enum === undefined
+          ? {}
+          : { placeholder: schema.enum.map(String).join("|") }),
       ...(schema.enum === undefined ? {} : { choices: schema.enum.map(String) }),
     };
   }
