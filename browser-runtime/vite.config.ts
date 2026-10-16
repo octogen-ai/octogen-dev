@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 const csp =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'";
 export default defineConfig({
+  base: "./",
   worker: { format: "es" },
   preview: { headers: { "Content-Security-Policy": csp } },
   build: {

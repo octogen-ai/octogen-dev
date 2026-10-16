@@ -37,9 +37,8 @@ Verified through the browser UI:
 1. `storerouter search 'linen dress' --limit 8 --json | jq '.items'` renders the
    fixture product and exits 0. The literal requested `.data.items` filter returns
    `null`, consistent with the unchanged flat CLI envelope.
-2. Repeating the pipeline reuses the loaded modules. Before the final metadata/
-   encoding cleanup, displayed click-to-result observations were 56 ms cold and
-   20 ms warm. These include worker loading, real QuickJS and jq instantiation,
+2. Repeating the pipeline reuses the loaded modules. Displayed click-to-result observations on the final host-adapter build were
+   51 ms cold and 17 ms warm. These include worker loading, real QuickJS and jq instantiation,
    fixture transport and display; local assets may have been HTTP-cached.
 3. `echo '{}' | jq 'until(false; .)'` stays cancellable. Cancel terminates the
    worker; the next command succeeds.
@@ -63,19 +62,19 @@ Vite's displayed gzip estimates use different settings; the JSON is authoritativ
 for this measurement method. These are single-session samples, not a benchmark
 study. Timing includes JSON host bridges but no real network latency or DOM work.
 
-Initial recorded production totals were about 1.69 MB raw, 645 KB gzip and 518 KB
+Initial recorded production totals were about 1.69 MB raw, 646 KB gzip and 518 KB
 Brotli, including the harness, reusable entry, both engines and license notices.
 QuickJS's WASM was 503,134 bytes raw / 232,350 gzip / 199,016 Brotli; jq's WASM was
 928,824 raw / 332,187 gzip / 248,183 Brotli. The jq binary is loaded only when jq is
 first used; worker JS currently includes its wrapper.
 
-The recorded Node run loaded QuickJS in about 10 ms, executed the cold search in
-24 ms, and warm searches in about 6.9 ms median / 7.8 ms p95. jq load was about
-4.5 ms and first filtering about 7.7 ms. Consult the JSON for exact values after
+The recorded Node run loaded QuickJS in about 9.3 ms, executed the cold search in
+23.5 ms, and warm searches in about 7.1 ms median / 8.0 ms p95. jq load was about
+4.5 ms and first filtering about 8.9 ms. Consult the JSON for exact values after
 any rerun; changes to assets/method require rerunning rather than extrapolation.
 
 After 101 searches and jq loading, QuickJS linear memory was 16 MiB. Node process
-RSS rose from roughly 136 MiB to 177 MiB in that sample; this includes Node, tsx,
+RSS rose from roughly 134 MiB to 170 MiB in that sample; this includes Node, tsx,
 JS wrappers, jq, allocator reservations and garbage collection. It is **not** a
 browser tab's memory usage or live guest allocation measurement. The QuickJS guest
 allocation cap is 128 MiB (not preallocated), chosen to allow worst-case 5 MiB HTML
@@ -98,10 +97,11 @@ must not be described as a peak-memory bound.
   snapshot; cancelled/failed worker runs discard partial writes. An idle worker
   retains module memory until disposal. Call `dispose` on component teardown.
 - Browser/SDK version metadata is generated from the repository manifests/source;
-  there are no independent CLI release version bumps in this slice. Another
-  delivery owns release preparation and contract diagnostic fixes; potential
-  integration overlap is `cli/src/contract.ts`, package manifests/lockfile and
-  help/reference generation. Rebase/test against those changes before merge.
+  there are no independent CLI release version bumps in this slice. The branch was rebased onto merged PR #34 (`0d72c22`), retaining its
+  release preparation and improved contract diagnostics. This runtime slice
+  independently changes no existing package release version. Future integration
+  overlap may include host interfaces, package manifests/lockfile and help/reference
+  generation; rerun contract checks when they change.
 - The next project should embed the stable runtime entry in the website and build
   an independently validated, credential-holding, rate-limited same-origin proxy.
   Product previews should subscribe to the existing redacted result events.

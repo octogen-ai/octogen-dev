@@ -12,10 +12,10 @@
       "brotli": 199016
     },
     {
-      "path": "dist/assets/emscripten-module.browser-BdAREQyj.js",
-      "bytes": 9176,
-      "gzip": 4132,
-      "brotli": 3709
+      "path": "dist/assets/emscripten-module.browser-c1nFSs9m.js",
+      "bytes": 9201,
+      "gzip": 4130,
+      "brotli": 3711
     },
     {
       "path": "dist/assets/ffi-4V2b7xu3.js",
@@ -42,10 +42,10 @@
       "brotli": 7941
     },
     {
-      "path": "dist/assets/worker-C3elbEry.js",
-      "bytes": 155094,
-      "gzip": 50515,
-      "brotli": 44516
+      "path": "dist/assets/worker-BuGg29ed.js",
+      "bytes": 155773,
+      "gzip": 50711,
+      "brotli": 44708
     },
     {
       "path": "dist/harness.js",
@@ -55,9 +55,9 @@
     },
     {
       "path": "dist/index.html",
-      "bytes": 1893,
-      "gzip": 879,
-      "brotli": 670
+      "bytes": 1896,
+      "gzip": 880,
+      "brotli": 695
     },
     {
       "path": "dist/licenses/jq-wasm.txt",
@@ -91,36 +91,36 @@
     },
     {
       "path": "dist/runtime.js",
-      "bytes": 30403,
-      "gzip": 8375,
-      "brotli": 7194
+      "bytes": 31010,
+      "gzip": 8579,
+      "brotli": 7394
     }
   ],
   "totals": {
-    "bytes": 1686685,
-    "gzip": 645396,
-    "brotli": 517610
+    "bytes": 1687999,
+    "gzip": 645795,
+    "brotli": 518029
   },
-  "engineLoadMs": 9.979125000000295,
-  "coldExecuteMs": 23.84337500000038,
-  "warmMedianMs": 6.877999999999702,
-  "warmP95Ms": 7.803124999999909,
-  "jqLoadMs": 4.48541699999987,
-  "jqRunMs": 7.690333999999893,
+  "engineLoadMs": 9.303875000000062,
+  "coldExecuteMs": 23.526208000000224,
+  "warmMedianMs": 7.067041000000245,
+  "warmP95Ms": 8.007333000000017,
+  "jqLoadMs": 4.463833999999679,
+  "jqRunMs": 8.916583000000173,
   "memory": {
     "before": {
-      "rss": 142163968,
-      "heapTotal": 18153472,
-      "heapUsed": 12571904,
-      "external": 8439636,
-      "arrayBuffers": 6073715
+      "rss": 140132352,
+      "heapTotal": 17711104,
+      "heapUsed": 12175640,
+      "external": 8291651,
+      "arrayBuffers": 5925690
     },
     "after": {
-      "rss": 185122816,
-      "heapTotal": 26361856,
-      "heapUsed": 10898904,
-      "external": 39043371,
-      "arrayBuffers": 2945878
+      "rss": 178274304,
+      "heapTotal": 28196864,
+      "heapUsed": 10365024,
+      "external": 38113747,
+      "arrayBuffers": 2016214
     },
     "quickjsLinearMemoryBytes": 16777216
   }
