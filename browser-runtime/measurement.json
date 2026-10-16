@@ -1,0 +1,127 @@
+{
+  "environment": {
+    "node": "v25.8.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "assets": [
+    {
+      "path": "dist/assets/emscripten-module-uFzwHH0Y.wasm",
+      "bytes": 503134,
+      "gzip": 232350,
+      "brotli": 199016
+    },
+    {
+      "path": "dist/assets/emscripten-module.browser-BdAREQyj.js",
+      "bytes": 9176,
+      "gzip": 4132,
+      "brotli": 3709
+    },
+    {
+      "path": "dist/assets/ffi-4V2b7xu3.js",
+      "bytes": 6322,
+      "gzip": 1005,
+      "brotli": 885
+    },
+    {
+      "path": "dist/assets/harness-DvLSINDQ.css",
+      "bytes": 943,
+      "gzip": 463,
+      "brotli": 344
+    },
+    {
+      "path": "dist/assets/jq-lWsQx0Lb.wasm",
+      "bytes": 928824,
+      "gzip": 332187,
+      "brotli": 248183
+    },
+    {
+      "path": "dist/assets/module-ES6BEMUI-CDTIpMiA.js",
+      "bytes": 34132,
+      "gzip": 8795,
+      "brotli": 7941
+    },
+    {
+      "path": "dist/assets/worker-C3elbEry.js",
+      "bytes": 155094,
+      "gzip": 50515,
+      "brotli": 44516
+    },
+    {
+      "path": "dist/harness.js",
+      "bytes": 3114,
+      "gzip": 1452,
+      "brotli": 1234
+    },
+    {
+      "path": "dist/index.html",
+      "bytes": 1893,
+      "gzip": 879,
+      "brotli": 670
+    },
+    {
+      "path": "dist/licenses/jq-wasm.txt",
+      "bytes": 1051,
+      "gzip": 635,
+      "brotli": 458
+    },
+    {
+      "path": "dist/licenses/jq.txt",
+      "bytes": 7887,
+      "gzip": 2433,
+      "brotli": 1843
+    },
+    {
+      "path": "dist/licenses/noble-hashes.txt",
+      "bytes": 1109,
+      "gzip": 680,
+      "brotli": 501
+    },
+    {
+      "path": "dist/licenses/oniguruma.txt",
+      "bytes": 1340,
+      "gzip": 731,
+      "brotli": 554
+    },
+    {
+      "path": "dist/licenses/quickjs.txt",
+      "bytes": 2263,
+      "gzip": 764,
+      "brotli": 562
+    },
+    {
+      "path": "dist/runtime.js",
+      "bytes": 30403,
+      "gzip": 8375,
+      "brotli": 7194
+    }
+  ],
+  "totals": {
+    "bytes": 1686685,
+    "gzip": 645396,
+    "brotli": 517610
+  },
+  "engineLoadMs": 9.979125000000295,
+  "coldExecuteMs": 23.84337500000038,
+  "warmMedianMs": 6.877999999999702,
+  "warmP95Ms": 7.803124999999909,
+  "jqLoadMs": 4.48541699999987,
+  "jqRunMs": 7.690333999999893,
+  "memory": {
+    "before": {
+      "rss": 142163968,
+      "heapTotal": 18153472,
+      "heapUsed": 12571904,
+      "external": 8439636,
+      "arrayBuffers": 6073715
+    },
+    "after": {
+      "rss": 185122816,
+      "heapTotal": 26361856,
+      "heapUsed": 10898904,
+      "external": 39043371,
+      "arrayBuffers": 2945878
+    },
+    "quickjsLinearMemoryBytes": 16777216
+  }
+}

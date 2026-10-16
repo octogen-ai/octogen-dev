@@ -1,3 +1,4 @@
+import type { CliHost } from "./host.js";
 /**
  * The CLI's one path to `api.storerouter.ai/v1`: `@octogen-ai/sdk`, exact-pinned.
  *
@@ -27,11 +28,13 @@ import { classify, retryDecision } from "./classify.js";
 import type { CliError } from "./exit.js";
 import type { Writer } from "./output.js";
 import { VERBOSE_HEADER_ALLOWLIST } from "./output.js";
-import type { ResolvedKey } from "./auth.js";
+import type { ResolvedKey } from "./auth-core.js";
 
 export { SDK_VERSION };
 
 export interface ApiContext {
+  onResult?: (operation: string, data: unknown) => void;
+  host: CliHost;
   baseUrl: string;
   client: OctogenClient;
   key: ResolvedKey;
@@ -46,6 +49,8 @@ export interface ApiContext {
 }
 
 export interface BuildClientOptions {
+  onResult?: (operation: string, data: unknown) => void;
+  host: CliHost;
   key: ResolvedKey;
   writer: Writer;
   baseUrl?: string | undefined;
@@ -89,6 +94,8 @@ export function buildContext(options: BuildClientOptions): ApiContext {
   }
 
   return {
+    ...(options.onResult === undefined ? {} : { onResult: options.onResult }),
+    host: options.host,
     announcedKeyless: false,
     baseUrl,
     client: new OctogenClient(clientOptions),
@@ -122,6 +129,10 @@ function announceKeyless(context: ApiContext): void {
     return;
   }
   context.announcedKeyless = true;
+  if (context.host.keylessNotice !== undefined) {
+    context.writer.diagnostic(context.host.keylessNotice);
+    return;
+  }
   context.writer.diagnostic(
     `No API key found. ${KEYLESS_ROUTES} answer without one (keyless trial: 30 ` +
       "requests per IP per day, full payloads); everything else on /v1 needs a " +
@@ -169,6 +180,11 @@ export async function call<T>(
     const startedAt = performance.now();
     try {
       const result = await invoke();
+      try {
+        context.onResult?.(label, context.writer.redactor.redactValue(result));
+      } catch {
+        /* Observers cannot retry or fail a completed API call. */
+      }
       context.writer.trace(
         `${label} ok in ${elapsed(startedAt)}${attempt > 1 ? ` (attempt ${String(attempt)})` : ""}`,
       );

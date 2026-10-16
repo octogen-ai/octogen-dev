@@ -19,7 +19,8 @@
   },
   "workspaces": [
     "sdks/typescript",
-    "cli"
+    "cli",
+    "browser-runtime"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

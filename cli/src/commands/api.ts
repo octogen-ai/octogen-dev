@@ -19,8 +19,7 @@
  * second HTTP client here.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve as resolvePath } from "node:path";
+import type { CliHost } from "../host.js";
 
 import type { HttpMethod, RawResponse } from "@octogen-ai/sdk";
 
@@ -48,7 +47,12 @@ async function runApi(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const body = readBody(args.string("data"), context.cwd, context.readStdin);
+  const body = readBody(
+    args.string("data"),
+    context.cwd,
+    context.readStdin,
+    context.host,
+  );
   const query = parseQuery(args.strings("query"));
 
   const api = context.api();
@@ -101,6 +105,7 @@ function readBody(
   source: string | undefined,
   cwd: string,
   readStdin: () => string,
+  host: CliHost,
 ): unknown {
   if (source === undefined) {
     return undefined;
@@ -109,7 +114,7 @@ function readBody(
     source === "-"
       ? readStdin()
       : source.startsWith("@")
-        ? readFileOrFail(resolvePath(cwd, source.slice(1)))
+        ? readFileOrFail(host.resolve(cwd, source.slice(1)), host)
         : source;
   if (text.trim().length === 0) {
     return undefined;
@@ -124,9 +129,9 @@ function readBody(
   }
 }
 
-function readFileOrFail(path: string): string {
+function readFileOrFail(path: string, host: CliHost): string {
   try {
-    return readFileSync(path, "utf8");
+    return host.readFile(path);
   } catch (error) {
     throw usageError(
       `Cannot read ${path}: ${error instanceof Error ? error.message : String(error)}`,

@@ -42,8 +42,8 @@ export interface WriterOptions {
   json: boolean;
   quiet: boolean;
   verbose: boolean;
-  stdout?: (text: string) => void;
-  stderr?: (text: string) => void;
+  stdout: (text: string) => void;
+  stderr: (text: string) => void;
   redactor?: Redactor;
 }
 
@@ -75,16 +75,8 @@ export class Writer {
     this.quiet = options.quiet;
     this.verbose = options.verbose;
     this.redactor = options.redactor ?? new Redactor();
-    this.writeOut =
-      options.stdout ??
-      ((text: string) => {
-        process.stdout.write(text);
-      });
-    this.writeErr =
-      options.stderr ??
-      ((text: string) => {
-        process.stderr.write(text);
-      });
+    this.writeOut = options.stdout;
+    this.writeErr = options.stderr;
   }
 
   /** A diagnostic. stderr, suppressed by `--quiet`, never on stdout. */

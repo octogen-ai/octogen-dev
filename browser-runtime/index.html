@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StoreRouter WASM CLI harness</title>
+  </head>
+  <body>
+    <main>
+      <h1>StoreRouter WASM CLI</h1>
+      <p>Development harness · fixture responses · JavaScript in QuickJS WASM</p>
+      <form id="command-form">
+        <label for="command">Command</label
+        ><input
+          id="command"
+          autocomplete="off"
+          spellcheck="false"
+          value="storerouter search 'linen dress' --limit 8 --json | jq '.items'"
+        /><button type="submit">Run</button
+        ><button id="cancel" type="button">Cancel</button
+        ><button id="reset" type="button">Reset session</button>
+      </form>
+      <p id="status" role="status">Ready. Use ↑ / ↓ for session command history.</p>
+      <label for="output">Output</label
+      ><textarea id="output" readonly spellcheck="false" rows="16"></textarea>
+      <details>
+        <summary>Session virtual files</summary>
+        <label for="path">Path</label
+        ><input id="path" value="/session/example.json" /><label for="file"
+          >Contents</label
+        ><textarea id="file" rows="5">{"hello":"StoreRouter"}</textarea
+        ><button id="save" type="button">Save file</button
+        ><button id="load" type="button">Read file</button>
+        <pre id="files"></pre>
+      </details>
+      <p>
+        Shell: storerouter / octogen, jq, cat, echo; quotes, pipes, &lt;, &gt;,
+        &gt;&gt;. No Bash expansion. Lookup uses
+        <code>--resolution-mode index_only</code> in this read-only profile.
+      </p>
+    </main>
+    <script type="module" src="/src/harness.ts"></script>
+  </body>
+</html>

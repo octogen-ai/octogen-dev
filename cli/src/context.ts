@@ -1,3 +1,4 @@
+import type { CliHost } from "./host.js";
 /**
  * What a command is handed: parsed arguments, a writer, and a lazily built API
  * context.
@@ -14,6 +15,7 @@ import type { Writer } from "./output.js";
 
 export interface CommandContext {
   /** The command as invoked, e.g. `"status"`. */
+  host: CliHost;
   command: string;
   args: Args;
   writer: Writer;

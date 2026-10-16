@@ -36,7 +36,7 @@ const SRC = fileURLToPath(new URL("../src", import.meta.url));
  */
 const ALLOWED = new Map<string, string>([
   ["exit.ts", "defines the table and the noResult() constructor"],
-  ["help.ts", "prints the exit-code table in --help"],
+  ["help-core.ts", "prints the exit-code table in --help"],
 ]);
 
 function sourceFiles(directory: string, prefix = ""): string[] {
