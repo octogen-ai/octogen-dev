@@ -9,7 +9,6 @@ from contextlib import contextmanager
 import httpx
 import pytest
 import respx
-
 from octogen_ai_sdk import (
     API_KEY_ENV_VAR,
     DEPRECATED_API_KEY_ENV_VAR,
