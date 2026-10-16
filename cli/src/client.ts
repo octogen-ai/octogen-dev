@@ -1,5 +1,5 @@
 /**
- * The CLI's one path to `api.octogen.ai/v1`: `@octogen-ai/sdk`, exact-pinned.
+ * The CLI's one path to `api.storerouter.ai/v1`: `@octogen-ai/sdk`, exact-pinned.
  *
  * D4, and not a stylistic choice. A thin private `/v1` client inside the CLI is
  * tempting whenever the SDK is missing something, and it would create two
@@ -22,6 +22,7 @@ import {
   type OperationId,
 } from "@octogen-ai/sdk";
 
+import { DEFAULT_BASE_URL } from "./config.js";
 import { classify, retryDecision } from "./classify.js";
 import type { CliError } from "./exit.js";
 import type { Writer } from "./output.js";
@@ -31,6 +32,7 @@ import type { ResolvedKey } from "./auth.js";
 export { SDK_VERSION };
 
 export interface ApiContext {
+  baseUrl: string;
   client: OctogenClient;
   key: ResolvedKey;
   keyless: boolean;
@@ -72,13 +74,13 @@ export function buildContext(options: BuildClientOptions): ApiContext {
     });
   }
 
-  const clientOptions: OctogenClientOptions = { allowKeyless: true };
-  if (key.apiKey !== undefined) {
-    clientOptions.apiKey = key.apiKey;
-  }
-  if (options.baseUrl !== undefined) {
-    clientOptions.baseUrl = options.baseUrl;
-  }
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const clientOptions: OctogenClientOptions = {
+    allowKeyless: true,
+    // An explicit empty key prevents a second lookup in the SDK process env.
+    apiKey: key.apiKey ?? "",
+    baseUrl,
+  };
   if (options.timeoutSeconds !== undefined) {
     clientOptions.timeoutMs = Math.round(options.timeoutSeconds * 1000);
   }
@@ -88,6 +90,7 @@ export function buildContext(options: BuildClientOptions): ApiContext {
 
   return {
     announcedKeyless: false,
+    baseUrl,
     client: new OctogenClient(clientOptions),
     key,
     keyless: key.apiKey === undefined,
@@ -122,7 +125,7 @@ function announceKeyless(context: ApiContext): void {
   context.writer.diagnostic(
     `No API key found. ${KEYLESS_ROUTES} answer without one (keyless trial: 30 ` +
       "requests per IP per day, full payloads); everything else on /v1 needs a " +
-      "key. Run `octogen init` to get one.",
+      "key. Set STOREROUTER_API_KEY or use --api-key-file <path>.",
   );
 }
 

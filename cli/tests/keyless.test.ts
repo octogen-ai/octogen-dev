@@ -118,7 +118,7 @@ describe("the keyless trial", () => {
     expect(body["code"]).toBe("keyless_quota_exhausted");
     expect(body["retryAfter"]).toBe(2880);
     expect((body["remediation"] as Record<string, string>)["command"]).toBe(
-      "octogen init",
+      "storerouter status --api-key-file <path>",
     );
   });
 
@@ -131,9 +131,11 @@ describe("the keyless trial", () => {
     });
     const message = String(result.json()["message"]);
     expect(message).toMatch(/Keyless trial exhausted: 30 requests per IP per day/);
-    expect(message).toMatch(/says nothing about whether Octogen covers this merchant/);
+    expect(message).toMatch(
+      /says nothing about whether StoreRouter covers this merchant/,
+    );
     expect(message).toMatch(/Coverage is unknown/);
-    expect(message).toMatch(/octogen init/);
+    expect(message).toMatch(/STOREROUTER_API_KEY/);
     expect(message).not.toMatch(/not covered/i);
   });
 

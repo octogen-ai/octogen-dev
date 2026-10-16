@@ -48,7 +48,7 @@ describe("JSON by default when stdout is not a TTY", () => {
       isTty: true,
       routes: ROUTES,
     });
-    expect(result.stdout).toMatch(/^Octogen {2}cli /);
+    expect(result.stdout).toMatch(/^StoreRouter {2}cli /);
     expect(() => parseSingleObject(result.stdout)).toThrow();
   });
 
@@ -67,7 +67,7 @@ describe("JSON by default when stdout is not a TTY", () => {
       isTty: false,
       routes: ROUTES,
     });
-    expect(human.stdout).toMatch(/^Octogen {2}cli /);
+    expect(human.stdout).toMatch(/^StoreRouter {2}cli /);
   });
 });
 
@@ -101,18 +101,18 @@ describe("stdout is exactly one object", () => {
   });
 
   it("keeps help off stdout entirely", async () => {
-    // `octogen lookup --help | jq` must not break, so help is a diagnostic.
+    // `storerouter lookup --help | jq` must not break, so help is a diagnostic.
     const result = await runCli({ argv: ["lookup", "--help"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toMatch(/octogen lookup <url>/);
+    expect(result.stderr).toMatch(/storerouter lookup <url>/);
   });
 
   it("keeps the bare-invocation help off stdout too", async () => {
     const result = await runCli({ argv: [] });
     expect(result.exitCode).toBe(ExitCode.Usage);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toMatch(/Usage: octogen <command>/);
+    expect(result.stderr).toMatch(/Usage: storerouter <command>/);
   });
 });
 

@@ -3,7 +3,7 @@
  * context.
  *
  * The API context is lazy so a command can fail on its own arguments before a
- * key is resolved — `octogen lookup` with no URL should be exit `2` on any
+ * key is resolved — `storerouter lookup` with no URL should be exit `2` on any
  * machine, including one with no credential, and resolving the key first would
  * make it exit `3` instead.
  */

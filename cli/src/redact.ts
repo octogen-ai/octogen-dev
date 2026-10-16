@@ -4,7 +4,7 @@
  * It is **prefix-preserving rather than all-or-nothing**. `api_key_service`
  * mints keys as `octo_live_<key_id>_<secret>`, so a safe identifier is already
  * embedded in the value: the first two segments are the same thing the API keys
- * UI shows, and `octogen status` is contractually required to print them as
+ * UI shows, and `storerouter status` is contractually required to print them as
  * `auth.keyPrefix`. A full key that leaks anywhere therefore degrades to that
  * identifier instead of vanishing into `[redacted]`, which keeps the output
  * useful — a bug report can still say *which* key — and keeps the pressure off

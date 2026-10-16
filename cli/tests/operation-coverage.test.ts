@@ -64,7 +64,7 @@ describe("command coverage of the published operation set", () => {
       expect(
         reason,
         `${operationId}'s reason should say where the surface lives`,
-      ).toMatch(/octogen-url-lists|octogen api/);
+      ).toMatch(/octogen-url-lists|storerouter api/);
     }
   });
 
@@ -130,7 +130,7 @@ describe("the escape hatch", () => {
 
   it("is named in the exclusion reasons as the way to reach them", () => {
     for (const reason of Object.values(EXCLUDED_OPERATIONS)) {
-      expect(reason).toMatch(/octogen api/);
+      expect(reason).toMatch(/storerouter api/);
     }
   });
 });

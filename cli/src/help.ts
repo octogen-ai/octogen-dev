@@ -2,7 +2,7 @@
  * `--help`, on stderr.
  *
  * Help is a diagnostic, not a result: it goes to stderr so that
- * `octogen lookup --help` piped into a parser does not corrupt the one-object
+ * `storerouter lookup --help` piped into a parser does not corrupt the one-object
  * stdout contract. Which also means help is never colorized and never paged.
  */
 
@@ -14,9 +14,9 @@ import { CLI_SDK_VERSION, CLI_VERSION } from "./version.js";
 export function renderRootHelp(commands: readonly CommandSpec[]): string {
   const width = Math.max(...commands.map((command) => command.name.length));
   const lines = [
-    `octogen ${CLI_VERSION} (sdk ${CLI_SDK_VERSION})`,
+    `storerouter ${CLI_VERSION} (sdk ${CLI_SDK_VERSION})`,
     "",
-    "Usage: octogen <command> [options]",
+    "Usage: storerouter <command> [options]",
     "",
     "Commands:",
   ];
@@ -24,6 +24,11 @@ export function renderRootHelp(commands: readonly CommandSpec[]): string {
     lines.push(`  ${command.name.padEnd(width)}  ${command.summary}`);
   }
   lines.push(
+    "",
+    "Aliases: parse = lookup; octogen = storerouter (compatibility executable).",
+    "",
+    "Credentials: --api-key-stdin, --api-key-file, STOREROUTER_API_KEY,",
+    "  OCTOGEN_PLATFORM_API_KEY, OCTO_API_KEY (deprecated), then nearest .env.",
     "",
     "Global options:",
     ...flagLines(GLOBAL_FLAGS),
@@ -36,13 +41,13 @@ export function renderRootHelp(commands: readonly CommandSpec[]): string {
     "Exit codes:",
     ...exitCodeLines(),
     "",
-    "octogen --help <command> for a command's own options.",
+    "storerouter --help <command> for a command's own options.",
   );
   return lines.join("\n");
 }
 
 export function renderCommandHelp(command: CommandSpec): string {
-  const lines = [`octogen ${command.usage}`, "", `  ${command.summary}`];
+  const lines = [`storerouter ${command.usage}`, "", `  ${command.summary}`];
   if (command.notes !== undefined && command.notes.length > 0) {
     lines.push("");
     for (const note of command.notes) {
@@ -58,7 +63,7 @@ export function renderCommandHelp(command: CommandSpec): string {
       `Calls: ${command.operations.join(", ")} (through @octogen-ai/sdk ${CLI_SDK_VERSION})`,
     );
   }
-  lines.push("", "Global options: octogen --help");
+  lines.push("", "Global options: storerouter --help");
   return lines.join("\n");
 }
 

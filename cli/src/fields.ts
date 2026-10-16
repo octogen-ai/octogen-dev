@@ -55,7 +55,7 @@ type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"
 
 export const LOOKUP_FIELDS = {
   format: unsupported(
-    "The typed SDK and lookup command return JSON. Use `octogen api` for Markdown responses.",
+    "The typed SDK and lookup command return JSON. Use `storerouter api` for Markdown responses.",
   ),
   matchMode: { flag: "--match-mode" },
   onDemandCachePolicy: { flag: "--on-demand-cache-policy" },
@@ -87,19 +87,19 @@ export type _CachePoliciesExact = Assert<
 
 export const SEARCH_FIELDS = {
   brand_quality_max: unsupported(
-    "Brand-quality bounds are a ranking-policy knob; reach them with `octogen api`.",
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
   ),
   brand_quality_min: unsupported(
-    "Brand-quality bounds are a ranking-policy knob; reach them with `octogen api`.",
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
   ),
   catalogs: { flag: "--catalog" },
   cursor: { flag: "--cursor" },
   debug: unsupported(
     "Returns the effective query for query-understanding analysis. A debugging " +
-      "surface, not a session one; reach it with `octogen api`.",
+      "surface, not a session one; reach it with `storerouter api`.",
   ),
   exclude_facets: unsupported(
-    "Not yet a flag on `search`; send it with `octogen api POST /products/search`.",
+    "Not yet a flag on `search`; send it with `storerouter api POST /products/search`.",
   ),
   facets: { flag: "--facet k=v (repeatable)" },
   limit: { flag: "--limit" },
@@ -111,14 +111,14 @@ export const SEARCH_FIELDS = {
   price_min: { flag: "--price-min" },
   q: { flag: "<query> (positional)" },
   relax: unsupported(
-    "Opt-in query relaxation changes matching. Use `octogen api` when you need it.",
+    "Opt-in query relaxation changes matching. Use `storerouter api` when you need it.",
   ),
   similar_to_brands: unsupported(
-    "Ranks by brand aesthetic rather than filtering; reach it with `octogen api`.",
+    "Ranks by brand aesthetic rather than filtering; reach it with `storerouter api`.",
   ),
   understand: unsupported(
     "Literal matching changes what the positional query means; reach it with " +
-      "`octogen api`.",
+      "`storerouter api`.",
   ),
 } satisfies FieldMap<SearchRequest>;
 
@@ -127,7 +127,7 @@ export const SEARCH_FIELDS = {
 export const SIMILAR_FIELDS = {
   catalogs: { flag: "--catalog (repeatable)" },
   cursor: { flag: "--cursor" },
-  debug: unsupported("Effective-query debugging; reach it with `octogen api`."),
+  debug: unsupported("Effective-query debugging; reach it with `storerouter api`."),
   exclude_facets: { flag: "--exclude-facet k=v (repeatable)" },
   include_facets: { flag: "--facet k=v (repeatable)" },
   limit: { flag: "--limit" },

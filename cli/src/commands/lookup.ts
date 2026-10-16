@@ -1,5 +1,5 @@
 /**
- * `octogen lookup <url>` — resolve one product URL.
+ * `storerouter lookup <url>` — resolve one product URL.
  *
  * The request field is **`url`**, not `productUrl`: bodies are
  * `extra="forbid"`, so a guess is a hard `422`. Which field maps to which flag
@@ -25,13 +25,13 @@ async function runLookup(context: CommandContext): Promise<ExitCode> {
   const url = context.positionals[0];
   if (url === undefined || url.length === 0) {
     throw usageError(
-      "octogen lookup <url> requires a product URL.",
+      "storerouter lookup <url> requires a product URL.",
       "missing_argument",
     );
   }
   if (context.positionals.length > 1) {
     throw usageError(
-      "octogen lookup takes one URL. For several, run it once per URL — each " +
+      "storerouter lookup takes one URL. For several, run it once per URL — each " +
         "is a separate request against your rate limit.",
       "too_many_arguments",
     );
@@ -136,11 +136,11 @@ function asMissOrRethrow(error: unknown, url: string): unknown {
       answeredWith: "404 product_not_found from POST /products/lookup",
       code: "product_not_found",
       // Not a coverage answer: the host may well be covered and this one URL
-      // not indexed. `octogen domains --check` is the coverage question.
+      // not indexed. `storerouter domains --check` is the coverage question.
       coverage: "unknown",
       data: { url },
       message: `No product found for ${url}.`,
-      remediation: { command: `octogen domains --check ${url}` },
+      remediation: { command: `storerouter domains --check ${url}` },
       serverAnswered: true,
     });
   }
@@ -182,12 +182,13 @@ export const lookupCommand = {
   },
   name: "lookup",
   notes: [
+    "Alias: parse. Uses the same /products/lookup request and lookup JSON command.",
     "Exit 6 means the server looked and found nothing for this URL — which is",
     "not the same as the merchant being uncovered. Ask the coverage question",
-    "with `octogen domains --check <url>`.",
+    "with `storerouter domains --check <url>`.",
     "",
     "Keyless-eligible, except --resolution-mode on_demand_only, which makes",
-    "Octogen fetch the page and needs a key.",
+    "StoreRouter fetch the page and needs a key.",
   ],
   operations: ["lookupProduct"] as const,
   run: runLookup,

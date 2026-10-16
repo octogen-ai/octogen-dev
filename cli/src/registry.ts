@@ -37,7 +37,7 @@ export interface CommandSpec {
   /** How the command is invoked, e.g. `"status"`. */
   name: string;
   summary: string;
-  /** The usage line, without the leading `octogen`. */
+  /** The usage line, without the leading `storerouter`. */
   usage: string;
   /**
    * Published operations this command issues, as a literal tuple.
@@ -61,13 +61,13 @@ export interface CommandSpec {
  * `octogen-bq-*` tools. A second, differently-shaped CLI for the same
  * *mutating* surface would be worse than no CLI — two conventions for "am I
  * about to change something?" is how a coverage list gets emptied by accident.
- * All eight stay reachable through `octogen api`, with the same key resolution,
+ * All eight stay reachable through `storerouter api`, with the same key resolution,
  * retry, error taxonomy, and redaction as everything else. Revisit when the two
  * exit-code tables are unified (design Open Decisions 4 and 5).
  */
 const URL_LISTS: string =
   "Owned by `octogen-url-lists` in octogen-ai-sdk (Python), whose mutations are " +
-  "dry-run-by-default behind `--apply`. Reachable here via `octogen api`.";
+  "dry-run-by-default behind `--apply`. Reachable here via `storerouter api`.";
 
 /**
  * Published operations with no command, and why.
@@ -92,7 +92,7 @@ export const EXCLUDED_OPERATIONS = {
   listUrlListUrls: URL_LISTS,
   listUrlLists: URL_LISTS,
   parseProductAlias:
-    "Exact alias of lookupProduct, already exposed by `octogen lookup`. Use `octogen api POST /products/parse` for the alias path.",
+    "Exact alias of lookupProduct, already exposed by `storerouter lookup` and its `parse` command alias. Use `storerouter api POST /products/parse` for the alias path.",
   removeUrlListUrls: URL_LISTS,
 } as const satisfies Partial<Record<OperationId, string>>;
 

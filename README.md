@@ -6,7 +6,7 @@ This repository is public-facing and is intended to become the canonical home fo
 
 - Python SDKs for Octogen APIs
 - TypeScript SDKs for Octogen APIs
-- The `@octogen-ai/cli` command-line tool, for terminals and agents
+- The `@storerouter/cli` command-line tool, for terminals and agents
 - Shared fixtures and contract tests for SDK behavior
 - Codex, Claude, and Cursor skills for building with Octogen
 - Examples and integration guides for commerce workflows
@@ -19,7 +19,7 @@ This repository is public-facing and is intended to become the canonical home fo
 |   +-- adr/                 # Architecture decision records
 |   +-- api/                 # API notes, schemas, and generated reference docs
 |   +-- guides/              # User-facing integration and workflow guides
-+-- cli/                     # `@octogen-ai/cli` — the `octogen` command
++-- cli/                     # `@storerouter/cli` — the `storerouter` command
 +-- examples/
 |   +-- python/              # Python SDK examples
 |   +-- typescript/          # TypeScript SDK examples
@@ -131,13 +131,13 @@ Package names and release targets are finalized: `@octogen-ai/sdk` on npm and
 
 ## The CLI
 
-[`cli/`](cli/README.md) is `@octogen-ai/cli`, a single `octogen` binary for
-session work and onboarding. It is **not** a `/v1` mirror and not a replacement
+[`cli/`](cli/README.md) is `@storerouter/cli`, the primary `storerouter` binary
+with an `octogen` compatibility alias for session work and onboarding. It is **not** a `/v1` mirror and not a replacement
 for the SDKs: production integrations use an SDK, and the CLI is what you (or an
 agent) reach for mid-task.
 
 ```bash
-npx -y @octogen-ai/cli@next domains --base-url https://api.storerouter.ai/v1 --check https://www.macys.com/shop/product/x
+npx -y @storerouter/cli@next domains --check https://www.macys.com/shop/product/x
 ```
 
 Two properties are worth knowing before reading the code:
@@ -152,8 +152,9 @@ Two properties are worth knowing before reading the code:
   reddens `tests/contract` until the SDK gains a method, then reddens the CLI
   until someone writes a command or records why not.
 
-The CLI is currently published to the **`@next`** dist-tag only. `@latest` is a
-promise an agent-facing document depends on, so it is promoted deliberately
+The CLI targets the **`@next`** dist-tag only. See the
+[migration and release guide](cli/MIGRATION.md) for the first StoreRouter release
+and old-package upgrade path. `@latest` is a promise an agent-facing document depends on, so it is promoted deliberately
 after a smoke suite rather than being wherever the last publish landed. The CLI
 pins an exact SDK version, so releases go `sdk-ts-v*` first, then `cli-v*`.
 

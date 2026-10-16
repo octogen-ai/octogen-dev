@@ -252,7 +252,7 @@ describe("classify", () => {
     const failure = classify(apiError(429, keylessDetail("keyless_trial_exhausted")), {
       coverageAdjacent: true,
     });
-    expect(failure.message).toMatch(/says nothing about whether Octogen covers/);
+    expect(failure.message).toMatch(/says nothing about whether StoreRouter covers/);
     expect(failure.coverage).toBe("unknown");
     expect(failure.exitCode).toBe(ExitCode.Throttled);
   });

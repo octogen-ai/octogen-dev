@@ -14,6 +14,7 @@ import { Args, GLOBAL_FLAGS, parseArgs, type FlagSpecs } from "./args.js";
 import { resolveKey } from "./auth.js";
 import { buildContext, type ApiContext } from "./client.js";
 import { COMMAND_LIST, COMMAND_TABLE } from "./commands/index.js";
+import { resolveBaseUrl } from "./config.js";
 import type { CommandContext } from "./context.js";
 import { CliError, ExitCode, usageError } from "./exit.js";
 import { renderCommandHelp, renderRootHelp } from "./help.js";
@@ -44,7 +45,7 @@ function matchCommand(
 ): { command: CommandSpec; rest: string[] } | undefined {
   for (const words of [2, 1]) {
     const name = positionals.slice(0, words).join(" ");
-    const command = COMMAND_TABLE.get(name);
+    const command = COMMAND_TABLE.get(name === "parse" ? "lookup" : name);
     if (command !== undefined) {
       return { command, rest: positionals.slice(words) };
     }
@@ -90,7 +91,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
           },
         },
         exitCode: ExitCode.Success,
-        human: () => `octogen ${CLI_VERSION} (sdk ${CLI_SDK_VERSION})`,
+        human: () => `storerouter ${CLI_VERSION} (sdk ${CLI_SDK_VERSION})`,
         ok: true,
       });
       return ExitCode.Success;
@@ -138,9 +139,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
           }),
           noRetry: args.flag("no-retry"),
           writer,
-          ...(args.string("base-url") === undefined
-            ? {}
-            : { baseUrl: args.string("base-url") }),
+          baseUrl: resolveBaseUrl(args.string("base-url"), env),
           ...(args.number("timeout") === undefined
             ? {}
             : { timeoutSeconds: args.number("timeout") }),
@@ -186,7 +185,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
 function commandNameFor(argv: readonly string[]): string {
   const bare = argv.filter((token) => !token.startsWith("-"));
   const matched = matchCommand(bare);
-  return matched?.command.name ?? bare[0] ?? "octogen";
+  return matched?.command.name ?? bare[0] ?? "storerouter";
 }
 
 /**
