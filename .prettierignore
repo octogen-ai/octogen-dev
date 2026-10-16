@@ -18,3 +18,6 @@ tests/fixtures/openapi
 
 # Generated from the exact help text, not Markdown formatting
 cli/REFERENCE.md
+
+# Generated guest source is tool-owned
+browser-runtime/src/core-source.generated.ts

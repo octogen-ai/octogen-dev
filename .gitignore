@@ -96,3 +96,6 @@ docs/site/
 tmp/
 temp/
 .cache/
+
+# Browser CLI guest bundle (built before tests/dev/build)
+browser-runtime/src/core-source.generated.ts

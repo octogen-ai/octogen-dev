@@ -19,6 +19,7 @@ const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
  */
 const projects = [
   "./cli/tsconfig.json",
+  "./browser-runtime/tsconfig.json",
   "./sdks/typescript/tsconfig.json",
   "./tsconfig.contract.json",
 ];
@@ -31,6 +32,7 @@ export default tseslint.config(
       "**/eslint.config.*",
       "**/node_modules/**",
       "**/src/generated/**",
+      "**/core-source.generated.ts",
       "sdks/python/**",
     ],
   },

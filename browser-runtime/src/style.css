@@ -1,0 +1,56 @@
+:root {
+  color-scheme: light dark;
+  font:
+    16px/1.5 system-ui,
+    sans-serif;
+}
+body {
+  margin: 0;
+  background: light-dark(#f5f6f8, #11151c);
+  color: light-dark(#18202c, #e4e9f1);
+}
+main {
+  max-width: 980px;
+  padding: 28px;
+  margin: auto;
+}
+h1 {
+  font-size: 1.6rem;
+  margin-bottom: 0;
+}
+p {
+  color: light-dark(#465368, #b4bfd0);
+}
+label {
+  display: block;
+  margin-top: 12px;
+}
+input,
+textarea,
+button {
+  font: inherit;
+  border: 1px solid #778397;
+  border-radius: 5px;
+  padding: 9px;
+}
+input,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  background: light-dark(white, #191f29);
+  color: inherit;
+  font-family: ui-monospace, monospace;
+}
+textarea {
+  resize: vertical;
+}
+button {
+  margin: 10px 8px 6px 0;
+  cursor: pointer;
+}
+#status {
+  min-height: 24px;
+}
+details {
+  margin-top: 20px;
+}

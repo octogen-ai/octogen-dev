@@ -9,8 +9,7 @@
  * path or stdin is the only channel that works at the size the endpoint accepts.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve as resolvePath } from "node:path";
+import type { CliHost } from "../host.js";
 
 import type {
   ResolveProductFromHtmlParams,
@@ -45,8 +44,8 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const html = readHtml(source, context.cwd, context.readStdin);
-  const bytes = Buffer.byteLength(html, "utf8");
+  const html = readHtml(source, context.cwd, context.readStdin, context.host);
+  const bytes = context.host.utf8ByteLength(html);
   if (bytes === 0) {
     throw usageError(
       `${source === "-" ? "stdin" : source} is empty; there is no HTML to resolve.`,
@@ -134,7 +133,12 @@ async function runResolve(context: CommandContext): Promise<ExitCode> {
   return ExitCode.Success;
 }
 
-function readHtml(source: string, cwd: string, readStdin: () => string): string {
+function readHtml(
+  source: string,
+  cwd: string,
+  readStdin: () => string,
+  host: CliHost,
+): string {
   if (source === "-") {
     try {
       return readStdin();
@@ -145,9 +149,9 @@ function readHtml(source: string, cwd: string, readStdin: () => string): string 
       );
     }
   }
-  const path = resolvePath(cwd, source);
+  const path = host.resolve(cwd, source);
   try {
-    return readFileSync(path, "utf8");
+    return host.readFile(path);
   } catch (error) {
     throw usageError(`Cannot read ${path}: ${message(error)}`, "unreadable_input");
   }

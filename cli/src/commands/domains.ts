@@ -11,7 +11,7 @@
  */
 
 import type { CommandContext } from "../context.js";
-import { fetchCoverage, type CoverageProvenance } from "../coverage.js";
+import { fetchCoverage, type CoverageProvenance } from "../coverage-core.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
 import type { CommandSpec } from "../registry.js";
 

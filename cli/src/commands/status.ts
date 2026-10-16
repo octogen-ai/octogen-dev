@@ -26,7 +26,8 @@ import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { CliError, ExitCode } from "../exit.js";
 import type { CommandSpec } from "../registry.js";
-import { versionBlock, type VersionBlock } from "../version.js";
+import type { CliHost } from "../host.js";
+type VersionBlock = CliHost["version"];
 
 /** The only organization type `/v1` admits; "Developer" in the Platform UI. */
 const DEVELOPER_ORG_TYPE = "catalog_partner";
@@ -79,7 +80,7 @@ interface StatusEnvelope extends Record<string, unknown> {
 
 async function runStatus(context: CommandContext): Promise<ExitCode> {
   const { args, writer } = context;
-  const cli = versionBlock();
+  const cli = context.host.version;
   const api = context.api();
   const baseUrl = api.baseUrl;
 

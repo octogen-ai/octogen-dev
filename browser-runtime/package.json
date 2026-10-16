@@ -1,0 +1,29 @@
+{
+  "name": "@storerouter/browser-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "core": "node tools/bundle-core.mjs",
+    "dev": "npm run core && vite --host 127.0.0.1",
+    "pretest": "npm run core",
+    "test": "vitest run",
+    "typecheck": "npm run core && tsc --noEmit",
+    "build": "npm run core && vite build",
+    "measure": "npm run build && tsx tools/measure.ts"
+  },
+  "dependencies": {
+    "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
+    "@noble/hashes": "^2.0.1",
+    "jq-wasm": "3.0.0-jq-1.8.2",
+    "quickjs-emscripten-core": "0.32.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "vite": "^8.0.0"
+  },
+  "exports": {
+    ".": "./dist/runtime.js"
+  }
+}

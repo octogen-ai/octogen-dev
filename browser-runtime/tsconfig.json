@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@octogen-ai/sdk": ["../sdks/typescript/src/index.ts"]
+    },
+    "allowJs": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "tools/**/*.mjs",
+    "tools/**/*.ts"
+  ]
+}
