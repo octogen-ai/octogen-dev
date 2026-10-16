@@ -49,7 +49,7 @@ const previous = await exec(oldBin, ['--version']);
 assert.equal(previous.code, 0);
 assert.equal(JSON.parse(previous.stdout).cli.version, '0.2.0');
 let collision = await exec('npm', ['install', '-g', '--prefix', prefix,
-  '--ignore-scripts', '--no-audit', '--no-fund', cli]);
+  '--ignore-scripts', '--no-audit', '--no-fund', sdk, cli]);
 assert.notEqual(collision.code, 0, 'new package must not overwrite the old global octogen');
 assert.match(collision.stderr, /EEXIST/);
 assert.equal(realpathSync(oldBin), original);

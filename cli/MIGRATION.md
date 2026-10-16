@@ -2,7 +2,7 @@
 
 ## Install and upgrade
 
-After the first release, install `@storerouter/cli@next` (Node 20 or newer):
+Install `@storerouter/cli@next` (Node 20 or newer):
 
 ```bash
 npm install -g @storerouter/cli@next
@@ -16,8 +16,9 @@ requests, JSON `command: "lookup"`, output, flags, and exit codes.
 
 The existing `@octogen-ai/cli@next` 0.2.0 stays available, pinned to SDK 0.4.0.
 It is not republished, unpublished, or automatically upgraded by this change.
-The new package starts at 0.3.0 and pins the already released SDK 0.5.0. Old
-installs remain usable but do not gain the new defaults or aliases. Moving to
+The published StoreRouter 0.3.0 pins SDK 0.5.0. The next release candidate is
+CLI 0.4.0 with SDK 0.6.0, including public-contract validation and customer
+Voyage removal. Old installs do not gain the new defaults or aliases. Moving to
 the new package is an explicit choice; an old-name forwarding package is not
 part of this release.
 
@@ -74,54 +75,43 @@ credential migration. Search price units, `--facet`, JSON schema version,
 canonical command names, and exit codes are unchanged. Color/size shortcuts,
 `--ships-to`, and `--currency` are not introduced.
 
-## Release owner checklist (no publish performed by this PR)
+## Release owner checklist (publication requires separate authorization)
 
-Read-only audit on 2026-10-16: public npm reports `@octogen-ai/cli@next` 0.2.0
-with SDK 0.4.0; `@storerouter/cli` returns 404. The existing GitHub `npm`
-environment permits `cli-v*` and `sdk-ts-v*` tags. Its approval gate is retained.
-The `storerouter` npm organization already exists; do not create another one.
-The registry's private trusted-publisher and owner settings were not accessible
-in this audit and are not assumed to be configured. See npm’s
-[trusted publishing](https://docs.npmjs.com/trusted-publishers/) and
-[provenance](https://docs.npmjs.com/generating-provenance-statements/) guidance.
+Read-only registry audit on 2026-10-16: `@storerouter/cli@next` is 0.3.0;
+`latest` still points to the 0.0.0 reservation package. Always specify `@next`.
+TypeScript `@octogen-ai/sdk` and Python `octogen-ai-sdk` are both at 0.5.0.
+The published CLI still includes Voyage and lacks `dist/contract.js`; merging
+source changes does not update that artifact. Do not reuse published versions.
 
-1. Review and merge this PR under the repository's normal policy.
-2. An npm owner with publish rights in the existing `storerouter` organization
-   must arrange the **first** public `@storerouter/cli` publish. The npm team
-   “Add Existing Package” page assigns access to an existing package; it does
-   not create one. The `developers` team receives access to newly created
-   organization packages by default. Follow npm's
-   current first-package/trusted-publishing setup; if a bootstrap publish is
-   required before the package settings exist, use the owner's authenticated
-   release session with `--tag next`, never commit a token. Local bootstrap
-   publishing cannot generate CI provenance: the owner must explicitly use
-   `--provenance=false` for that one publish, or arrange a separately authorized
-   CI bootstrap with provenance. Keep provenance enabled in the committed
-   manifest and normal release workflow.
-   Do not assume the old package's publisher grants rights to the new scope.
-3. Configure/verify the trusted publisher **on `@storerouter/cli`** for GitHub
-   owner `octogen-ai`, repository `octogen-dev`, workflow `release.yml`,
-   environment `npm`. Allow `npm publish` for this workflow. Complete its first OIDC publish within
-   two days of configuration (otherwise recreate the expired publisher).
-   Leave SDK publishers unchanged. Verify organization
-   security/2FA policy and the release environment's required reviewers.
-4. Run `npm ci`, `npm run check`, `npm run codegen:check`, and the CLI tarball
-   smoke test on the release commit. Confirm SDK 0.5.0 is available on npm
-   before tagging. The workflow checks tag/manifest agreement and builds/tests
-   the tagged commit. It publishes only `@storerouter/cli` for `cli-v*` tags,
-   using the manifest's public/provenance/`next` configuration.
-5. For workflow publishing after bootstrap, use a fresh matching version and
-   `cli-v<version>` tag. Do not duplicate a bootstrap version already published
-   or reuse `cli-v0.2.0`. Approve the `npm` environment only after reviewing the
-   tagged artifact. No new tag naming scheme or environment policy is needed.
-6. Verify the published `@next` tarball in a disposable prefix: both binaries,
-   `--version`, keyless/offline exit 3, configured-key status, and migration.
-   Promote to `latest` only under separate release approval after those checks.
-   Keep the old package available; optional npm deprecation messaging on it is
-   a separate owner action and must point to the uninstall/install instructions.
+1. Review and merge the release-preparation PR under normal repository policy.
+   On the final release commit run `npm ci`, `npm run check`,
+   `npm run codegen:check`, `npm run test:published-contract`, Python tests,
+   `npm run test:cli-package`, and the migration smoke test below.
+2. With explicit release authorization, publish TypeScript SDK 0.6.0 through
+   `sdk-ts-v0.6.0`. Publish Python SDK 0.6.0 through `sdk-py-v0.6.0` as its
+   separate release. The existing workflow checks tag/manifest agreement and
+   retains the `npm` / `pypi` environment approval gates and trusted publishing.
+   Verify the registry artifacts, versions, and retired Voyage surface.
+3. After npm serves SDK 0.6.0, run `npm run test:cli-release` on the final
+   release commit. This installs the CLI tarball with its exact **registry** SDK.
+   A passing local-tarball test is not this gate; an unpublished SDK means this
+   gate is blocked. Do not change the pin or waive the check to bypass it.
+4. With separate CLI release authorization, tag `cli-v0.4.0`. The workflow
+   publishes `@storerouter/cli` using public access, provenance, and `next`.
+   Verify trusted-publisher configuration on this package for GitHub owner
+   `octogen-ai`, repository `octogen-dev`, workflow `release.yml`, environment
+   `npm`; private registry settings are not assumed to be configured.
+5. Verify the published `@next` tarball in a disposable prefix: both binaries,
+   version metadata, credential-free offline exit 3, configured-key status,
+   migration, contract runtime presence, and Voyage command/file absence.
+   Rerun packed request conformance against the registry artifact.
+6. Promote to `latest` only with separate approval after verification. Keep the
+   old package available; optional npm deprecation messaging is a separate owner
+   action and must point to the uninstall/install instructions.
 
-No package publication, npm permission change, credential change, dist-tag
-promotion, merge, or deployment is authorized by this implementation PR.
+No publication, registry setting change, dist-tag promotion, merge, or deployment
+is authorized by the preparation PR. Recheck version availability before tags;
+if a candidate has since been published, prepare a fresh version and matching pin.
 
 ## Reproduce the package smoke test
 
@@ -131,8 +121,8 @@ From the repository root, after `npm ci` and `npm run build`:
 pack_dir=$(mktemp -d)
 npm pack --workspace @octogen-ai/sdk --pack-destination "$pack_dir"
 npm pack --workspace @storerouter/cli --pack-destination "$pack_dir"
-CLI_TARBALL="$pack_dir/storerouter-cli-0.3.0.tgz" \
-SDK_TARBALL="$pack_dir/octogen-ai-sdk-0.5.0.tgz" \
+CLI_TARBALL="$pack_dir/storerouter-cli-0.4.0.tgz" \
+SDK_TARBALL="$pack_dir/octogen-ai-sdk-0.6.0.tgz" \
 bash cli/tests/package-smoke.sh
 ```
 

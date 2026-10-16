@@ -12,7 +12,7 @@ it("all shell examples in the linked public CLI reference use accepted commands 
   expect(examples.length).toBeGreaterThan(10);
   for (const example of examples) {
     const invocation = example
-      .replace(/^.*?(?:\bstorerouter\s|@storerouter\/cli@next\s)/, "")
+      .replace(/^.*?\bstorerouter\s/, "")
       .replace(/\s+#.*$/, "");
     const argv = [...invocation.matchAll(/'([^']*)'|"([^"]*)"|(\S+)/g)].map(
       (match) => match[1] ?? match[2] ?? match[3] ?? "",

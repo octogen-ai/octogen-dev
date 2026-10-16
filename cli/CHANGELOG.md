@@ -1,6 +1,15 @@
 # Changelog — `@storerouter/cli`
 
-## 0.3.0 (unreleased, `next`)
+## 0.4.0 (unreleased, `next`)
+
+- Generate request validation and help from the public contract; include the
+  contract runtime in the package.
+- Preserve numeric, string, array, and nested-path validation errors through
+  nullable schemas. Genuine unions report all type-compatible alternatives.
+- **Breaking:** remove customer Voyage commands; Voyage is admin-only.
+- Pin SDK 0.6.0. Publish that SDK before releasing this CLI.
+
+## 0.3.0 — 2026-10-16 (`next`)
 
 - Move the primary package to `@storerouter/cli`, with `storerouter` and `octogen` executables.
 - Default to the StoreRouter API, accept StoreRouter env names with legacy fallback, and preserve the cache directory.

@@ -1,5 +1,11 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.6.0 (unreleased)
+
+- **Breaking:** remove customer Voyage methods and types. Voyage is admin-only;
+  customer applications must stop calling these retired endpoints.
+- Regenerate the public contract mirror without Voyage operations and schemas.
+
 ## 0.5.0 — 2026-10-14
 
 `search_products` now exposes the redesigned `/v1` search contract: one control

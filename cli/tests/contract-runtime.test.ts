@@ -277,3 +277,96 @@ it("every exposed first-class field reaches the SDK wire payload", async () => {
     }
   }
 });
+
+describe("anyOf diagnostics", () => {
+  const nullable = (schema: import("../src/contract.js").Schema) => ({
+    anyOf: [schema, { type: "null" }],
+  });
+  it.each([
+    [{ type: "number", minimum: 0 }, -1, "must be at least 0"],
+    [{ type: "integer", minimum: 1, maximum: 6 }, 7, "must be between 1 and 6"],
+    [{ type: "string", minLength: 2 }, "x", "must have at least 2 characters"],
+    [{ type: "string", maxLength: 1 }, "😀x", "must have at most 1 characters"],
+    [{ type: "array", minItems: 1 }, [], "needs at least 1 entries"],
+    [{ type: "array", maxItems: 1 }, [1, 2], "allows at most 1 entries"],
+  ] as const)("retains nullable constraints: %j", (schema, value, message) => {
+    expect(() => {
+      validate(nullable(schema), value, "field");
+    }).toThrow(`field ${message}`);
+    expect(() => {
+      validate(nullable(schema), null, "field");
+    }).not.toThrow();
+  });
+  it("keeps array indices and nested facet paths without echoing input", () => {
+    expect(() => {
+      validate(
+        requestSchema("searchProducts"),
+        { facets: [{ name: "color", values: [123] }] },
+        "search",
+      );
+    }).toThrow("search.facets[0].values[0] must be a string");
+  });
+  it("tries every genuine union branch and reports all compatible failures", () => {
+    const schema = {
+      anyOf: [
+        { type: "number", maximum: 0 },
+        { type: "number", minimum: 10 },
+        { type: "string", minLength: 3 },
+      ],
+    };
+    for (const value of [-1, 10, "abc"])
+      expect(() => {
+        validate(schema, value, "choice");
+      }).not.toThrow();
+    expect(() => {
+      validate(schema, 5, "choice");
+    }).toThrow("choice must be at most 0 or choice must be at least 10");
+    expect(() => {
+      validate(schema, "x", "choice");
+    }).toThrow("choice must have at least 3 characters");
+    expect(() => {
+      validate(schema, false, "choice");
+    }).toThrow("choice does not match the public request schema");
+  });
+  it("enforces union siblings and rejects an empty union", () => {
+    expect(() => {
+      validate({ ...nullable({ type: "string" }), maxLength: 1 }, "xx", "field");
+    }).toThrow("at most 1 characters");
+    expect(() => {
+      validate({ anyOf: [] }, null, "field");
+    }).toThrow();
+    expect(() => {
+      validate(
+        { anyOf: [{ type: "null" }, { type: "number", minimum: 0 }] },
+        -1,
+        "field",
+      );
+    }).toThrow("field must be at least 0");
+  });
+  it("does not swallow runtime errors as alternative mismatches", () => {
+    const failure = new TypeError("broken schema implementation");
+    const branch = {
+      get type(): string {
+        throw failure;
+      },
+    };
+    expect(() => {
+      validate({ anyOf: [branch, {}] }, "value", "field");
+    }).toThrow(failure);
+  });
+  it("preserves the JSON envelope, exit code and no-request behavior", async () => {
+    const result = await runCli({
+      argv: ["search", "dress", "--price-min", "-1", "--json"],
+    });
+    expect(result.exitCode).toBe(2);
+    expect(result.requests).toHaveLength(0);
+    const body = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      ok: false,
+      exitCode: 2,
+      code: "invalid_option_value",
+      message: "searchProducts.price_min must be at least 0",
+    });
+    expect(result.stdout.trim().split("\n")).toHaveLength(1);
+  });
+});
