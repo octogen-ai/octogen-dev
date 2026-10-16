@@ -125,14 +125,19 @@ const fetchBridge = async (
 const input = JSON.parse(__input) as {
   argv: string[];
   keylessNotice?: string;
+  unavailableCommands?: string[];
   cwd: string;
   env: Record<string, string>;
   stdin: string;
+  isTty: boolean;
   version: CliHost["version"];
 };
 const host: CliHost = {
   utf8ByteLength: (text) => sync("utf8ByteLength", text) as number,
   ...(input.keylessNotice === undefined ? {} : { keylessNotice: input.keylessNotice }),
+  ...(input.unavailableCommands === undefined
+    ? {}
+    : { unavailableCommands: input.unavailableCommands }),
   readFile: (path) => sync("readFile", path) as string,
   writeCache: (path, contents) => {
     sync("writeFile", { path, contents });
@@ -152,7 +157,7 @@ Object.assign(globalThis, {
     host,
     cwd: input.cwd,
     env: input.env,
-    isTty: false,
+    isTty: input.isTty,
     readStdin: () => input.stdin,
     fetch: fetchBridge as unknown as typeof fetch,
     stdout: (text) => {
