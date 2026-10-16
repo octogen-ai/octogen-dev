@@ -35,11 +35,9 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "deleteUrlList": Operation("DELETE", "/coverage/url-lists/{urlListId}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
-    "getVoyage": Operation("GET", "/voyage/{task_id}"),
     "listDomains": Operation("GET", "/domains"),
     "listUrlListUrls": Operation("GET", "/coverage/url-lists/{urlListId}/urls"),
     "listUrlLists": Operation("GET", "/coverage/url-lists"),
-    "listVoyages": Operation("GET", "/voyage"),
     "lookupProduct": Operation("POST", "/products/lookup"),
     "moreLikeThisProducts": Operation("POST", "/products/more-like-this"),
     "parseProductAlias": Operation("POST", "/products/parse"),
@@ -48,7 +46,6 @@ OPERATIONS: Final[dict[str, Operation]] = {
     ),
     "resolveProductFromHtml": Operation("POST", "/products/resolve-from-html"),
     "searchProducts": Operation("POST", "/products/search"),
-    "startVoyage": Operation("POST", "/voyage"),
 }
 
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")

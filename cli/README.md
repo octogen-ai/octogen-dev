@@ -1,6 +1,6 @@
 # `@storerouter/cli`
 
-The StoreRouter CLI. Coverage, product lookup, search, and voyages from a terminal —
+The StoreRouter CLI. Coverage, product lookup, and search from a terminal —
 or from an agent, which is the caller this is actually designed for.
 
 > **Pre-release.** Targets the `@next` dist-tag only. Set
@@ -151,19 +151,6 @@ curl -s https://example.com/p/1 | storerouter resolve --html - --url https://exa
 HTML comes from a file or stdin and **never from an argument**: the body cap is
 5 MiB, argv is the wrong channel for a payload that size, and a multi-megabyte
 argv entry in an agent transcript is its own problem.
-
-### `storerouter voyage <url>`, `voyage status <task_id>`, `voyage list`
-
-```bash
-storerouter voyage https://newmerchant.example --wait --wait-timeout 1800
-storerouter voyage status task_01H...
-storerouter voyage list --status running
-```
-
-Voyages are shared per domain: starting one that is already running joins it and
-consumes no quota, and `created` says which happened. With `--wait`: exit `0`
-completed, `7` still running at the deadline (the voyage is unaffected — resume
-with `voyage status`), `1` failed or cancelled.
 
 ### `storerouter api <METHOD> <path>` — the escape hatch
 

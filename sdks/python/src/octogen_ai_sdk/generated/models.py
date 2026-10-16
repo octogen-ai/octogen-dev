@@ -11,7 +11,6 @@ hand-written; these models are what it validates against.
 from __future__ import annotations
 from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
-from datetime import date
 
 
 class AttributeValue(BaseModel):
@@ -301,6 +300,13 @@ class MeOrganization(BaseModel):
     )
 
 
+class MeQuotas(BaseModel):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class MeRateLimit(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -316,6 +322,32 @@ class MeRateLimit(BaseModel):
         alias="resetAt",
         description="When the bucket is fully refilled (UTC, RFC 3339).",
         title="Resetat",
+    )
+
+
+class MeResponse(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    key: MeKey | None = Field(
+        None, description="The calling API key; `null` for a super admin."
+    )
+    organization: MeOrganization | None = Field(
+        None, description="The credential's organization; `null` for a super admin."
+    )
+    principal: Literal["api_key", "super_admin"] = Field(
+        ...,
+        description="Which credential kind authenticated this request.",
+        title="Principal",
+    )
+    quotas: MeQuotas | None = Field(
+        None,
+        description="Resource quotas for the organization; `null` for a super admin.",
+    )
+    rate_limit: MeRateLimit | None = Field(
+        None,
+        alias="rateLimit",
+        description="Current rate-limit posture; `null` when the limiter is off.",
     )
 
 
@@ -681,60 +713,6 @@ class VideoView(BaseModel):
     url: str | None = Field(None, title="Url")
 
 
-class VoyageError(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    code: str = Field(..., title="Code")
-    message: str = Field(..., title="Message")
-
-
-class VoyageQuotaConcurrent(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    limit: int | None = Field(None, title="Limit")
-    used: int | None = Field(None, title="Used")
-
-
-class VoyageQuotaMonthly(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    limit: int | None = Field(None, title="Limit")
-    period_start: date | None = Field(None, alias="periodStart", title="Periodstart")
-    resets_at: AwareDatetime | None = Field(None, alias="resetsAt", title="Resetsat")
-    used: int | None = Field(None, title="Used")
-
-
-class VoyageQuotas(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    concurrent: VoyageQuotaConcurrent
-    monthly: VoyageQuotaMonthly
-
-
-class VoyageResultEndpoints(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    lookup: str | None = Field("/v1/products/lookup", title="Lookup")
-    search: str | None = Field("/v1/products/search", title="Search")
-
-
-class VoyageStartRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    domain: str = Field(
-        ...,
-        description="Registrable domain or full URL. The server normalizes it (lowercase; scheme, path, port, and leading `www.` stripped) and echoes the normalized form back as `domain`.",
-        title="Domain",
-    )
-
-
 class Attribute(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -796,42 +774,6 @@ class HTTPValidationError(BaseModel):
         populate_by_name=True,
     )
     detail: list[ValidationError] | None = Field(None, title="Detail")
-
-
-class MeQuotas(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    voyage: VoyageQuotas | None = Field(
-        None,
-        description="Voyage quota usage — the same block `GET /v1/voyage` returns. `null` for callers with no organization quota.",
-    )
-
-
-class MeResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    key: MeKey | None = Field(
-        None, description="The calling API key; `null` for a super admin."
-    )
-    organization: MeOrganization | None = Field(
-        None, description="The credential's organization; `null` for a super admin."
-    )
-    principal: Literal["api_key", "super_admin"] = Field(
-        ...,
-        description="Which credential kind authenticated this request.",
-        title="Principal",
-    )
-    quotas: MeQuotas | None = Field(
-        None,
-        description="Resource quotas for the organization; `null` for a super admin.",
-    )
-    rate_limit: MeRateLimit | None = Field(
-        None,
-        alias="rateLimit",
-        description="Current rate-limit posture; `null` when the limiter is off.",
-    )
 
 
 class MerchantProductListItem(BaseModel):
@@ -1346,44 +1288,6 @@ class ProgrammaticProductSearchPage(BaseModel):
     )
 
 
-class VoyageResult(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    catalog: str = Field(..., title="Catalog")
-    endpoints: VoyageResultEndpoints | None = None
-    product_count: int | None = Field(None, alias="productCount", title="Productcount")
-
-
-class VoyageTask(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    completed_at: AwareDatetime | None = Field(
-        None, alias="completedAt", title="Completedat"
-    )
-    created_at: AwareDatetime | None = Field(None, alias="createdAt", title="Createdat")
-    domain: str = Field(..., title="Domain")
-    error: VoyageError | None = None
-    phase: Literal[
-        "discovering_site",
-        "sampling_products",
-        "building_extraction",
-        "in_review",
-        "publishing_catalog",
-        "complete",
-        "failed",
-    ] = Field(..., title="Phase")
-    phase_label: str = Field(..., alias="phaseLabel", title="Phaselabel")
-    progress_percent: int = Field(..., alias="progressPercent", title="Progresspercent")
-    result: VoyageResult | None = None
-    status: Literal[
-        "queued", "running", "in_review", "completed", "failed", "cancelled"
-    ] = Field(..., title="Status")
-    task_id: str = Field(..., alias="taskId", title="Taskid")
-    updated_at: AwareDatetime | None = Field(None, alias="updatedAt", title="Updatedat")
-
-
 class MerchantProductView(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -1511,15 +1415,6 @@ class ProgrammaticProductLookupResponse(BaseModel):
         description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
         title="Warnings",
     )
-
-
-class VoyageListResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    items: list[VoyageTask] = Field(..., title="Items")
-    next_cursor: str | None = Field(None, alias="nextCursor", title="Nextcursor")
-    quotas: VoyageQuotas | None = None
 
 
 class MerchantProductUrlLookupResponse(BaseModel):

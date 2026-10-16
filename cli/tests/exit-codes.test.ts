@@ -348,11 +348,11 @@ describe("noResult", () => {
       coverage: "not_covered",
       data: { covered: false },
       message: "not covered",
-      remediation: { command: "storerouter voyage example.com" },
+      remediation: { url: "https://storerouter.ai/contact" },
       serverAnswered: true,
     });
     expect(miss.coverage).toBe("not_covered");
     expect(miss.data).toEqual({ covered: false });
-    expect(miss.remediation?.command).toBe("storerouter voyage example.com");
+    expect(miss.remediation?.url).toBe("https://storerouter.ai/contact");
   });
 });

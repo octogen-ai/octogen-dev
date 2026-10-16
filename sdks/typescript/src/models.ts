@@ -667,38 +667,3 @@ export interface ResolveProductFromHtmlParams {
 
 export type ProgrammaticResolveFromHtmlRequest =
   components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
-
-// ── Voyages (/v1/voyage) ────────────────────────────────────────────────────
-
-export type VoyageTask = components["schemas"]["VoyageTask"];
-
-export type VoyageStatus = NonNullable<VoyageTask["status"]>;
-
-export type VoyagePhase = NonNullable<VoyageTask["phase"]>;
-
-export type VoyageResult = components["schemas"]["VoyageResult"];
-
-export type VoyageError = components["schemas"]["VoyageError"];
-
-export type VoyageQuotas = components["schemas"]["VoyageQuotas"];
-
-export type VoyageListResponse = components["schemas"]["VoyageListResponse"];
-
-export type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
-
-export interface StartVoyageResult {
-  task: VoyageTask;
-  /**
-   * `true` when this call dispatched a new voyage (`202`, quota consumed);
-   * `false` when it joined one already running for the domain (`200`, no quota
-   * consumed). Voyages are shared per domain, so joining is the common case
-   * for a popular merchant.
-   */
-  created: boolean;
-}
-
-export interface ListVoyagesParams {
-  status?: VoyageStatus;
-  cursor?: string;
-  limit?: number;
-}

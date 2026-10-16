@@ -20,7 +20,6 @@ import type {
   ListDomainsOptions,
   ListDomainsResponse,
   ListDomainsResult,
-  ListVoyagesParams,
   MeResponse,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
@@ -35,9 +34,6 @@ import type {
   ResolveProductFromHtmlParams,
   SearchProductsParams,
   Facet,
-  StartVoyageResult,
-  VoyageListResponse,
-  VoyageTask,
 } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
@@ -255,43 +251,6 @@ export class OctogenClient {
       etag: result.etag,
       maxAgeSeconds: result.maxAgeSeconds,
     });
-  }
-
-  /**
-   * Start — or join — a voyage for a domain (`POST /v1/voyage`).
-   *
-   * Voyages are shared per domain. When one is already running (or the domain
-   * already has a live catalog) the caller joins it and no quota is consumed;
-   * {@link StartVoyageResult.created} says which happened. Voyages run for
-   * hours to days: poll {@link getVoyage} every five minutes or slower.
-   */
-  async startVoyage(domain: string): Promise<StartVoyageResult> {
-    assertNonEmptyString(domain, "domain");
-    const { data, response } = await this.request("startVoyage", {
-      body: { domain },
-    });
-    return { task: data as VoyageTask, created: response.status === 202 };
-  }
-
-  /** List this organization's voyages, newest first (`GET /v1/voyage`). */
-  async listVoyages(params: ListVoyagesParams = {}): Promise<VoyageListResponse> {
-    const data = await this.json("listVoyages", {
-      query: { cursor: params.cursor, limit: params.limit, status: params.status },
-    });
-    return data as VoyageListResponse;
-  }
-
-  /**
-   * Poll one voyage (`GET /v1/voyage/{task_id}`).
-   *
-   * A task belonging to another organization is reported as `404
-   * voyage_not_found`, indistinguishable from one that does not exist.
-   */
-  async getVoyage(taskId: string): Promise<VoyageTask> {
-    const data = await this.json("getVoyage", {
-      pathParams: { task_id: taskId },
-    });
-    return data as VoyageTask;
   }
 
   /**

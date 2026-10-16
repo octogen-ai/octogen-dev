@@ -206,11 +206,6 @@ export const ME_BODY = {
     type: "catalog_partner",
   },
   principal: "api_key",
-  quotas: {
-    voyage: {
-      concurrent: { limit: 2, used: 0 },
-      monthly: { limit: 25, resetsAt: "2026-09-01T00:00:00Z", used: 3 },
-    },
-  },
+  quotas: {},
   rateLimit: { limit: 120, remaining: 118, resetAt: "2026-08-21T14:31:00Z" },
 };

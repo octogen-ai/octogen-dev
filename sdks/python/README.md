@@ -62,9 +62,7 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         found = await client.lookup_product(url)
         print(found.product.title)
     else:
-        # Not covered yet — this is what `start_voyage` is for.
-        started = await client.start_voyage(url)
-        print(started.task.task_id, "dispatched" if started.created else "joined")
+        print("Contact https://storerouter.ai/contact to discuss coverage.")
 ```
 
 The endpoint is `Cache-Control: max-age=300` behind a strong `ETag`, and clients
@@ -110,10 +108,7 @@ if that stops being true — see
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
-- `start_voyage(domain)`, `list_voyages(...)`, and `get_voyage(task_id)` build a
-  catalog for a merchant Octogen does not cover yet. Voyages are shared per
-  domain: `StartVoyageResult.created` is `False` when you joined one already
-  running, which consumes no quota.
+
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
   `delete_coverage_url_list(url_list_id)` manage coverage URL lists — named
@@ -137,13 +132,6 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
 ```
 
 
-```python
-async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
-    # Poll a voyage until its catalog is live. Voyages run for hours to days.
-    started = await client.start_voyage("shop.example")
-    progress = await client.get_voyage(started.task.task_id)
-    print(progress.phase_label, progress.progress_percent)
-```
 
 ```python
 async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:

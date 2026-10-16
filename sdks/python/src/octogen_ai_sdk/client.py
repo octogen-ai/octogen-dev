@@ -49,11 +49,6 @@ from octogen_ai_sdk.models import (
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
-    StartVoyageResult,
-    VoyageListResponse,
-    VoyageStartRequest,
-    VoyageStatus,
-    VoyageTask,
 )
 from octogen_ai_sdk.operations import OPERATIONS, resolve_operation_path
 
@@ -285,48 +280,6 @@ class OctogenClient:
             max_age_seconds=result.max_age_seconds,
         )
 
-    async def start_voyage(self, domain: str) -> StartVoyageResult:
-        """Start — or join — a voyage for a domain.
-
-        Voyages are shared per domain: when one is already running (or the
-        domain already has a live catalog) the caller joins it and no quota is
-        consumed. :attr:`StartVoyageResult.created` says which happened.
-        Voyages run for hours to days; poll :meth:`get_voyage` every five
-        minutes or slower.
-        """
-        request = VoyageStartRequest(domain=domain)
-        response = await self._request(
-            "startVoyage",
-            json=request.model_dump(mode="json", by_alias=True, exclude_none=True),
-        )
-        return StartVoyageResult(
-            task=VoyageTask.model_validate(_decode_json(response)),
-            created=response.status_code == 202,
-        )
-
-    async def list_voyages(
-        self,
-        *,
-        status: VoyageStatus | str | None = None,
-        cursor: str | None = None,
-        limit: int | None = None,
-    ) -> VoyageListResponse:
-        """List this organization's voyages, newest first."""
-        data = await self._json(
-            "listVoyages",
-            params={"status": status, "cursor": cursor, "limit": limit},
-        )
-        return VoyageListResponse.model_validate(data)
-
-    async def get_voyage(self, task_id: str) -> VoyageTask:
-        """Poll one voyage.
-
-        A task belonging to another organization is reported as ``404
-        voyage_not_found``, indistinguishable from one that does not exist.
-        """
-        data = await self._json("getVoyage", path_params={"task_id": task_id})
-        return VoyageTask.model_validate(data)
-
     async def search_products(
         self,
         *,
@@ -547,7 +500,7 @@ class OctogenClient:
         cannot reach a route the published contract does not define without
         ``tests/contract`` failing. Callers that only want the decoded body use
         :meth:`_json`; the ones that need a status code or a header — the
-        ``202``/``200`` split on ``startVoyage``, the ``ETag`` on
+        ``ETag`` on
         ``listDomains`` — use this.
         """
         operation = OPERATIONS[operation_id]

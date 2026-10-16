@@ -52,9 +52,8 @@ cross-field validation.
 The public CLI overview lives in `octogen-ai/mintlify-docs`, at
 `cli/overview.mdx`, and links to this repository's CLI directory for the complete
 command reference. This change makes [that linked reference](REFERENCE.md)
-generated from the actual help renderer. The overview remains editorial;
-branding and Voyager retirement belong to their concurrent projects. Local
-README shell examples are checked against the actual command parser.
+generated from the actual help renderer. The overview remains editorial.
+Local README shell examples are checked against the actual command parser.
 
 ## Verification and release order
 
@@ -79,10 +78,10 @@ README shell examples are checked against the actual command parser.
    published version and both executable names, then promote its dist-tag only
    under the existing migration/release policy. PR merge is not publication.
 
-The current published contract still includes Voyage. This PR does not retire
-or expand it. The retirement project must remove its public operations and CLI
-bindings together when refreshing this snapshot; stale mappings intentionally
-fail. Sequence/rebase against that change rather than suppressing the guard.
+Customer Voyage operations and CLI bindings are retired together in this
+snapshot. Deploy the companion Platform API and publish its OpenAPI before
+releasing these packages; the published-contract check remains a rollout gate.
+Stale mappings intentionally fail and must not be suppressed.
 
 Negative tests mutate operations, fields, requiredness, types, enums, bounds,
 defaults and descriptions. They also verify that unsupported schema keywords

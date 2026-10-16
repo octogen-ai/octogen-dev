@@ -22,7 +22,6 @@ import { resolveCommand } from "./resolve.js";
 import { searchCommand } from "./search.js";
 import { similarCommand } from "./similar.js";
 import { statusCommand } from "./status.js";
-import { voyageCommand, voyageListCommand, voyageStatusCommand } from "./voyage.js";
 
 /**
  * Every command, in the order `--help` lists them: onboarding and the
@@ -36,9 +35,6 @@ export const ALL_COMMANDS = [
   searchCommand,
   similarCommand,
   resolveCommand,
-  voyageCommand,
-  voyageStatusCommand,
-  voyageListCommand,
   apiCommand,
 ] as const;
 

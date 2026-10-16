@@ -21,7 +21,6 @@ type LookupRequest = components["schemas"]["ProgrammaticProductLookupRequest"];
 type SearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
 type MoreLikeThisRequest = components["schemas"]["ProgrammaticMoreLikeThisRequest"];
 type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
-type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
@@ -123,21 +122,9 @@ export const RESOLVE_FIELDS = {
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
-// ── POST /voyage ───────────────────────────────────────────────────────────
-
-export const VOYAGE_START_FIELDS = {
-  domain: { flag: "<url|domain> (positional)" },
-} satisfies FieldMap<VoyageStartRequest>;
-
-/** Query and path bindings use the same generated parameter schema. */
-export const VOYAGE_LIST_FIELDS = {
-  cursor: { flag: "--cursor" },
-  limit: { flag: "--limit" },
-  status: { flag: "--status" },
-} satisfies Record<string, Binding>;
-export const VOYAGE_STATUS_FIELDS = {
-  task_id: { flag: "<task_id>", sdkName: "taskId" },
-};
+/**
+ * Every field map, including operations with no request fields.
+ */
 export const FIELD_MAPS: Readonly<
   Record<string, Readonly<Record<string, FieldBinding>>>
 > = Object.freeze({
@@ -145,9 +132,6 @@ export const FIELD_MAPS: Readonly<
   moreLikeThisProducts: SIMILAR_FIELDS,
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
-  startVoyage: VOYAGE_START_FIELDS,
-  listVoyages: VOYAGE_LIST_FIELDS,
-  getVoyage: VOYAGE_STATUS_FIELDS,
   getMe: {},
   listDomains: {},
 });

@@ -43,19 +43,21 @@ function requestBodyJson(call: FetchCall | undefined): unknown {
 
 describe("resolveOperationPath", () => {
   it("substitutes and percent-encodes path parameters", () => {
-    expect(resolveOperationPath("/voyage/{task_id}", { task_id: "task-1/../x" })).toBe(
-      "/voyage/task-1%2F..%2Fx",
-    );
+    expect(
+      resolveOperationPath("/coverage/url-lists/{urlListId}", {
+        urlListId: "task-1/../x",
+      }),
+    ).toBe("/coverage/url-lists/task-1%2F..%2Fx");
     expect(resolveOperationPath("/domains")).toBe("/domains");
   });
 
   it("refuses a missing or blank path parameter", () => {
-    expect(() => resolveOperationPath("/voyage/{task_id}", {})).toThrow(
-      "task_id is required",
+    expect(() => resolveOperationPath("/coverage/url-lists/{urlListId}", {})).toThrow(
+      "urlListId is required",
     );
-    expect(() => resolveOperationPath("/voyage/{task_id}", { task_id: "   " })).toThrow(
-      "task_id is required",
-    );
+    expect(() =>
+      resolveOperationPath("/coverage/url-lists/{urlListId}", { urlListId: "   " }),
+    ).toThrow("urlListId is required");
   });
 });
 
@@ -70,17 +72,7 @@ describe("OctogenClient#getMe", () => {
         type: "catalog_partner",
       },
       key: { id: "3f9c1a2b", prefix: "octo_live_3f9c1a2b4d", source: "coding_agent" },
-      quotas: {
-        voyage: {
-          concurrent: { limit: 2, used: 0 },
-          monthly: {
-            limit: 25,
-            used: 3,
-            periodStart: "2026-08-01",
-            resetsAt: "2026-09-01T00:00:00Z",
-          },
-        },
-      },
+      quotas: {},
       rateLimit: { limit: 3000, remaining: 2998, resetAt: "2026-08-20T14:31:00Z" },
     });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
@@ -93,7 +85,7 @@ describe("OctogenClient#getMe", () => {
     expect(me.organization?.slug).toBe("acme-co");
     expect(me.key?.prefix).toBe("octo_live_3f9c1a2b4d");
     expect(me.key?.source).toBe("coding_agent");
-    expect(me.quotas?.voyage?.monthly.limit).toBe(25);
+    expect(me.quotas).toEqual({});
     expect(me.rateLimit?.remaining).toBe(2998);
   });
 
@@ -156,95 +148,6 @@ describe("OctogenClient#resolveProductFromHtml", () => {
     await expect(client.resolveProductFromHtml({ html: "" })).rejects.toThrow(
       "html is required",
     );
-    expect(calls).toHaveLength(0);
-  });
-});
-
-describe("OctogenClient voyages", () => {
-  const TASK = {
-    taskId: "task-1",
-    domain: "shop.example",
-    status: "running",
-    phase: "sampling_products",
-    phaseLabel: "Sampling products",
-    progressPercent: 40,
-  };
-
-  it("reports 202 as a fresh dispatch that consumed quota", async () => {
-    const { calls, fetchMock } = createFetchMock(
-      { ...TASK, status: "queued", phase: "discovering_site", progressPercent: 5 },
-      { status: 202 },
-    );
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    const started = await client.startVoyage("https://www.shop.example/collections/x");
-
-    expect(calls[0]?.input).toBe(`${BASE_URL}/voyage`);
-    expect(requestBodyJson(calls[0])).toEqual({
-      domain: "https://www.shop.example/collections/x",
-    });
-    expect(started.created).toBe(true);
-    expect(started.task.taskId).toBe("task-1");
-  });
-
-  it("reports 200 as joining an in-flight voyage, no quota consumed", async () => {
-    const { fetchMock } = createFetchMock(TASK, { status: 200 });
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    const started = await client.startVoyage("shop.example");
-
-    expect(started.created).toBe(false);
-    expect(started.task.status).toBe("running");
-  });
-
-  it("rejects an empty domain before making a request", async () => {
-    const { calls, fetchMock } = createFetchMock();
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    await expect(client.startVoyage("")).rejects.toThrow("domain is required");
-    expect(calls).toHaveLength(0);
-  });
-
-  it("lists voyages with the status filter and pagination", async () => {
-    const { calls, fetchMock } = createFetchMock({
-      items: [TASK],
-      nextCursor: "cursor-2",
-      quotas: {
-        concurrent: { limit: 2, used: 1 },
-        monthly: { limit: 25, used: 3 },
-      },
-    });
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    const page = await client.listVoyages({ status: "running", limit: 10 });
-
-    expect(calls[0]?.input).toBe(`${BASE_URL}/voyage?limit=10&status=running`);
-    expect(page.items[0]?.taskId).toBe("task-1");
-    expect(page.nextCursor).toBe("cursor-2");
-    expect(page.quotas?.concurrent.used).toBe(1);
-  });
-
-  it("polls one voyage by task id", async () => {
-    const { calls, fetchMock } = createFetchMock({
-      ...TASK,
-      status: "completed",
-      phase: "complete",
-      progressPercent: 100,
-      result: { catalog: "shop_example", productCount: 1420 },
-    });
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    const task = await client.getVoyage("task-1");
-
-    expect(calls[0]?.input).toBe(`${BASE_URL}/voyage/task-1`);
-    expect(task.result?.catalog).toBe("shop_example");
-  });
-
-  it("refuses a blank task id before making a request", async () => {
-    const { calls, fetchMock } = createFetchMock();
-    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
-
-    await expect(client.getVoyage("  ")).rejects.toThrow("task_id is required");
     expect(calls).toHaveLength(0);
   });
 });

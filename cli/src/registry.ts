@@ -11,7 +11,7 @@ import type { ExitCode } from "./exit.js";
 import type { CommandContext } from "./context.js";
 
 export interface CommandSpec {
-  /** How the command is invoked, e.g. `"voyage status"`. */
+  /** How the command is invoked, e.g. `"status"`. */
   name: string;
   summary: string;
   /** The usage line, without the leading `storerouter`. */

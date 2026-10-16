@@ -44,11 +44,8 @@ languages:
 ```text
 published operations with no SDK method:
   getMe (GET /me)
-  getVoyage (GET /voyage/{task_id})
   listDomains (GET /domains)
-  listVoyages (GET /voyage)
   resolveProductFromHtml (POST /products/resolve-from-html)
-  startVoyage (POST /voyage)
 
 SDK methods naming an operation the contract does not publish:
   recrawlProducts (POST /products/recrawl)

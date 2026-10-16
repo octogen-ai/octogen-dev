@@ -145,25 +145,6 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}"
     },
-    "getVoyage": {
-      "body": {
-        "properties": {},
-        "type": "object"
-      },
-      "method": "GET",
-      "parameters": [
-        {
-          "in": "path",
-          "name": "task_id",
-          "required": true,
-          "schema": {
-            "title": "Task Id",
-            "type": "string"
-          }
-        }
-      ],
-      "path": "/voyage/{task_id}"
-    },
     "listDomains": {
       "body": {
         "properties": {},
@@ -261,72 +242,6 @@ export const PUBLIC_CONTRACT = {
         }
       ],
       "path": "/coverage/url-lists"
-    },
-    "listVoyages": {
-      "body": {
-        "properties": {},
-        "type": "object"
-      },
-      "method": "GET",
-      "parameters": [
-        {
-          "description": "Filter by public status.",
-          "in": "query",
-          "name": "status",
-          "required": false,
-          "schema": {
-            "anyOf": [
-              {
-                "enum": [
-                  "queued",
-                  "running",
-                  "in_review",
-                  "completed",
-                  "failed",
-                  "cancelled"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Filter by public status.",
-            "title": "Status"
-          }
-        },
-        {
-          "description": "Opaque page cursor.",
-          "in": "query",
-          "name": "cursor",
-          "required": false,
-          "schema": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Opaque page cursor.",
-            "title": "Cursor"
-          }
-        },
-        {
-          "in": "query",
-          "name": "limit",
-          "required": false,
-          "schema": {
-            "default": 50,
-            "maximum": 100,
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
-          }
-        }
-      ],
-      "path": "/voyage"
     },
     "lookupProduct": {
       "body": {
@@ -1056,31 +971,8 @@ export const PUBLIC_CONTRACT = {
       "method": "POST",
       "parameters": [],
       "path": "/products/search"
-    },
-    "startVoyage": {
-      "body": {
-        "additionalProperties": false,
-        "description": "Body for ``POST /v1/voyage``. ``domain`` only — pipeline profile, seed\nURLs, and review mode are server-side policy, not caller-controlled.",
-        "properties": {
-          "domain": {
-            "description": "Registrable domain or full URL. The server normalizes it (lowercase; scheme, path, port, and leading `www.` stripped) and echoes the normalized form back as `domain`.",
-            "maxLength": 2048,
-            "minLength": 1,
-            "title": "Domain",
-            "type": "string"
-          }
-        },
-        "required": [
-          "domain"
-        ],
-        "title": "VoyageStartRequest",
-        "type": "object"
-      },
-      "method": "POST",
-      "parameters": [],
-      "path": "/voyage"
     }
   },
-  "sha256": "04f3cd9289001e1674c724759a1ce765353ed0cfbbed67145550fccd5a43d6ba",
+  "sha256": "66afee37b6364c6d90ef30a302ad1fb1dea4c4f5aca35612597412134806a6a7",
   "version": "1.0.0"
 } as const;
