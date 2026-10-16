@@ -86,6 +86,12 @@ worker next time. Host transports must honor their `AbortSignal`; late results
 are ignored even if they do not. `timeoutMs` sets a whole-run deadline, capped at
 two minutes; the default is two minutes. The SDK's `--timeout` remains per request.
 
+Pass `terminal: true` when the host renders stdout as a terminal. The final
+pipeline stage, unless redirected, then sees a TTY and prints the CLI's human
+format, as an installed CLI does in a shell. Piped and redirected stages, and
+any stage given `--json`, keep the one-line JSON envelope. The default (`false`)
+keeps every stage non-TTY, so stdout is always JSON.
+
 Idle workers retain loaded WASM modules. Each CLI stage gets a fresh QuickJS
 context/runtime with a 128 MiB guest allocation limit, 512 KiB stack limit, CPU
 interrupt deadline, promise job pump, and deterministic handle disposal. Network,

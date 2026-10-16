@@ -16,6 +16,7 @@ export interface RunMessage {
   type: "run";
   runId: string;
   line: string;
+  terminal?: boolean;
   files: Record<string, string>;
 }
 export interface ResponseMessage {
@@ -64,15 +65,17 @@ self.onmessage = (event: MessageEvent<RunMessage | ResponseMessage>) => {
       const module = await engine;
       const result = await executeShell({
         line: message.line,
+        terminal: message.terminal === true,
         files,
         signal,
         runId,
         emit: send,
-        cli: (argv, stdin, emit) =>
+        cli: (argv, stdin, emit, isTty) =>
           executeWasm({
             module,
             argv,
             stdin,
+            isTty,
             files,
             signal,
             runId,

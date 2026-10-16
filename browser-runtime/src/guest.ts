@@ -128,6 +128,7 @@ const input = JSON.parse(__input) as {
   cwd: string;
   env: Record<string, string>;
   stdin: string;
+  isTty: boolean;
   version: CliHost["version"];
 };
 const host: CliHost = {
@@ -152,7 +153,7 @@ Object.assign(globalThis, {
     host,
     cwd: input.cwd,
     env: input.env,
-    isTty: false,
+    isTty: input.isTty,
     readStdin: () => input.stdin,
     fetch: fetchBridge as unknown as typeof fetch,
     stdout: (text) => {

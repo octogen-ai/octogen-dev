@@ -9,23 +9,25 @@ import { nodeHost } from "../../cli/src/node-host.js";
 import type { ExecutionEvent, TransportRequest } from "../src/protocol.js";
 const engine = loadEngine();
 const jq = loadJq();
-async function shell(line: string, files = new VirtualFiles()) {
+async function shell(line: string, files = new VirtualFiles(), terminal = false) {
   const events: ExecutionEvent[] = [];
   const signal = new AbortController().signal;
   let calls = 0;
   const result = await executeShell({
     line,
+    terminal,
     files,
     signal,
     runId: "shell",
     emit: (event) => {
       events.push(event);
     },
-    cli: async (argv, stdin, emit) =>
+    cli: async (argv, stdin, emit, isTty) =>
       executeWasm({
         module: await engine,
         argv,
         stdin,
+        isTty,
         emit,
         files,
         signal,
@@ -51,6 +53,35 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     ]);
     expect(result.calls).toBe(1);
     expect(result.events.filter((event) => event.type === "result")).toHaveLength(1);
+  });
+  it("terminal hosts give only the final unredirected stage a TTY", async () => {
+    const files = new VirtualFiles();
+    const human = await shell(
+      "storerouter search 'linen dress' --limit 8",
+      files,
+      true,
+    );
+    expect(human.code).toBe(0);
+    expect(human.stdout).toContain('results for "linen dress"');
+    expect(() => {
+      JSON.parse(human.stdout);
+    }).toThrow();
+    const piped = await shell(
+      "storerouter search 'linen dress' --limit 8 | jq '.count'",
+      files,
+      true,
+    );
+    expect(piped.stdout).toBe("1");
+    await shell("storerouter search 'linen dress' --limit 8 > found.json", files, true);
+    expect(JSON.parse(files.read("/session/found.json"))).toMatchObject({ count: 1 });
+    const flagged = await shell(
+      "storerouter search 'linen dress' --limit 8 --json",
+      files,
+      true,
+    );
+    expect(JSON.parse(flagged.stdout)).toMatchObject({ count: 1 });
+    const headless = await shell("storerouter search 'linen dress' --limit 8", files);
+    expect(JSON.parse(headless.stdout)).toMatchObject({ count: 1 });
   });
   it("literal requested .data.items respects the existing flattened envelope", async () => {
     const result = await shell(

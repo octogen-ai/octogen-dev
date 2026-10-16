@@ -16,6 +16,12 @@ export interface BrowserRuntimeOptions {
   onEvent?: (event: ExecutionEvent) => void;
   /** Supply a worker from your own bundler. The default is Vite-compatible. */
   createWorker?: () => Worker;
+  /**
+   * The host renders stdout as a terminal. The final stage, when it is not
+   * redirected, then sees a TTY and prints the CLI's human format, exactly as an
+   * installed CLI does in a shell; piped and redirected stages keep JSON.
+   */
+  terminal?: boolean;
   /** Hard deadline also terminates synchronous jq programs; maximum two minutes. */
   timeoutMs?: number;
 }
@@ -168,6 +174,7 @@ export class BrowserRuntime {
         type: "run",
         runId: id,
         line,
+        terminal: this.options.terminal === true,
         files: this.files.snapshot(),
       } satisfies RunMessage);
     });
