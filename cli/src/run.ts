@@ -37,11 +37,7 @@ export interface RunOptions {
 }
 
 /**
- * Longest command name first, so `voyage status` is matched before `voyage`.
- *
- * Two-word commands are the reason this is not a plain map lookup: `octogen
- * voyage list` and `octogen voyage <url>` differ only in whether the second
- * word is a subcommand, and a URL is never one.
+ * Match multi-word commands before their shorter prefixes.
  */
 function matchCommand(
   positionals: readonly string[],

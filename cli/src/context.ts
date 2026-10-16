@@ -13,7 +13,7 @@ import type { ApiContext } from "./client.js";
 import type { Writer } from "./output.js";
 
 export interface CommandContext {
-  /** The command as invoked, e.g. `"voyage status"`. */
+  /** The command as invoked, e.g. `"status"`. */
   command: string;
   args: Args;
   writer: Writer;

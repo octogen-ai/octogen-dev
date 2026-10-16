@@ -64,7 +64,6 @@ const COVERAGE: { schema: string; map: string }[] = [
   { map: "searchProducts", schema: "ProgrammaticProductSearchRequest" },
   { map: "moreLikeThisProducts", schema: "ProgrammaticMoreLikeThisRequest" },
   { map: "resolveProductFromHtml", schema: "ProgrammaticResolveFromHtmlRequest" },
-  { map: "startVoyage", schema: "VoyageStartRequest" },
 ];
 
 describe("every published request field is accounted for", () => {
@@ -120,7 +119,6 @@ describe("every published request field is accounted for", () => {
       moreLikeThisProducts: "similar",
       resolveProductFromHtml: "resolve",
       searchProducts: "search",
-      startVoyage: "voyage",
     };
 
     for (const [map, fields] of Object.entries(FIELD_MAPS)) {

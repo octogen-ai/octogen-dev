@@ -9,6 +9,7 @@ from contextlib import contextmanager
 import httpx
 import pytest
 import respx
+
 from octogen_ai_sdk import (
     API_KEY_ENV_VAR,
     DEPRECATED_API_KEY_ENV_VAR,
@@ -41,18 +42,20 @@ TASK_JSON = {
 
 def test_resolve_operation_path_substitutes_and_encodes() -> None:
     assert (
-        resolve_operation_path("/voyage/{task_id}", {"task_id": "task-1/../x"})
-        == "/voyage/task-1%2F..%2Fx"
+        resolve_operation_path(
+            "/coverage/url-lists/{urlListId}", {"urlListId": "task-1/../x"}
+        )
+        == "/coverage/url-lists/task-1%2F..%2Fx"
     )
     assert resolve_operation_path("/domains") == "/domains"
 
 
-@pytest.mark.parametrize("path_params", [{}, {"task_id": "   "}])
+@pytest.mark.parametrize("path_params", [{}, {"urlListId": "   "}])
 def test_resolve_operation_path_refuses_a_blank_parameter(
     path_params: dict[str, str],
 ) -> None:
-    with pytest.raises(ValueError, match="task_id"):
-        resolve_operation_path("/voyage/{task_id}", path_params)
+    with pytest.raises(ValueError, match="urlListId"):
+        resolve_operation_path("/coverage/url-lists/{urlListId}", path_params)
 
 
 def test_operations_declare_distinct_verb_and_path_pairs() -> None:
@@ -78,17 +81,7 @@ async def test_get_me_returns_the_callers_identity() -> None:
                     "prefix": "octo_live_3f9c1a2b4d",
                     "source": "coding_agent",
                 },
-                "quotas": {
-                    "voyage": {
-                        "concurrent": {"limit": 2, "used": 0},
-                        "monthly": {
-                            "limit": 25,
-                            "used": 3,
-                            "periodStart": "2026-08-01",
-                            "resetsAt": "2026-09-01T00:00:00Z",
-                        },
-                    }
-                },
+                "quotas": {},
                 "rateLimit": {
                     "limit": 3000,
                     "remaining": 2998,
@@ -108,8 +101,7 @@ async def test_get_me_returns_the_callers_identity() -> None:
     assert me.key.prefix == "octo_live_3f9c1a2b4d"
     assert me.key.source == "coding_agent"
     assert me.quotas is not None
-    assert me.quotas.voyage is not None
-    assert me.quotas.voyage.monthly.limit == 25
+    assert me.quotas.model_dump() == {}
     assert me.rate_limit is not None
     assert me.rate_limit.remaining == 2998
 
@@ -191,108 +183,6 @@ async def test_resolve_product_from_html_rejects_empty_html() -> None:
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(ValueError):
             await client.resolve_product_from_html(html="")
-
-
-@respx.mock
-async def test_start_voyage_reports_202_as_a_fresh_dispatch() -> None:
-    route = respx.post(f"{BASE_URL}/voyage").mock(
-        return_value=httpx.Response(
-            202,
-            json={
-                **TASK_JSON,
-                "status": "queued",
-                "phase": "discovering_site",
-                "progressPercent": 5,
-            },
-        )
-    )
-
-    async with OctogenClient(api_key="key") as client:
-        started = await client.start_voyage("https://www.shop.example/collections/x")
-
-    assert route.calls.last.request.read() == (
-        b'{"domain":"https://www.shop.example/collections/x"}'
-    )
-    assert started.created is True
-    assert started.task.task_id == "task-1"
-
-
-@respx.mock
-async def test_start_voyage_reports_200_as_joining_an_in_flight_voyage() -> None:
-    respx.post(f"{BASE_URL}/voyage").mock(
-        return_value=httpx.Response(200, json=TASK_JSON)
-    )
-
-    async with OctogenClient(api_key="key") as client:
-        started = await client.start_voyage("shop.example")
-
-    # Joining costs no quota — the caller needs to be able to tell.
-    assert started.created is False
-    assert started.task.status == "running"
-
-
-async def test_start_voyage_rejects_an_empty_domain() -> None:
-    async with OctogenClient(api_key="key") as client:
-        with pytest.raises(ValueError):
-            await client.start_voyage("")
-
-
-@respx.mock
-async def test_list_voyages_sends_the_status_filter_and_pagination() -> None:
-    route = respx.get(f"{BASE_URL}/voyage").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                "items": [TASK_JSON],
-                "nextCursor": "cursor-2",
-                "quotas": {
-                    "concurrent": {"limit": 2, "used": 1},
-                    "monthly": {"limit": 25, "used": 3},
-                },
-            },
-        )
-    )
-
-    async with OctogenClient(api_key="key") as client:
-        page = await client.list_voyages(status="running", limit=10)
-
-    assert dict(route.calls.last.request.url.params) == {
-        "status": "running",
-        "limit": "10",
-    }
-    assert page.items[0].task_id == "task-1"
-    assert page.next_cursor == "cursor-2"
-    assert page.quotas is not None
-    assert page.quotas.concurrent.used == 1
-
-
-@respx.mock
-async def test_get_voyage_polls_one_task() -> None:
-    route = respx.get(f"{BASE_URL}/voyage/task-1").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                **TASK_JSON,
-                "status": "completed",
-                "phase": "complete",
-                "progressPercent": 100,
-                "result": {"catalog": "shop_example", "productCount": 1420},
-            },
-        )
-    )
-
-    async with OctogenClient(api_key="key") as client:
-        task = await client.get_voyage("task-1")
-
-    assert route.called
-    assert task.result is not None
-    assert task.result.catalog == "shop_example"
-
-
-async def test_get_voyage_refuses_a_blank_task_id() -> None:
-    async with OctogenClient(api_key="key") as client:
-        with pytest.raises(ValueError, match="task_id"):
-            await client.get_voyage("  ")
 
 
 @pytest.mark.parametrize(
@@ -406,3 +296,9 @@ async def test_lookup_methods_accept_current_resolution_metadata(
     assert result.resolution.method == "catalog_extractor"
     assert result.resolution.rendered is None
     assert result.resolution.missing_fields is None
+
+
+def test_retired_voyage_methods_are_not_exposed() -> None:
+    for name in ("start_voyage", "list_voyages", "get_voyage"):
+        assert not hasattr(OctogenClient, name)
+    assert not any("voyage" in operation.path for operation in OPERATIONS.values())

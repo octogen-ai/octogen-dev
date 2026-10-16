@@ -42,15 +42,14 @@ control is consistent across surfaces.
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
 SDK — `getMe`, `listDomains`, `resolveProductFromHtml`,
-`startVoyage`, `listVoyages`, `getVoyage`, and the eight
+and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
-| Operation                                      | What it is for                                                        |
-| ---------------------------------------------- | --------------------------------------------------------------------- |
-| `GET /domains`                                 | Every covered host. Check this before `lookup` — see the note below.  |
-| `GET /me`                                      | Your organization, key id and provenance, quotas, rate-limit posture. |
-| `POST /products/resolve-from-html`             | Resolve a product from HTML you already have. No index, no fetch.     |
-| `POST /voyage`, `GET /voyage`, `GET /voyage/…` | Build a catalog for a merchant not covered yet.                       |
+| Operation                          | What it is for                                                        |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `GET /domains`                     | Every covered host. Check this before `lookup` — see the note below.  |
+| `GET /me`                          | Your organization, key id and provenance, quotas, rate-limit posture. |
+| `POST /products/resolve-from-html` | Resolve a product from HTML you already have. No index, no fetch.     |
 
 > **`GET /domains` returns hosts normalized by the server** — lowercased, with a
 > leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
@@ -373,9 +372,9 @@ https://cdn.storerouter.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- All 18 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
+- All 15 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
   `moreLikeThisProducts`, `lookupProduct`,
-  `resolveProductFromHtml`, `startVoyage`, `listVoyages`, and `getVoyage`.
+  `resolveProductFromHtml`.
 - Full request and response schemas for code generation.
 - Example error bodies for auth, authorization, missing-catalog,
   missing-product, and validation failures.

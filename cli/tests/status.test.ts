@@ -30,6 +30,18 @@ describe("the auth probe", () => {
     expect((result.json()["api"] as Record<string, unknown>)["probe"]).toBe("GET /me");
   });
 
+  it("does not fall back to retired task routes when /me is unavailable", async () => {
+    const result = await runCli({
+      argv: ["status"],
+      env: KEYED,
+      routes: { "GET /me": { body: { detail: "Not Found" }, status: 404 } },
+    });
+    expect(result.exitCode).not.toBe(ExitCode.Success);
+    expect(result.requests.map((request) => request.url)).toEqual([
+      "https://api.octogen.ai/v1/me",
+    ]);
+  });
+
   it("never calls /domains, even though the coverage cache would like it to", async () => {
     // `status` mutates nothing, including the coverage cache: it is the one
     // command safe to run in a loop.
@@ -43,36 +55,7 @@ describe("the auth probe", () => {
     ]);
   });
 
-  it("falls back to GET /voyage?limit=1 when /me is not deployed", async () => {
-    const result = await runCli({
-      argv: ["status"],
-      env: KEYED,
-      routes: {
-        "GET /me": { body: { detail: "Not Found" }, status: 404 },
-        "GET /voyage": {
-          body: {
-            items: [],
-            quotas: {
-              concurrent: { limit: 2, used: 0 },
-              monthly: { limit: 25, used: 1 },
-            },
-          },
-        },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Success);
-    expect((result.json()["api"] as Record<string, unknown>)["probe"]).toBe(
-      "GET /voyage?limit=1",
-    );
-    const problems = result.json()["problems"] as { code: string }[];
-    expect(problems.map((problem) => problem.code)).toContain("me_unavailable");
-    // Quota still comes back: it rides that same response.
-    expect(result.json()["quota"]).toMatchObject({
-      voyage: { monthly: { limit: 25, used: 1 } },
-    });
-  });
-
-  it("does not fall back for a real failure — only for a 404", async () => {
+  it("does not fall back for a server failure", async () => {
     const result = await runCli({
       // --no-retry so this is one request rather than the three a 5xx earns.
       argv: ["status", "--no-retry"],
@@ -134,10 +117,6 @@ describe("the status envelope", () => {
 
     expect(body["quota"]).toEqual({
       rateLimit: { limit: 120, remaining: 118, resetAt: "2026-08-21T14:31:00Z" },
-      voyage: {
-        concurrent: { limit: 2, used: 0 },
-        monthly: { limit: 25, resetsAt: "2026-09-01T00:00:00Z", used: 3 },
-      },
     });
 
     expect(body["keyless"]).toEqual({ active: false, remaining: null });

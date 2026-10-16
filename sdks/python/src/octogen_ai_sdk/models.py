@@ -45,11 +45,6 @@ ProgrammaticProductSearchEffectiveQuery = (
     _contract.ProgrammaticProductSearchEffectiveQuery
 )
 ProgrammaticProductSearchRelaxation = _contract.ProgrammaticProductSearchRelaxation
-VoyageError = _contract.VoyageError
-VoyageListResponse = _contract.VoyageListResponse
-VoyageQuotas = _contract.VoyageQuotas
-VoyageResult = _contract.VoyageResult
-VoyageTask = _contract.VoyageTask
 
 
 class _ResponseModel(BaseModel):
@@ -283,17 +278,6 @@ class ProgrammaticResolveFromHtmlRequest(_RequestModel):
 
     html: str = Field(min_length=1, max_length=5_242_880)
     url: str | None = Field(default=None, min_length=1)
-
-
-class VoyageStartRequest(_RequestModel):
-    """Body for ``POST /v1/voyage``.
-
-    ``domain`` accepts a registrable domain or a full URL; the server
-    normalizes it (lowercase, with scheme, path, port, and leading ``www.``
-    stripped) and echoes the normalized form back.
-    """
-
-    domain: str = Field(min_length=1, max_length=2048)
 
 
 class ProgrammaticMoreLikeThisSource(_RequestModel):
@@ -712,26 +696,6 @@ class CoverageUrlListUrl(_ResponseModel):
 class CoverageUrlListUrlsPage(_ResponseModel):
     items: list[CoverageUrlListUrl]
     next_cursor: str | None = Field(default=None, alias="nextCursor")
-
-
-# ── Voyages (/v1/voyage) ─────────────────────────────────────────────────────
-
-VoyageStatus = Literal[
-    "queued", "running", "in_review", "completed", "failed", "cancelled"
-]
-
-
-class StartVoyageResult(_ResponseModel):
-    """The outcome of ``POST /v1/voyage``.
-
-    ``created`` is ``True`` when this call dispatched a new voyage (``202``,
-    quota consumed) and ``False`` when it joined one already running for the
-    domain (``200``, no quota consumed). Voyages are shared per domain, so
-    joining is the common case for a popular merchant.
-    """
-
-    task: VoyageTask
-    created: bool
 
 
 class ListDomainsResult(_ResponseModel):

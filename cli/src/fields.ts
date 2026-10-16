@@ -50,7 +50,6 @@ type LookupRequest = components["schemas"]["ProgrammaticProductLookupRequest"];
 type SearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
 type MoreLikeThisRequest = components["schemas"]["ProgrammaticMoreLikeThisRequest"];
 type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
-type VoyageStartRequest = components["schemas"]["VoyageStartRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
@@ -158,12 +157,6 @@ export const RESOLVE_FIELDS = {
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
-// ── POST /voyage ───────────────────────────────────────────────────────────
-
-export const VOYAGE_START_FIELDS = {
-  domain: { flag: "<url|domain> (positional)" },
-} satisfies FieldMap<VoyageStartRequest>;
-
 /**
  * Every field map, for the test that asserts each entry is either a flag or an
  * `unsupported` with a non-trivial reason.
@@ -175,5 +168,4 @@ export const FIELD_MAPS: Readonly<
   moreLikeThisProducts: SIMILAR_FIELDS,
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
-  startVoyage: VOYAGE_START_FIELDS,
 });

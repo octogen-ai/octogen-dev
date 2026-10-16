@@ -407,152 +407,6 @@ describe("octogen resolve", () => {
   });
 });
 
-describe("octogen voyage", () => {
-  const RUNNING = {
-    domain: "example.com",
-    phase: "discovering_site",
-    phaseLabel: "Discovering the site",
-    progressPercent: 5,
-    status: "running",
-    taskId: "task-1",
-  };
-  const DONE = {
-    ...RUNNING,
-    completedAt: "2026-08-21T12:00:00Z",
-    phase: "complete",
-    phaseLabel: "Complete",
-    progressPercent: 100,
-    result: { catalog: "example", productCount: 1234 },
-    status: "completed",
-  };
-
-  it("normalizes the domain server-side and reports whether quota was spent", async () => {
-    const result = await runCli({
-      argv: ["voyage", "https://www.example.com/collections/all"],
-      env: KEYED,
-      routes: { "POST /voyage": { body: RUNNING, status: 202 } },
-    });
-    expect(result.exitCode).toBe(ExitCode.Success);
-    expect(result.json()["created"]).toBe(true);
-    expect((result.requests[0]?.body as Record<string, unknown>)["domain"]).toBe(
-      "https://www.example.com/collections/all",
-    );
-  });
-
-  it("says a 200 joined an existing voyage and spent nothing", async () => {
-    const result = await runCli({
-      argv: ["voyage", "example.com"],
-      env: KEYED,
-      routes: { "POST /voyage": { body: RUNNING, status: 200 } },
-    });
-    expect(result.json()["created"]).toBe(false);
-    expect(result.stderr).toMatch(/No quota consumed/);
-  });
-
-  it("polls to completion under --wait", async () => {
-    const result = await runCli({
-      argv: ["voyage", "example.com", "--wait"],
-      env: KEYED,
-      routes: {
-        "GET /voyage/task-1": [{ body: RUNNING }, { body: DONE }],
-        "POST /voyage": { body: RUNNING, status: 202 },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Success);
-    expect(result.json()["timedOut"]).toBe(false);
-  });
-
-  it("exits 7 at the deadline, and says the voyage is unaffected", async () => {
-    const result = await runCli({
-      // One second: the first poll is already past it, so the deadline is
-      // reached without the fake clock needing to advance.
-      argv: ["voyage", "example.com", "--wait", "--wait-timeout", "0"],
-      env: KEYED,
-      routes: { "POST /voyage": { body: RUNNING, status: 202 } },
-    });
-    expect(result.exitCode).toBe(ExitCode.Partial);
-    const body = result.json();
-    expect(body["code"]).toBe("wait_deadline");
-    expect(body["message"]).toMatch(/voyage is unaffected/);
-    expect(body["message"]).toMatch(/octogen voyage status task-1/);
-  });
-
-  it("exits 1 when the voyage itself failed", async () => {
-    const result = await runCli({
-      argv: ["voyage", "example.com", "--wait"],
-      env: KEYED,
-      routes: {
-        "GET /voyage/task-1": {
-          body: {
-            ...RUNNING,
-            error: { code: "no_products", message: "found nothing to crawl" },
-            status: "failed",
-          },
-        },
-        "POST /voyage": { body: RUNNING, status: 202 },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Unexpected);
-    expect(result.json()["code"]).toBe("voyage_failed");
-  });
-
-  it("exits 6 for a task id this organization does not own", async () => {
-    const result = await runCli({
-      argv: ["voyage", "status", "task-nope"],
-      env: KEYED,
-      routes: {
-        "GET /voyage/task-nope": { body: { detail: "voyage_not_found" }, status: 404 },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.NoResult);
-    expect(result.json()["code"]).toBe("voyage_not_found");
-  });
-
-  it("lists voyages with the quota block, which lives only here and on /me", async () => {
-    const result = await runCli({
-      argv: ["voyage", "list"],
-      env: KEYED,
-      routes: {
-        "GET /voyage": {
-          body: {
-            items: [RUNNING],
-            nextCursor: null,
-            quotas: {
-              concurrent: { limit: 2, used: 1 },
-              monthly: { limit: 25, used: 3 },
-            },
-          },
-        },
-      },
-    });
-    expect(result.exitCode).toBe(ExitCode.Success);
-    expect(result.json()["quotas"]).toEqual({
-      concurrent: { limit: 2, used: 1 },
-      monthly: { limit: 25, used: 3 },
-    });
-  });
-
-  it("distinguishes `voyage list` from `voyage <domain>`", async () => {
-    const result = await runCli({
-      argv: ["voyage", "list"],
-      env: KEYED,
-      routes: { "GET /voyage": { body: { items: [RUNNING] } } },
-    });
-    // A POST would mean `list` was read as a domain to onboard.
-    expect(result.requests[0]?.method).toBe("GET");
-  });
-
-  it("exits 6 when the organization has no voyages", async () => {
-    const result = await runCli({
-      argv: ["voyage", "list"],
-      env: KEYED,
-      routes: { "GET /voyage": { body: { items: [], quotas: null } } },
-    });
-    expect(result.exitCode).toBe(ExitCode.NoResult);
-    expect(result.json()["code"]).toBe("no_voyages");
-  });
-});
-
 describe("octogen api", () => {
   it("issues the request verbatim, with no schema opinion", async () => {
     const result = await runCli({
@@ -626,4 +480,16 @@ it("does not recognize the removed refresh command or issue a request", async ()
   });
   expect(result.exitCode).not.toBe(ExitCode.Success);
   expect(result.requests).toEqual([]);
+});
+
+describe("retired commands", () => {
+  it.each([
+    ["voyage", "example.com"],
+    ["voyage", "list"],
+    ["voyage", "status", "task-1"],
+  ])("rejects %j without making requests", async (...argv) => {
+    const result = await runCli({ argv, routes: {} });
+    expect(result.exitCode).not.toBe(ExitCode.Success);
+    expect(result.requests).toEqual([]);
+  });
 });

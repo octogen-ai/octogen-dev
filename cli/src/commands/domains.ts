@@ -81,7 +81,7 @@ async function runDomains(context: CommandContext): Promise<ExitCode> {
       // rather than one that is present on a hit and absent on a miss.
       data: { catalogs: [], covered: false, source: provenance, url: check },
       message: `${check} is not covered: no catalog claims that host.`,
-      remediation: { command: `octogen voyage ${check}` },
+      remediation: { url: "https://storerouter.ai/contact" },
       serverAnswered: true,
     });
   }

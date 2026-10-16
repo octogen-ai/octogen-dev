@@ -102,9 +102,7 @@ describe("command coverage of the published operation set", () => {
   });
 
   it("has no command claiming an operation another command already owns for a different purpose", () => {
-    // `getVoyage` is deliberately shared: `voyage --wait` polls it and `voyage
-    // status` is it. Everything else should be claimed once, so an accidental
-    // duplicate command shows up here.
+    // Each operation is owned by one command.
     const counts = new Map<OperationId, number>();
     for (const command of ALL_COMMANDS) {
       for (const operationId of command.operations) {
@@ -115,7 +113,7 @@ describe("command coverage of the published operation set", () => {
       .filter(([, count]) => count > 1)
       .map(([operationId]) => operationId)
       .sort();
-    expect(shared).toEqual(["getVoyage", "listVoyages"]);
+    expect(shared).toEqual([]);
   });
 });
 

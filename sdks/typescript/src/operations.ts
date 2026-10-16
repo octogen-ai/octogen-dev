@@ -32,11 +32,9 @@ export const OPERATIONS = {
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
-  getVoyage: { method: "GET", path: "/voyage/{task_id}" },
   listDomains: { method: "GET", path: "/domains" },
   listUrlListUrls: { method: "GET", path: "/coverage/url-lists/{urlListId}/urls" },
   listUrlLists: { method: "GET", path: "/coverage/url-lists" },
-  listVoyages: { method: "GET", path: "/voyage" },
   lookupProduct: { method: "POST", path: "/products/lookup" },
   moreLikeThisProducts: { method: "POST", path: "/products/more-like-this" },
   parseProductAlias: { method: "POST", path: "/products/parse" },
@@ -46,7 +44,6 @@ export const OPERATIONS = {
   },
   resolveProductFromHtml: { method: "POST", path: "/products/resolve-from-html" },
   searchProducts: { method: "POST", path: "/products/search" },
-  startVoyage: { method: "POST", path: "/voyage" },
 } as const satisfies Record<string, OperationDefinition>;
 
 export type OperationId = keyof typeof OPERATIONS;

@@ -1,6 +1,6 @@
 # `@octogen-ai/cli`
 
-The Octogen CLI. Coverage, product lookup, search, and voyages from a terminal —
+The Octogen CLI. Coverage, product lookup, and search from a terminal —
 or from an agent, which is the caller this is actually designed for.
 
 > **Pre-release.** Published to the `@next` dist-tag only. `octogen init`,
@@ -134,19 +134,6 @@ curl -s https://example.com/p/1 | octogen resolve --base-url https://api.storero
 HTML comes from a file or stdin and **never from an argument**: the body cap is
 5 MiB, argv is the wrong channel for a payload that size, and a multi-megabyte
 argv entry in an agent transcript is its own problem.
-
-### `octogen voyage <url>`, `voyage status <task_id>`, `voyage list`
-
-```bash
-octogen voyage --base-url https://api.storerouter.ai/v1 https://newmerchant.example --wait --wait-timeout 1800
-octogen voyage status --base-url https://api.storerouter.ai/v1 task_01H...
-octogen voyage list --base-url https://api.storerouter.ai/v1 --status running
-```
-
-Voyages are shared per domain: starting one that is already running joins it and
-consumes no quota, and `created` says which happened. With `--wait`: exit `0`
-completed, `7` still running at the deadline (the voyage is unaffected — resume
-with `voyage status`), `1` failed or cancelled.
 
 ### `octogen api <METHOD> <path>` — the escape hatch
 

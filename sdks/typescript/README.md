@@ -54,9 +54,7 @@ if (coverage.isHostCovered(url)) {
   const product = await client.lookupProduct(url);
   console.log(product.product.title);
 } else {
-  // Not covered yet — this is what `startVoyage` is for.
-  const { task, created } = await client.startVoyage(url);
-  console.log(task.taskId, created ? "dispatched" : "joined an existing voyage");
+  console.log("Contact https://storerouter.ai/contact to discuss coverage.");
 }
 ```
 
@@ -99,10 +97,7 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   the request field is `url`.
 - `resolveProductFromHtml(params)` resolves a product from page HTML you already
   have — no index read, no outbound fetch.
-- `startVoyage(domain)`, `listVoyages(params?)`, and `getVoyage(taskId)` build a
-  catalog for a merchant Octogen does not cover yet. Voyages are shared per
-  domain: `StartVoyageResult.created` is `false` when you joined one already
-  running, which consumes no quota.
+
 - `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
   `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`
   manage coverage URL lists — named sets of product URLs that Octogen
@@ -126,13 +121,6 @@ const similar = await client.moreLikeThisProducts({
 for (const product of similar.items) {
   console.log(product.title, product.productUrl);
 }
-```
-
-```ts
-// Poll a voyage until its catalog is live. Voyages run for hours to days.
-const { task } = await client.startVoyage("shop.example");
-const progress = await client.getVoyage(task.taskId);
-console.log(progress.phaseLabel, progress.progressPercent);
 ```
 
 ```ts
