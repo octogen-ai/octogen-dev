@@ -13,6 +13,8 @@ export interface EngineOptions {
   module?: QuickJSWASMModule;
   argv: string[];
   keylessNotice?: string;
+  /** Commands the CLI refuses in this host; see CliHost.unavailableCommands. */
+  unavailableCommands?: string[];
   cwd?: string;
   env?: Record<string, string>;
   stdin?: string;
@@ -205,6 +207,7 @@ export async function executeWasm(options: EngineOptions): Promise<ExecutionResu
       JSON.stringify({
         argv: options.argv,
         keylessNotice: options.keylessNotice,
+        unavailableCommands: options.unavailableCommands,
         cwd: options.cwd ?? "/session",
         env: options.env ?? { STOREROUTER_CACHE_DIR: "/cache" },
         stdin: options.stdin ?? "",

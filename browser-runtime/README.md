@@ -131,8 +131,7 @@ applies `withDemoPolicy` before calling the supplied transport. It uses SDK
 or schema registry. It allows only search, lookup/parse, similar, and domains on
 exact `https://api.storerouter.ai/v1` paths and methods; it denies arbitrary
 destinations, query smuggling, unknown body fields, mutation/admin routes and
-lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Raw `api` may
-call these same approved operations; it cannot escape the policy. Browser headers
+lookup auto/refresh. Lookup needs `--resolution-mode index_only`. The browser profile refuses raw `api` outright (see below). Browser headers
 are reduced to Accept/Content-Type/If-None-Match; Authorization and User-Agent
 are never forwarded. Policy failures use existing CLI network failure semantics.
 
@@ -150,9 +149,12 @@ installed CLI's legacy trial notice with a host-transport notice.
 ## Bounded shell and files
 
 Supported executables: `storerouter`, compatibility `octogen`, genuine `jq`,
-`cat`, `echo`. CLI `parse` remains the existing `lookup` alias. All existing CLI
-commands remain in shared help; hosts explicitly refuse disallowed capabilities
-at the network boundary. No Voyager surface is added.
+`cat`, `echo`. CLI `parse` remains the existing `lookup` alias. The browser
+profile refuses `storerouter api` and `storerouter status` before any request
+and leaves them out of root help: its server proxy holds the host's own key, and
+`status` reports that organization while `api` returns its raw envelope and
+rate-limit headers. Other disallowed capabilities are refused at the network
+boundary. No Voyager surface is added.
 
 - Single/double quoted strings, backslash escapes, quoted empty arguments.
 - At most eight buffered pipeline stages, `<`, `>`, `>>`. Relative files resolve

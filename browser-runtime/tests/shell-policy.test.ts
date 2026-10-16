@@ -104,6 +104,44 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     expect(silent.code).toBe(0);
     expect(silent.stderr).toBe("");
   });
+  it("hosts can refuse commands before any request and hide them from help", async () => {
+    let calls = 0;
+    const run = async (argv: string[]) =>
+      executeWasm({
+        module: await engine,
+        argv,
+        files: new VirtualFiles(),
+        signal: new AbortController().signal,
+        runId: "unavailable",
+        version: nodeHost.version,
+        emit: () => undefined,
+        unavailableCommands: ["api", "status"],
+        transport: withDemoPolicy((request, signal) => {
+          calls++;
+          return fixtureTransport(request, signal);
+        }),
+      });
+    const api = await run([
+      "api",
+      "POST",
+      "/products/search",
+      "--data",
+      '{"q":"dress"}',
+    ]);
+    expect(api.code).toBe(2);
+    // Without a TTY the failure is the JSON envelope on stdout.
+    const envelope = JSON.parse(api.stdout) as { ok: boolean; message: string };
+    expect(envelope.ok).toBe(false);
+    expect(envelope.message).toContain("storerouter api is not available here");
+    const status = await run(["--json", "status"]);
+    expect(status.code).toBe(2);
+    expect(JSON.parse(status.stdout)).toMatchObject({ code: "unavailable_command" });
+    const help = await run([]);
+    expect(help.stderr).toContain("search");
+    expect(help.stderr).not.toMatch(/^\s+(api|status)\s/m);
+    expect(calls).toBe(0);
+    expect((await run(["search", "linen dress", "--limit", "8"])).code).toBe(0);
+  });
   it("literal requested .data.items respects the existing flattened envelope", async () => {
     const result = await shell(
       "storerouter search 'linen dress' --limit 8 --json | jq '.data.items'",
