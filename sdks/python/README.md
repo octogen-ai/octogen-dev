@@ -184,6 +184,39 @@ Contradictions the API would refuse — `relax` or `understand=False` without a
 your filters in `facets` and `exclude_facets`. See the
 [CHANGELOG](./CHANGELOG.md#050--2026-10-14) for the migration.
 
+### Prebuilt requests, timeouts, and errors
+
+Every operation with a request body also takes `request=`, a prebuilt request
+model sent as is. A subclass's extra fields go out too, which bridges a field
+the API accepts before this SDK declares it. Passing `request=` together with
+the keyword form is a `TypeError`.
+
+```python
+class MySearchRequest(ProgrammaticProductSearchRequest):
+    new_control: bool | None = None
+
+page = await client.search_products(
+    request=MySearchRequest(q="linen dress", new_control=True),
+    timeout=2.5,  # this call only; also works with an injected http_client
+)
+```
+
+Every operation takes `timeout` (seconds or an `httpx.Timeout`). The SDK never
+retries, so map failures by type and retry what is safe for your call:
+
+| Error | When | Fields |
+| --- | --- | --- |
+| `OctogenRateLimitError` | `429` | `retry_after` (seconds or `None`) |
+| `OctogenInsufficientCreditError` | `402` | `detail` has `top_up_url` |
+| `OctogenServerError` | `5xx` | `retry_after` on a back-pressure `503` |
+| `OctogenTimeoutError` | `httpx` timeout, or `504` (`OctogenGatewayTimeoutError`) | — |
+| `OctogenConnectionError` | connection refused or reset | — |
+
+Every `OctogenAPIError` carries `status_code`, `detail`, and `request_id` (the
+response's `x-request-id`). `OctogenTimeoutError` subclasses
+`OctogenConnectionError`; a `504` is both an `OctogenTimeoutError` and an
+`OctogenServerError`.
+
 ## Coverage URL lists CLI
 
 `octogen-url-lists` manages coverage URL lists from the terminal, so the whole

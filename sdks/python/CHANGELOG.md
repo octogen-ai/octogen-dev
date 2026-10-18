@@ -25,6 +25,31 @@
   (about 1-3 KB). They stay opaque; pass `next_cursor` back unchanged with the
   same `q`.
 - Regenerate the contract mirror for these changes.
+- Every operation with a request body also takes `request=`, a prebuilt request
+  model (`ProgrammaticProductSearchRequest`, `ProgrammaticProductLookupRequest`,
+  `ProgrammaticMoreLikeThisRequest`, `ProgrammaticResolveFromHtmlRequest`,
+  `CoverageUrlListCreateRequest`, `CoverageUrlsRequest`), sent as
+  `model_dump(mode="json", by_alias=True, exclude_none=True)`. A subclass's
+  extra fields are sent, so a caller can send a field the API accepts before
+  the SDK declares it. `request=` with any keyword argument is a `TypeError`.
+  To allow this, keywords that had a non-`None` default (`limit`,
+  `resolution_mode`, `on_demand_cache_policy`, `price_preference`, `debug` on
+  `more_like_this_products`) now default to `None`, meaning the same value as
+  before; `lookup_product`'s `url` and the coverage methods' `name`, `html` and
+  `urls` are optional when `request=` is passed.
+- Every operation takes `timeout` (seconds or an `httpx.Timeout`) for that call
+  only. It applies to an injected `http_client` too; omitted, the client's own
+  timeout stands.
+- Typed errors, all subclasses of the existing ones:
+  `OctogenRateLimitError` (`429`), `OctogenInsufficientCreditError` (`402`),
+  `OctogenServerError` (`5xx`), and `OctogenTimeoutError`
+  (an `OctogenConnectionError`) for `httpx` timeouts. A `504` raises
+  `OctogenGatewayTimeoutError`, both an `OctogenTimeoutError` and an
+  `OctogenServerError`. A refused or reset connection stays a plain
+  `OctogenConnectionError`. The SDK still never retries.
+- Every `OctogenAPIError` carries `request_id` (from `x-request-id`) and
+  `retry_after` (whole seconds from `Retry-After`, delta-seconds or HTTP-date;
+  `None` when absent), so callers need not read `.response`.
 
 ## 0.5.0 — 2026-10-14
 
