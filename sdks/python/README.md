@@ -212,6 +212,11 @@ retries, so map failures by type and retry what is safe for your call:
 | `OctogenTimeoutError` | `httpx` timeout, or `504` (`OctogenGatewayTimeoutError`) | — |
 | `OctogenConnectionError` | connection refused or reset | — |
 
+`lookup_product_markdown(url)` returns the product as LLM-ready Markdown
+(`format: "markdown"`, `Accept: text/markdown`) in a
+`ProductMarkdownLookupResult`, with `request_id`, `product_uuid`, `catalog`,
+`matched_via` and `normalized_url` from the response's identity headers.
+
 Every `OctogenAPIError` carries `status_code`, `detail`, and `request_id` (the
 response's `x-request-id`). `OctogenTimeoutError` subclasses
 `OctogenConnectionError`; a `504` is both an `OctogenTimeoutError` and an
@@ -394,6 +399,12 @@ OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python
 by `npm run codegen` (at the repository root) and committed, so a contract
 change arrives as a reviewable diff. **Response** models are re-exported from it
 under the contract's own names.
+
+Response models are forward compatible, generated or hand-written: they keep
+unknown fields (`extra="allow"`, read them from `model_extra` or
+`model_dump(by_alias=True)`), and their enums are open (`Literal[...] | str`),
+so a value the server adds after this release parses instead of failing the
+response. Request models keep closed enums and `extra="forbid"`.
 
 **Request** models stay hand-written in `models.py`, for two reasons: rules the
 contract cannot express (`extra="forbid"` catches a misspelled key, but not

@@ -51,6 +51,7 @@ from octogen_ai_sdk.models import (
     ProductLookupCachePolicy,
     ProductLookupMatchMode,
     ProductLookupResolutionMode,
+    ProductMarkdownLookupResult,
     ProgrammaticMoreLikeThisRequest,
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
@@ -181,6 +182,57 @@ class OctogenClient:
         )
         data = await self._json("lookupProduct", json=body, timeout=timeout)
         return MerchantProductUrlLookupResponse.model_validate(data)
+
+    async def lookup_product_markdown(
+        self,
+        url: str | None = None,
+        *,
+        match_mode: ProductLookupMatchMode | str | None = None,
+        resolution_mode: ProductLookupResolutionMode | str | None = None,
+        on_demand_cache_policy: ProductLookupCachePolicy | str | None = None,
+        request: ProgrammaticProductLookupRequest | None = None,
+        timeout: Timeout | None = None,
+    ) -> ProductMarkdownLookupResult:
+        """:meth:`lookup_product`, with the product rendered as LLM-ready Markdown.
+
+        Sends ``format: "markdown"`` with ``Accept: text/markdown``. The result
+        carries the Markdown and the identity headers that name the product —
+        ``x-request-id``, ``x-octogen-product-uuid``, ``x-octogen-catalog``,
+        ``x-octogen-matched-via`` and ``x-octogen-normalized-url``. Errors are
+        raised exactly as for :meth:`lookup_product`.
+        """
+        body = _lookup_request(
+            "lookup_product_markdown",
+            url,
+            match_mode=match_mode,
+            resolution_mode=resolution_mode,
+            on_demand_cache_policy=on_demand_cache_policy,
+            request=request,
+        )
+        body["format"] = "markdown"
+        response = await self._request(
+            "lookupProduct",
+            json=body,
+            headers={"Accept": "text/markdown"},
+            timeout=timeout,
+        )
+        headers = response.headers
+        media_type = headers.get("content-type", "").split(";", 1)[0].strip()
+        if media_type == "application/json":
+            raise OctogenAPIError(
+                "Octogen API returned JSON where Markdown was requested",
+                status_code=response.status_code,
+                response=response,
+                request_id=headers.get("x-request-id"),
+            )
+        return ProductMarkdownLookupResult(
+            markdown=response.text,
+            request_id=headers.get("x-request-id"),
+            product_uuid=headers.get("x-octogen-product-uuid"),
+            catalog=headers.get("x-octogen-catalog"),
+            matched_via=headers.get("x-octogen-matched-via"),
+            normalized_url=headers.get("x-octogen-normalized-url"),
+        )
 
     async def parse_product_alias(
         self,
