@@ -201,6 +201,7 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
             brand_quality_min=3,
             brand_quality_max=6,
             similar_to_brands=("Warren Lotas",),
+            fallback_category=("apparel & accessories", "clothing"),
             catalogs=["warrenlotas"],
             limit=25,
             cursor="cursor-1",
@@ -220,6 +221,7 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
         "brand_quality_min": 3,
         "brand_quality_max": 6,
         "similar_to_brands": ["Warren Lotas"],
+        "fallback_category": ["apparel & accessories", "clothing"],
         "catalogs": ["warrenlotas"],
         "limit": 25,
         "cursor": "cursor-1",
@@ -322,6 +324,20 @@ def test_text_search_query_model_is_gone() -> None:
         ({"similar_to_brands": []}, "at least 1 item"),
         ({"similar_to_brands": [f"b{i}" for i in range(11)]}, "at most 10 items"),
         ({"similar_to_brands": ["Acme", " "]}, "non-empty brand names"),
+        ({"fallback_category": ["clothing"]}, "fallback_category requires"),
+        (
+            {"q": "dress", "understand": False, "fallback_category": ["clothing"]},
+            "fallback_category requires",
+        ),
+        ({"q": "dress", "fallback_category": []}, "at least 1 item"),
+        (
+            {"q": "dress", "fallback_category": ["a", "b", "c", "d", "e"]},
+            "at most 4 items",
+        ),
+        (
+            {"q": "dress", "fallback_category": ["apparel & accessories", " "]},
+            "non-empty category names",
+        ),
     ],
 )
 @respx.mock
@@ -391,7 +407,91 @@ async def test_search_products_parses_debug_effective_query() -> None:
 
 
 @respx.mock
-async def test_search_products_without_debug_has_no_effective_query() -> None:
+async def test_search_products_parses_effective_query_without_debug() -> None:
+    # Current servers report the search that ran on every response.
+    respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [],
+                "nextCursor": None,
+                "requestId": "r-1",
+                "effectiveQuery": {
+                    "text": "party dress",
+                    "understood": True,
+                    "facets": [
+                        {
+                            "name": "category_path.depth_0",
+                            "values": ["apparel & accessories"],
+                            "source": "generated",
+                        }
+                    ],
+                },
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_products(
+            q="something for a party",
+            fallback_category=["apparel & accessories"],
+        )
+
+    assert page.effective_query is not None
+    assert [(f.name, f.source) for f in page.effective_query.facets or []] == [
+        ("category_path.depth_0", "generated")
+    ]
+
+
+@respx.mock
+async def test_search_products_parses_list_item_card_fields() -> None:
+    respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "uuid": "dress",
+                        "productUrl": "https://acme.example/dress",
+                        "currency": "USD",
+                        "inStock": False,
+                        "colors": ["Red", "Navy"],
+                        "sizes": ["S", "M"],
+                        "gender": "female",
+                        "categoryPath": ["apparel & accessories", "clothing"],
+                        "catalogDisplayName": "Acme",
+                    },
+                    {"uuid": "bare", "productUrl": "https://acme.example/bare"},
+                ],
+                "nextCursor": None,
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_products(q="dress")
+
+    full, bare = page.items
+    assert (full.currency, full.in_stock, full.colors, full.sizes) == (
+        "USD",
+        False,
+        ["Red", "Navy"],
+        ["S", "M"],
+    )
+    assert full.gender == "female"
+    assert full.category_path == ["apparel & accessories", "clothing"]
+    assert full.catalog_display_name == "Acme"
+    assert not full.model_extra
+    assert (bare.currency, bare.in_stock, bare.colors, bare.gender) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+@respx.mock
+async def test_search_products_from_an_older_server_has_no_effective_query() -> None:
     respx.post(f"{BASE_URL}/products/search").mock(
         return_value=httpx.Response(
             200,

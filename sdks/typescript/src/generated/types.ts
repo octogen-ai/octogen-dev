@@ -837,10 +837,30 @@ export interface components {
         MerchantProductListItem: {
             brand?: components["schemas"]["BrandView"] | null;
             /**
+             * Catalogdisplayname
+             * @description Display name of the catalog that supplied it.
+             */
+            catalogDisplayName?: string | null;
+            /**
              * Catalogkey
              * @description Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.
              */
             catalogKey?: string | null;
+            /**
+             * Categorypath
+             * @description Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.
+             */
+            categoryPath?: string[] | null;
+            /**
+             * Colors
+             * @description Product-family color labels; the linked variant may differ.
+             */
+            colors?: string[] | null;
+            /**
+             * Currency
+             * @description ISO 4217 currency of the prices; null when unknown or mixed.
+             */
+            currency?: string | null;
             /** Currentprice */
             currentPrice?: number | null;
             /**
@@ -848,6 +868,8 @@ export interface components {
              * @description User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.
              */
             displayMatchScore?: number | null;
+            /** @description Target gender; null when unknown or when several are listed. */
+            gender?: components["schemas"]["Gender"] | null;
             /**
              * Images
              * @default []
@@ -858,6 +880,11 @@ export interface components {
              * @description Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.
              */
             imageUrl?: string | null;
+            /**
+             * Instock
+             * @description Product-family availability; null when unknown. Does not establish stock for a specific color or size.
+             */
+            inStock?: boolean | null;
             /**
              * Isactive
              * @default true
@@ -875,6 +902,11 @@ export interface components {
              * @description Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.
              */
             rawScore?: number | null;
+            /**
+             * Sizes
+             * @description Product-family size labels.
+             */
+            sizes?: string[] | null;
             /** Title */
             title?: string | null;
             /** Updatedat */
@@ -1600,6 +1632,9 @@ export interface components {
         /**
          * ProgrammaticProductSearchEffectiveQuery
          * @description The search that actually ran, in the request's own vocabulary.
+         *
+         *     It is a report, not a request fragment: understood facets of one name can
+         *     AND together, which a request cannot express.
          */
         ProgrammaticProductSearchEffectiveQuery: {
             /** Brandqualitymax */
@@ -1638,8 +1673,8 @@ export interface components {
          * @description One page of search results.
          */
         ProgrammaticProductSearchPage: {
-            /** @description Present with `debug: true`. */
-            effectiveQuery?: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"] | null;
+            /** @description The text, filters and bounds that actually ran, with each facet's origin. Present on every response. */
+            effectiveQuery: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"];
             /**
              * Items
              * @default []
@@ -1705,12 +1740,12 @@ export interface components {
             catalogs?: string[] | null;
             /**
              * Cursor
-             * @description `nextCursor` from the previous page, passed back verbatim with the same request body.
+             * @description `nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.
              */
             cursor?: string | null;
             /**
              * Debug
-             * @description Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.
+             * @description Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.
              * @default false
              */
             debug: boolean;
@@ -1730,6 +1765,11 @@ export interface components {
              * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.
              */
             facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Fallback Category
+             * @description Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.
+             */
+            fallback_category?: string[] | null;
             /**
              * Limit
              * @description Maximum results per page.
@@ -3013,7 +3053,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProgrammaticProductSearchPage"];
                 };
             };
-            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, or records a relaxation round that no longer maps onto the current query. Restart from page 1 (omit the cursor). */
+            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, records a relaxation round that no longer maps onto the current query, or does not carry the understanding of this request's `q` that page 1 ran. Restart from page 1 (omit the cursor). */
             400: {
                 headers: {
                     /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */

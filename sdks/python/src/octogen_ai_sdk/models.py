@@ -167,6 +167,12 @@ def _validate_brand_names(brands: list[str] | None) -> list[str] | None:
     return brands
 
 
+def _validate_fallback_category(path: list[str] | None) -> list[str] | None:
+    if path is not None and any(not part.strip() for part in path):
+        raise ValueError("fallback_category must contain only non-empty category names")
+    return path
+
+
 def _facet_names(facets: list[Facet] | None, field: str) -> set[str]:
     """Reject a repeated facet name; return the names for cross-field checks."""
     names: set[str] = set()
@@ -201,6 +207,11 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     similar_to_brands: list[str] | None = Field(
         default=None, min_length=1, max_length=10
     )
+    #: Category path, root first (1-4 names as the ``category_path.depth_N``
+    #: facets accept them), searched when understanding finds no category.
+    fallback_category: list[str] | None = Field(
+        default=None, min_length=1, max_length=4
+    )
     # An empty list is refused rather than sent: omitting the field already
     # means every catalog.
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
@@ -212,6 +223,9 @@ class ProgrammaticProductSearchRequest(_RequestModel):
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
     _check_brand_names = field_validator("similar_to_brands")(_validate_brand_names)
+    _check_fallback_category = field_validator("fallback_category")(
+        _validate_fallback_category
+    )
 
     @model_validator(mode="after")
     def reject_contradictions(self) -> ProgrammaticProductSearchRequest:
@@ -227,6 +241,11 @@ class ProgrammaticProductSearchRequest(_RequestModel):
         if self.omit_generated_facets and not (has_query and understood):
             raise ValueError(
                 "omit_generated_facets requires an understood q "
+                "(q set, understand not False)"
+            )
+        if self.fallback_category is not None and not (has_query and understood):
+            raise ValueError(
+                "fallback_category requires an understood q "
                 "(q set, understand not False)"
             )
 
@@ -531,6 +550,22 @@ class MerchantProductListItem(_ResponseModel):
     raw_score: float | None = Field(default=None, alias="rawScore")
     display_match_score: int | None = Field(default=None, alias="displayMatchScore")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
+    # Card fields on search and more-like-this results; ``None`` when the
+    # product does not carry them or the server predates them.
+    #: ISO 4217 currency of the prices; ``None`` when unknown or mixed.
+    currency: str | None = None
+    #: Product-family availability, not a particular color's or size's stock.
+    in_stock: bool | None = Field(default=None, alias="inStock")
+    #: Product-family color labels; the linked variant may differ.
+    colors: list[str] | None = None
+    sizes: list[str] | None = None
+    #: ``"male"``, ``"female"`` or ``"unisex"``; ``None`` when unknown or
+    #: when several are listed. Typed open so a new value never fails parsing.
+    gender: str | None = None
+    #: Taxonomy category path, root first, in the names the
+    #: ``category_path.depth_N`` facets accept.
+    category_path: list[str] | None = Field(default=None, alias="categoryPath")
+    catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
 
 
 class MerchantProductListPage(_ResponseModel):
@@ -542,7 +577,8 @@ class ProgrammaticProductSearchPage(MerchantProductListPage):
     """One page of ``search_products`` results."""
 
     request_id: str | None = Field(default=None, alias="requestId")
-    #: The search that actually ran; present with ``debug=True``.
+    #: The search that actually ran. Present on every response; servers that
+    #: predate it send it only with ``debug=True``.
     effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
         default=None,
         alias="effectiveQuery",

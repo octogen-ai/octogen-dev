@@ -8,6 +8,23 @@
 - `searchProducts` takes `diversity` again, now that the API applies it:
   `diversity: true` spreads page 1 across retailers and drops repeated images.
   It is no longer refused as a removed field. Omitted by default.
+- `searchProducts` takes `fallbackCategory` (sent as `fallback_category`), a
+  category path root first (1–4 names as the `category_path.depth_N` facets
+  accept them), searched when understanding finds no category in `q`. It
+  requires an understood `q` and throws `TypeError` otherwise, or for an
+  empty, blank or over-long path. Applied levels appear in `effectiveQuery` as
+  `generated`.
+- `ProgrammaticProductSearchPage.effectiveQuery` is present on every response,
+  not only with `debug: true`. It stays optional so a page from an older
+  server still type-checks. `debug` is now reserved for diagnostic detail.
+- `MerchantProductListItem` declares the search and more-like-this card
+  fields: `currency`, `inStock`, `colors`, `sizes`, `gender`, `categoryPath`
+  and `catalogDisplayName`, each null or absent when the product lacks them.
+  `MerchantProductView` (lookup) omits the ones lookup does not report.
+- Search cursors now carry page 1's query understanding, so they are longer
+  (about 1–3 KB). They stay opaque; pass `nextCursor` back unchanged with the
+  same `q`.
+- Regenerate the contract mirror for these changes.
 
 ## 0.5.0 — 2026-10-14
 

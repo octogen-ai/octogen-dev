@@ -158,6 +158,14 @@ export interface SearchProductsParams {
    */
   similarToBrands?: string[];
   /**
+   * Category path, root first (1–4 names as the `category_path.depth_N` facets
+   * accept them, e.g. `["apparel & accessories", "clothing"]`), searched when
+   * understanding finds no category in `q`. Not applied when the understood
+   * query has a top-level category or `facets` has a `category_path` facet;
+   * reported in `effectiveQuery` as `generated`. Requires understood `q`.
+   */
+  fallbackCategory?: string[];
+  /**
    * Restrict results to these catalog keys (1–500). Omit to search every
    * catalog your key can access. Keys are sent as given; one outside your
    * grants simply matches nothing.
@@ -180,7 +188,10 @@ export interface SearchProductsParams {
    * setting it was minted under.
    */
   diversity?: boolean;
-  /** Include {@link ProgrammaticProductSearchPage.effectiveQuery} in the response. */
+  /**
+   * Reserved for diagnostic detail.
+   * {@link ProgrammaticProductSearchPage.effectiveQuery} arrives without it.
+   */
   debug?: boolean;
 }
 
@@ -196,6 +207,7 @@ export interface ProgrammaticProductSearchRequest {
   brand_quality_min?: number;
   brand_quality_max?: number;
   similar_to_brands?: string[];
+  fallback_category?: string[];
   catalogs?: string[];
   limit: number;
   cursor?: string;
@@ -224,7 +236,10 @@ export type ProgrammaticProductSearchEffectiveQuery =
 export interface ProgrammaticProductSearchPage extends MerchantProductListPage {
   /** Server-generated UUID for this execution, matching `X-Request-ID`. */
   requestId: string;
-  /** Present with `debug: true`. */
+  /**
+   * The search that actually ran. Present on every response; servers that
+   * predate it send it only with `debug: true`.
+   */
   effectiveQuery?: ProgrammaticProductSearchEffectiveQuery | null;
 }
 
@@ -476,6 +491,26 @@ export interface MerchantProductListItem {
   rawScore?: number | null;
   displayMatchScore?: number | null;
   updatedAt?: string | null;
+  // Card fields on search and more-like-this results; null or absent when the
+  // product does not carry them or the server predates them.
+  /** ISO 4217 currency of the prices; null when unknown or mixed. */
+  currency?: string | null;
+  /** Product-family availability, not a particular color's or size's stock. */
+  inStock?: boolean | null;
+  /** Product-family color labels; the linked variant may differ. */
+  colors?: string[] | null;
+  sizes?: string[] | null;
+  /**
+   * `"male"`, `"female"` or `"unisex"`; null when unknown or when several are
+   * listed. Typed open so a new value is not a type error.
+   */
+  gender?: "male" | "female" | "unisex" | CustomString | null;
+  /**
+   * Taxonomy category path, root first, in the names the `category_path.depth_N`
+   * facets accept.
+   */
+  categoryPath?: string[] | null;
+  catalogDisplayName?: string | null;
 }
 
 export interface MerchantProductListPage {
@@ -485,7 +520,13 @@ export interface MerchantProductListPage {
 
 export interface MerchantProductView extends Omit<
   MerchantProductListItem,
-  "uuid" | "isActive"
+  | "uuid"
+  | "isActive"
+  | "colors"
+  | "sizes"
+  | "gender"
+  | "categoryPath"
+  | "catalogDisplayName"
 > {
   uuid: string | null;
   isActive?: boolean | null;

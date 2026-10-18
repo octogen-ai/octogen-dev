@@ -165,6 +165,7 @@ describe("OctogenClient", () => {
       brandQualityMin: 3,
       brandQualityMax: 6,
       similarToBrands: ["Warren Lotas"],
+      fallbackCategory: ["apparel & accessories", "clothing"],
       catalogs: ["warrenlotas"],
       limit: 25,
       cursor: "cursor-1",
@@ -184,6 +185,7 @@ describe("OctogenClient", () => {
       brand_quality_min: 3,
       brand_quality_max: 6,
       similar_to_brands: ["Warren Lotas"],
+      fallback_category: ["apparel & accessories", "clothing"],
       catalogs: ["warrenlotas"],
       limit: 25,
       cursor: "cursor-1",
@@ -191,6 +193,41 @@ describe("OctogenClient", () => {
       diversity: true,
       debug: true,
     });
+  });
+
+  it("reads the card fields on search list items", async () => {
+    const { fetchMock } = createFetchMock({
+      items: [
+        {
+          uuid: "dress",
+          productUrl: "https://acme.example/dress",
+          currency: "USD",
+          inStock: false,
+          colors: ["Red", "Navy"],
+          sizes: ["S", "M"],
+          gender: "female",
+          categoryPath: ["apparel & accessories", "clothing"],
+          catalogDisplayName: "Acme",
+        },
+      ],
+      nextCursor: null,
+      requestId: "r-1",
+      effectiveQuery: { text: "dress", understood: true, facets: [] },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.searchProducts({ q: "dress" });
+
+    const [item] = page.items;
+    expect(item?.currency).toBe("USD");
+    expect(item?.inStock).toBe(false);
+    expect(item?.colors).toEqual(["Red", "Navy"]);
+    expect(item?.sizes).toEqual(["S", "M"]);
+    expect(item?.gender).toBe("female");
+    expect(item?.categoryPath).toEqual(["apparel & accessories", "clothing"]);
+    expect(item?.catalogDisplayName).toBe("Acme");
+    // Present without debug on current servers.
+    expect(page.effectiveQuery?.text).toBe("dress");
   });
 
   it("sends understand: false for a literal match", async () => {
@@ -234,6 +271,20 @@ describe("OctogenClient", () => {
   });
 
   it.each([
+    [{ fallbackCategory: ["clothing"] }, "fallbackCategory requires an understood q"],
+    [
+      { q: "dress", understand: false, fallbackCategory: ["clothing"] },
+      "fallbackCategory requires an understood q",
+    ],
+    [{ q: "dress", fallbackCategory: [] }, "between 1 and 4 category names"],
+    [
+      { q: "dress", fallbackCategory: ["a", "b", "c", "d", "e"] },
+      "between 1 and 4 category names",
+    ],
+    [
+      { q: "dress", fallbackCategory: ["apparel & accessories", " "] },
+      "non-empty category names",
+    ],
     [{ understand: false }, "understand: false requires q"],
     [{ q: "   ", understand: false }, "understand: false requires q"],
     [{ relax: true }, "relax requires an understood q"],
