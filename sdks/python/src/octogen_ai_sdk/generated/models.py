@@ -589,12 +589,12 @@ class ProgrammaticProductSearchRequest(BaseModel):
     )
     cursor: str | None = Field(
         None,
-        description="`nextCursor` from the previous page, passed back verbatim with the same request body.",
+        description="`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
         title="Cursor",
     )
     debug: bool | None = Field(
         False,
-        description="Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
+        description="Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
         title="Debug",
     )
     diversity: bool | None = Field(
@@ -611,6 +611,11 @@ class ProgrammaticProductSearchRequest(BaseModel):
         None,
         description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
         title="Facets",
+    )
+    fallback_category: list[str] | None = Field(
+        None,
+        description='Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.',
+        title="Fallback Category",
     )
     limit: int | None = Field(
         50, description="Maximum results per page.", title="Limit"
@@ -786,11 +791,33 @@ class MerchantProductListItem(BaseModel):
         populate_by_name=True,
     )
     brand: BrandView | None = None
+    catalog_display_name: str | None = Field(
+        None,
+        alias="catalogDisplayName",
+        description="Display name of the catalog that supplied it.",
+        title="Catalogdisplayname",
+    )
     catalog_key: str | None = Field(
         None,
         alias="catalogKey",
         description="Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.",
         title="Catalogkey",
+    )
+    category_path: list[str] | None = Field(
+        None,
+        alias="categoryPath",
+        description="Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.",
+        title="Categorypath",
+    )
+    colors: list[str] | None = Field(
+        None,
+        description="Product-family color labels; the linked variant may differ.",
+        title="Colors",
+    )
+    currency: str | None = Field(
+        None,
+        description="ISO 4217 currency of the prices; null when unknown or mixed.",
+        title="Currency",
     )
     current_price: float | None = Field(
         None, alias="currentPrice", title="Currentprice"
@@ -801,6 +828,9 @@ class MerchantProductListItem(BaseModel):
         description="User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.",
         title="Displaymatchscore",
     )
+    gender: Literal["male", "female", "unisex"] | None = Field(
+        None, description="Target gender; null when unknown or when several are listed."
+    )
     image_url: str | None = Field(
         None,
         alias="imageUrl",
@@ -808,6 +838,12 @@ class MerchantProductListItem(BaseModel):
         title="Imageurl",
     )
     images: list[MerchantProductImageMetadataView] | None = Field([], title="Images")
+    in_stock: bool | None = Field(
+        None,
+        alias="inStock",
+        description="Product-family availability; null when unknown. Does not establish stock for a specific color or size.",
+        title="Instock",
+    )
     is_active: bool | None = Field(True, alias="isActive", title="Isactive")
     original_price: float | None = Field(
         None, alias="originalPrice", title="Originalprice"
@@ -824,6 +860,9 @@ class MerchantProductListItem(BaseModel):
         alias="rawScore",
         description="Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
         title="Rawscore",
+    )
+    sizes: list[str] | None = Field(
+        None, description="Product-family size labels.", title="Sizes"
     )
     title: str | None = Field(None, title="Title")
     updated_at: AwareDatetime | None = Field(None, alias="updatedAt", title="Updatedat")
@@ -1275,8 +1314,10 @@ class ProgrammaticProductSearchPage(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
     )
-    effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
-        None, alias="effectiveQuery", description="Present with `debug: true`."
+    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
+        ...,
+        alias="effectiveQuery",
+        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response.",
     )
     items: list[MerchantProductListItem] | None = Field([], title="Items")
     next_cursor: str | None = Field(

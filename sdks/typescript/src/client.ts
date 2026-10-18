@@ -700,6 +700,9 @@ function toSearchPayload(
   if (params.similarToBrands !== undefined) {
     payload.similar_to_brands = [...params.similarToBrands];
   }
+  if (params.fallbackCategory !== undefined) {
+    payload.fallback_category = [...params.fallbackCategory];
+  }
   if (params.catalogs !== undefined) {
     payload.catalogs = [...params.catalogs];
   }
@@ -777,6 +780,26 @@ function assertSearchControls(params: SearchProductsParams): void {
       brands.some((brand) => typeof brand !== "string" || brand.trim().length === 0)
     ) {
       throw new TypeError("similarToBrands must contain only non-empty brand names");
+    }
+  }
+
+  const fallback = params.fallbackCategory;
+  if (fallback !== undefined) {
+    assertStringArray(fallback, "fallbackCategory");
+    if (fallback.length < 1 || fallback.length > 4) {
+      throw new TypeError(
+        "fallbackCategory must contain between 1 and 4 category names",
+      );
+    }
+    if (fallback.some((part) => part.trim().length === 0)) {
+      throw new TypeError(
+        "fallbackCategory must contain only non-empty category names",
+      );
+    }
+    if (!hasQuery || !understood) {
+      throw new TypeError(
+        "fallbackCategory requires an understood q (q set, understand not false)",
+      );
     }
   }
 }

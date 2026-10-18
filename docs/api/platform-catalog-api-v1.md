@@ -168,22 +168,23 @@ curl -sS https://api.storerouter.ai/v1/products/search \
 
 Request fields:
 
-| Field                                    | Type    | Notes                                                                                                                                                                                                       |
-| ---------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `q`                                      | string  | Free text. Omit (or send blank) to browse by filters alone. Understood by default: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it.              |
-| `understand`                             | boolean | Defaults to `true`. `false` matches `q` as written and filters only by what you send. Requires `q`.                                                                                                         |
-| `facets`                                 | array   | Filters a product must match: every facet, any value within a facet. Replaces any understood facet of the same name and is never relaxed. Each name at most once.                                           |
-| `exclude_facets`                         | array   | Filters a product must not match. Each name at most once.                                                                                                                                                   |
-| `omit_generated_facets`                  | array   | Names of understood facets to drop, for a derived filter that is wrong and that you have no value for. Use the names `effectiveQuery` reports. Requires understood `q`; a name may not also be in `facets`. |
-| `price_min`, `price_max`                 | number  | Inclusive, at least 0, min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                              |
-| `brand_quality_min`, `brand_quality_max` | number  | Brand quality score bounds from 1 (very poor) to 6 (exceptional), min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                   |
-| `similar_to_brands`                      | array   | 1 to 10 brand names whose style to favour. Ranks, does not filter. Replaces brands understood from `q`.                                                                                                     |
-| `catalogs`                               | array   | 1 to 500 catalog keys. Omit to search everything your key can access; keys you cannot access match nothing.                                                                                                 |
-| `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                   |
-| `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body.                                                                                                                                               |
-| `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                        |
-| `diversity`                              | boolean | Defaults to `false`. Spreads page 1 across retailers and drops repeated images. No effect with `catalogs`, a catalog-limited key, or a `brand_name` facet. Changing it mid-search is a `400`.               |
-| `debug`                                  | boolean | Adds `effectiveQuery`: the text, filters and bounds that ran, each facet tagged `caller` or `generated`.                                                                                                    |
+| Field                                    | Type    | Notes                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`                                      | string  | Free text. Omit (or send blank) to browse by filters alone. Understood by default: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it.                                                                                                                            |
+| `understand`                             | boolean | Defaults to `true`. `false` matches `q` as written and filters only by what you send. Requires `q`.                                                                                                                                                                                                                       |
+| `facets`                                 | array   | Filters a product must match: every facet, any value within a facet. Replaces any understood facet of the same name and is never relaxed. Each name at most once.                                                                                                                                                         |
+| `exclude_facets`                         | array   | Filters a product must not match. Each name at most once.                                                                                                                                                                                                                                                                 |
+| `omit_generated_facets`                  | array   | Names of understood facets to drop, for a derived filter that is wrong and that you have no value for. Use the names `effectiveQuery` reports. Requires understood `q`; a name may not also be in `facets`.                                                                                                               |
+| `price_min`, `price_max`                 | number  | Inclusive, at least 0, min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                                                                                                                                            |
+| `brand_quality_min`, `brand_quality_max` | number  | Brand quality score bounds from 1 (very poor) to 6 (exceptional), min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                                                                                                 |
+| `similar_to_brands`                      | array   | 1 to 10 brand names whose style to favour. Ranks, does not filter. Replaces brands understood from `q`.                                                                                                                                                                                                                   |
+| `fallback_category`                      | array   | 1 to 4 category names, root first, as the `category_path.depth_N` facets accept them, e.g. `["apparel & accessories", "clothing"]`; the path must exist in the taxonomy. Applied as `generated` category facets only when understanding finds no category and you send no `category_path` facet. Requires understood `q`. |
+| `catalogs`                               | array   | 1 to 500 catalog keys. Omit to search everything your key can access; keys you cannot access match nothing.                                                                                                                                                                                                               |
+| `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                                                                                                                                 |
+| `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body. Later pages reuse page 1's understanding of `q`; a cursor sent with a different `q` is a `400`.                                                                                                                                                             |
+| `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                                                                                                                                      |
+| `diversity`                              | boolean | Defaults to `false`. Spreads page 1 across retailers and drops repeated images. No effect with `catalogs`, a catalog-limited key, or a `brand_name` facet. Changing it mid-search is a `400`.                                                                                                                             |
+| `debug`                                  | boolean | Reserved for diagnostic detail. `effectiveQuery` is returned without it.                                                                                                                                                                                                                                                  |
 
 `catalog` and `text_search_query` were removed and are now a `422` whose
 message names the replacement: send `catalogs: ["<key>"]` for
@@ -212,21 +213,46 @@ Response:
       ],
       "currentPrice": 180,
       "originalPrice": null,
+      "currency": "USD",
+      "inStock": true,
+      "colors": ["Black"],
+      "sizes": ["S", "M", "L"],
+      "gender": "unisex",
+      "categoryPath": ["apparel & accessories", "clothing", "activewear"],
+      "catalogDisplayName": "Warren Lotas",
       "isActive": true,
       "updatedAt": "2026-05-19T18:04:10Z"
     }
   ],
   "nextCursor": "eyJzZWFyY2hBZnRlciI6Wy4uLl19",
-  "requestId": "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11"
+  "requestId": "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11",
+  "effectiveQuery": {
+    "text": "black hoodie",
+    "understood": true,
+    "facets": [
+      { "name": "color", "values": ["black"], "source": "caller" },
+      { "name": "product_type", "values": ["hoodie"], "source": "generated" }
+    ],
+    "excludeFacets": [],
+    "priceMin": 50,
+    "priceMax": 300,
+    "catalogs": ["warrenlotas"]
+  }
 }
 ```
 
+Each item's `currency`, `inStock`, `colors`, `sizes`, `gender` (`male`,
+`female` or `unisex`), `categoryPath` (root first, in the names the
+`category_path.depth_N` facets accept) and `catalogDisplayName` are null when
+the product does not carry them. `inStock` and `colors` describe the product
+family, not a particular variant.
+
 When `nextCursor` is non-null, pass it as `cursor` on the next request — with
 the same filters — to advance pagination. A null `nextCursor` means the page
-is the last one.
+is the last one. Query understanding runs once, on page 1; later pages reuse
+it.
 
-With `"debug": true` the page adds `effectiveQuery`, the search that actually
-ran: `text` (the understood rewrite of `q`, `q` itself with `understand: false`,
+Every page includes `effectiveQuery`, the search that actually ran: `text` (the understood rewrite of `q`, `q` itself with `understand: false`,
 or empty when browsing), `understood`, `facets` and `excludeFacets` (each
 `{name, values, source}` with `source` `caller` or `generated`), `priceMin`,
 `priceMax`, `brandQualityMin`, `brandQualityMax`, `similarToBrands`,

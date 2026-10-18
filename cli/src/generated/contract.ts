@@ -789,12 +789,12 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "`nextCursor` from the previous page, passed back verbatim with the same request body.",
+            "description": "`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
             "title": "Cursor"
           },
           "debug": {
             "default": false,
-            "description": "Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
+            "description": "Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
             "title": "Debug",
             "type": "boolean"
           },
@@ -877,6 +877,23 @@ export const PUBLIC_CONTRACT = {
             ],
             "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
             "title": "Facets"
+          },
+          "fallback_category": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Category path, root first, to search when understanding finds no category in `q`, e.g. `[\"apparel & accessories\", \"clothing\"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.",
+            "title": "Fallback Category"
           },
           "limit": {
             "default": 50,
@@ -979,6 +996,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "a6aa46ace70061a1da75fcde29ad20181fcad0ccf650977b80f54d5bc848d84e",
+  "sha256": "ee672728253ea5796140211ccf5497d417f291671c00ee046d4c73bcc7d7c42a",
   "version": "1.0.0"
 } as const;

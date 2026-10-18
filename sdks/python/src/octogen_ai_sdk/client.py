@@ -293,6 +293,7 @@ class OctogenClient:
         brand_quality_min: float | None = None,
         brand_quality_max: float | None = None,
         similar_to_brands: Sequence[str] | None = None,
+        fallback_category: Sequence[str] | None = None,
         catalogs: Sequence[str] | None = None,
         limit: int = 50,
         cursor: str | None = None,
@@ -306,7 +307,14 @@ class OctogenClient:
         derived from it; ``understand=False`` matches it as written. ``facets``
         and ``exclude_facets`` say what to keep and drop, ``catalogs`` (1-500
         keys) where to look; omit it to search every catalog your key can
-        access. ``debug=True`` adds ``effective_query``, the search that ran.
+        access. Every page carries ``effective_query``, the search that ran.
+
+        ``fallback_category`` is a category path, root first (for example
+        ``["apparel & accessories", "clothing"]``), searched when understanding
+        finds no category in ``q``. It is not applied when the understood
+        query has a top-level category or ``facets`` has a ``category_path``
+        facet, and it is reported in ``effective_query`` as ``generated``.
+        Requires an understood ``q``.
 
         ``diversity=True`` spreads page 1 across retailers and drops products
         whose image repeats one already on the page. It has no effect with
@@ -332,6 +340,7 @@ class OctogenClient:
             brand_quality_min=brand_quality_min,
             brand_quality_max=brand_quality_max,
             similar_to_brands=_string_list(similar_to_brands, "similar_to_brands"),
+            fallback_category=_string_list(fallback_category, "fallback_category"),
             catalogs=_catalog_list(catalogs),
             limit=limit,
             cursor=cursor,
