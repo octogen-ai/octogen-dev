@@ -979,6 +979,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "2b4ad8c1deda9844bd09ba1b5eaea6eea98c15014b986c3ce1ddb54ae24dbaa1",
+  "sha256": "a6aa46ace70061a1da75fcde29ad20181fcad0ccf650977b80f54d5bc848d84e",
   "version": "1.0.0"
 } as const;
