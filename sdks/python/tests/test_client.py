@@ -205,6 +205,7 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
             limit=25,
             cursor="cursor-1",
             relax=True,
+            diversity=True,
             debug=True,
         )
 
@@ -223,6 +224,7 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
         "limit": 25,
         "cursor": "cursor-1",
         "relax": True,
+        "diversity": True,
         "debug": True,
     }
 
@@ -248,16 +250,16 @@ async def test_search_products_sends_understand_false() -> None:
     }
 
 
-@pytest.mark.parametrize("removed", ["catalog", "text_search_query", "diversity"])
+@pytest.mark.parametrize("removed", ["catalog", "text_search_query"])
 async def test_search_products_no_longer_takes_removed_fields(removed: str) -> None:
-    # The API answers all three with a 422; 0.5 removed the keywords.
+    # The API answers both with a 422; 0.5 removed the keywords.
     legacy_kwargs: dict[str, Any] = {"q": "dress", removed: "acme"}
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(TypeError, match=removed):
             await client.search_products(**legacy_kwargs)
 
 
-@pytest.mark.parametrize("removed", ["catalog", "text_search_query", "diversity"])
+@pytest.mark.parametrize("removed", ["catalog", "text_search_query"])
 def test_search_request_forbids_removed_fields(removed: str) -> None:
     with pytest.raises(ValueError, match="Extra inputs are not permitted"):
         ProgrammaticProductSearchRequest.model_validate({"q": "dress", removed: "x"})

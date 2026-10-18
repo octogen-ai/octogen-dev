@@ -1715,6 +1715,12 @@ export interface components {
              */
             debug: boolean;
             /**
+             * Diversity
+             * @description Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.
+             * @default false
+             */
+            diversity: boolean;
+            /**
              * Exclude Facets
              * @description Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.
              */

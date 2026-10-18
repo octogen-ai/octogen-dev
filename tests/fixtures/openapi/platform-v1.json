@@ -3714,6 +3714,12 @@
             "title": "Debug",
             "type": "boolean"
           },
+          "diversity": {
+            "default": false,
+            "description": "Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+            "title": "Diversity",
+            "type": "boolean"
+          },
           "exclude_facets": {
             "anyOf": [
               {

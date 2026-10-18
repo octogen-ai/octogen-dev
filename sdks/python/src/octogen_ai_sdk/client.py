@@ -297,6 +297,7 @@ class OctogenClient:
         limit: int = 50,
         cursor: str | None = None,
         relax: bool | None = None,
+        diversity: bool | None = None,
         debug: bool | None = None,
     ) -> ProgrammaticProductSearchPage:
         """Search indexed products by free text, filters, or both.
@@ -306,6 +307,12 @@ class OctogenClient:
         and ``exclude_facets`` say what to keep and drop, ``catalogs`` (1-500
         keys) where to look; omit it to search every catalog your key can
         access. ``debug=True`` adds ``effective_query``, the search that ran.
+
+        ``diversity=True`` spreads page 1 across retailers and drops products
+        whose image repeats one already on the page. It has no effect with
+        ``catalogs``, a key limited to specific catalogs, or a ``brand_name``
+        facet, and a cursor continues only with the setting it was minted
+        under.
 
         Contradictions the server would refuse with a ``422`` — ``relax``
         without an understood ``q``, a facet name sent twice, ``price_min``
@@ -329,6 +336,7 @@ class OctogenClient:
             limit=limit,
             cursor=cursor,
             relax=relax,
+            diversity=diversity,
             debug=debug,
         )
         data = await self._json(

@@ -58,6 +58,10 @@ export const SEARCH_FIELDS = {
     "Returns the effective query for query-understanding analysis. A debugging " +
       "surface, not a session one; reach it with `storerouter api`.",
   ),
+  diversity: unsupported(
+    "Opt-in retailer spreading changes page 1's results. Use `storerouter api` " +
+      "when you need it.",
+  ),
   exclude_facets: unsupported(
     "Not yet a flag on `search`; send it with `storerouter api POST /products/search`.",
   ),

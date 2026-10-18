@@ -207,6 +207,7 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     limit: int = Field(default=50, ge=1, le=100)
     cursor: str | None = None
     relax: bool | None = None
+    diversity: bool | None = None
     debug: bool | None = None
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)

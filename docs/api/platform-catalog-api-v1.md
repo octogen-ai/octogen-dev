@@ -182,10 +182,11 @@ Request fields:
 | `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                   |
 | `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body.                                                                                                                                               |
 | `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                        |
+| `diversity`                              | boolean | Defaults to `false`. Spreads page 1 across retailers and drops repeated images. No effect with `catalogs`, a catalog-limited key, or a `brand_name` facet. Changing it mid-search is a `400`.               |
 | `debug`                                  | boolean | Adds `effectiveQuery`: the text, filters and bounds that ran, each facet tagged `caller` or `generated`.                                                                                                    |
 
-`catalog`, `text_search_query`, and `diversity` were removed and are now a
-`422` whose message names the replacement: send `catalogs: ["<key>"]` for
+`catalog` and `text_search_query` were removed and are now a `422` whose
+message names the replacement: send `catalogs: ["<key>"]` for
 `catalog`, and `q` with `understand: false` (filters in `facets` and
 `exclude_facets`) for `text_search_query`.
 
