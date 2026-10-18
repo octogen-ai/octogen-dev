@@ -798,6 +798,12 @@ export const PUBLIC_CONTRACT = {
             "title": "Debug",
             "type": "boolean"
           },
+          "diversity": {
+            "default": false,
+            "description": "Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+            "title": "Diversity",
+            "type": "boolean"
+          },
           "exclude_facets": {
             "anyOf": [
               {
@@ -973,6 +979,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "66afee37b6364c6d90ef30a302ad1fb1dea4c4f5aca35612597412134806a6a7",
+  "sha256": "a6aa46ace70061a1da75fcde29ad20181fcad0ccf650977b80f54d5bc848d84e",
   "version": "1.0.0"
 } as const;

@@ -173,6 +173,13 @@ export interface SearchProductsParams {
    * `q`; replay a relaxed page's cursor with `relax: true`.
    */
   relax?: boolean;
+  /**
+   * Spread page 1 across retailers and drop products whose image repeats one
+   * already on the page. No effect with `catalogs`, a key limited to specific
+   * catalogs, or a `brand_name` facet. A cursor continues only with the
+   * setting it was minted under.
+   */
+  diversity?: boolean;
   /** Include {@link ProgrammaticProductSearchPage.effectiveQuery} in the response. */
   debug?: boolean;
 }
@@ -193,6 +200,7 @@ export interface ProgrammaticProductSearchRequest {
   limit: number;
   cursor?: string;
   relax?: boolean;
+  diversity?: boolean;
   debug?: boolean;
 }
 

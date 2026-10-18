@@ -3714,6 +3714,12 @@
             "title": "Debug",
             "type": "boolean"
           },
+          "diversity": {
+            "default": false,
+            "description": "Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+            "title": "Diversity",
+            "type": "boolean"
+          },
           "exclude_facets": {
             "anyOf": [
               {
@@ -4073,7 +4079,7 @@
     },
     "securitySchemes": {
       "BearerApiKey": {
-        "bearerFormat": "Octogen Platform API key",
+        "bearerFormat": "StoreRouter API key",
         "description": "Send your Catalog partner organization API key as `Authorization: Bearer <api-key>`.",
         "scheme": "bearer",
         "type": "http"
@@ -4083,7 +4089,7 @@
   "info": {
     "description": "Use `/v1` with Catalog partner organization API keys. Merchant organization keys remain forbidden.",
     "summary": "Public server-to-server API for Catalog partner product search and lookup",
-    "title": "Octogen Platform Catalog API",
+    "title": "StoreRouter Catalog API",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
@@ -6509,7 +6515,7 @@
   "servers": [
     {
       "description": "Production",
-      "url": "https://api.octogen.ai/v1"
+      "url": "https://api.storerouter.ai/v1"
     },
     {
       "description": "Local development",

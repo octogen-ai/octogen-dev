@@ -169,6 +169,7 @@ describe("OctogenClient", () => {
       limit: 25,
       cursor: "cursor-1",
       relax: true,
+      diversity: true,
       debug: true,
     });
 
@@ -187,6 +188,7 @@ describe("OctogenClient", () => {
       limit: 25,
       cursor: "cursor-1",
       relax: true,
+      diversity: true,
       debug: true,
     });
   });
@@ -209,7 +211,7 @@ describe("OctogenClient", () => {
     });
   });
 
-  it("refuses the removed catalog, diversity and textSearchQuery fields", async () => {
+  it("refuses the removed catalog and textSearchQuery fields", async () => {
     const { calls, fetchMock } = createFetchMock();
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
     const removed = [
@@ -217,7 +219,6 @@ describe("OctogenClient", () => {
         { catalog: "acme", q: "dress" },
         "searchProducts takes catalogs: [key], not catalog",
       ],
-      [{ diversity: true, q: "dress" }, "no longer takes diversity"],
       [{ textSearchQuery: { text: "dress" } }, "pass q with understand: false"],
     ] as const;
 

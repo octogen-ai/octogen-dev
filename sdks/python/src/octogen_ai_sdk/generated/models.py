@@ -597,6 +597,11 @@ class ProgrammaticProductSearchRequest(BaseModel):
         description="Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
         title="Debug",
     )
+    diversity: bool | None = Field(
+        False,
+        description="Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+        title="Diversity",
+    )
     exclude_facets: list[Facet] | None = Field(
         None,
         description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",

@@ -5,6 +5,9 @@
 - **Breaking:** remove customer Voyage methods and types. Voyage is admin-only;
   customer applications must stop calling these retired endpoints.
 - Regenerate the public contract mirror without Voyage operations and schemas.
+- `search_products` takes `diversity` again, now that the API applies it:
+  `diversity=True` spreads page 1 across retailers and drops repeated images.
+  `ProgrammaticProductSearchRequest` declares the field. Omitted by default.
 
 ## 0.5.0 — 2026-10-14
 

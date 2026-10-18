@@ -645,7 +645,6 @@ function assertCatalogs(catalogs: unknown, max: number): void {
  */
 const REMOVED_SEARCH_PARAMS: Readonly<Record<string, string>> = Object.freeze({
   catalog: "searchProducts takes catalogs: [key], not catalog",
-  diversity: "searchProducts no longer takes diversity; the API removed it",
   textSearchQuery:
     "searchProducts no longer takes textSearchQuery; pass q with understand: false, " +
     "and your filters in facets and excludeFacets",
@@ -709,6 +708,9 @@ function toSearchPayload(
   }
   if (params.relax !== undefined) {
     payload.relax = params.relax;
+  }
+  if (params.diversity !== undefined) {
+    payload.diversity = params.diversity;
   }
   if (params.debug !== undefined) {
     payload.debug = params.debug;
