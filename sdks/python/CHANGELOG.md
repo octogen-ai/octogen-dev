@@ -1,5 +1,32 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.8.0 (unreleased)
+
+More-like-this takes the same caller controls as search. **Breaking:** the
+`include_facets` keyword is gone. The API now refuses `include_facets` with a
+`422` that names `facets`, so 0.7.0 and older break on any call that passes it.
+Upgrade before that API change deploys.
+
+- `more_like_this_products` takes `facets` in place of `include_facets`. A facet
+  you send replaces the generated facet of the same name and is never relaxed.
+  `ProgrammaticMoreLikeThisRequest` declares `facets` and forbids
+  `include_facets`.
+- `more_like_this_products` takes `relax`. It is omitted unless set, and the
+  server defaults it to `True`: a short page 1 is retried with Platform's own
+  generated facets dropped, never the facets or bounds you sent. For a URL or
+  UUID source, page 1 is short when it has fewer than `min(5, limit)` results
+  and no `next_cursor`. An image source relaxes only an empty page. Search
+  keeps its default of `False`. The rule is the same on both routes: what you
+  send is never dropped, but the server may drop its own inferences.
+- `more_like_this_products` takes `price_min`/`price_max` and
+  `brand_quality_min`/`brand_quality_max`, with search's semantics. A
+  minimum above its maximum, or a facet name sent twice in `facets` or
+  `exclude_facets`, raises `ValidationError` before any request.
+- `ProgrammaticMoreLikeThisEffectiveQuery` (returned with `debug=True`)
+  reports `relaxation` in search's shape (`rounds`, `declined_rounds`, `dropped_facets`) and the applied
+  `brand_quality_min`/`brand_quality_max`.
+- Regenerate the contract mirror for these changes.
+
 ## 0.7.0 — 2026-10-19
 
 - Add `list_taxonomy_categories`, `list_taxonomy_attributes` and

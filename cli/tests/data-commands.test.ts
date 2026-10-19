@@ -322,6 +322,46 @@ describe("storerouter similar", () => {
     expect(body).not.toHaveProperty("catalog");
   });
 
+  it("sends --facet as `facets`, never `include_facets`, and relaxes by default", async () => {
+    const result = await runCli({
+      argv: [
+        "similar",
+        "https://lagence.com/products/akiya",
+        "--facet",
+        "gender=female",
+        "--exclude-facet",
+        "color_family=Black",
+        "--price-min",
+        "50",
+        "--price-max",
+        "300",
+      ],
+      env: KEYED,
+      routes: { "POST /products/more-like-this": { body: SIMILAR_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body["facets"]).toEqual([{ name: "gender", values: ["female"] }]);
+    expect(body["exclude_facets"]).toEqual([
+      { name: "color_family", values: ["Black"] },
+    ]);
+    expect(body["price_min"]).toBe(50);
+    expect(body["price_max"]).toBe(300);
+    expect(body["relax"]).toBe(true);
+    expect(body).not.toHaveProperty("include_facets");
+  });
+
+  it("sends relax: false for --no-relax", async () => {
+    const result = await runCli({
+      argv: ["similar", "https://lagence.com/products/akiya", "--no-relax"],
+      env: KEYED,
+      routes: { "POST /products/more-like-this": { body: SIMILAR_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body["relax"]).toBe(false);
+  });
+
   it("refuses something that is neither, rather than sending a 422", async () => {
     const result = await runCli({ argv: ["similar", "akiya-dress"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);

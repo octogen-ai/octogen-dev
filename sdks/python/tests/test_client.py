@@ -27,6 +27,7 @@ from octogen_ai_sdk import (
     ProductLookupCachePolicy,
     ProductLookupResolutionMode,
     ProductResolutionMetadata,
+    ProgrammaticMoreLikeThisRequest,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
     ProgrammaticProductSearchEffectiveQuery,
@@ -571,9 +572,14 @@ async def test_more_like_this_products_sends_typed_request() -> None:
         page = await client.more_like_this_products(
             source_url="https://example.com/products/linen-dress",
             catalogs=["acme", "globex"],
-            include_facets=[{"name": FacetName.GENDER, "values": ["female"]}],
+            facets=[{"name": FacetName.GENDER, "values": ["female"]}],
             exclude_facets=[{"name": FacetName.COLOR_FAMILY, "values": ["Black"]}],
+            price_min=50,
+            price_max=300,
+            brand_quality_min=3,
+            brand_quality_max=6,
             price_preference=PricePreference.HIGHER,
+            relax=False,
             limit=3,
             debug=True,
         )
@@ -583,9 +589,14 @@ async def test_more_like_this_products_sends_typed_request() -> None:
         "source": {"url": "https://example.com/products/linen-dress"},
         "catalogs": ["acme", "globex"],
         "limit": 3,
-        "include_facets": [{"name": "gender", "values": ["female"]}],
+        "facets": [{"name": "gender", "values": ["female"]}],
         "exclude_facets": [{"name": "color_family", "values": ["Black"]}],
+        "price_min": 50,
+        "price_max": 300,
+        "brand_quality_min": 3,
+        "brand_quality_max": 6,
         "price_preference": "higher",
+        "relax": False,
         "debug": True,
     }
     assert page.source.catalog_key == "acme"
@@ -614,6 +625,136 @@ async def test_more_like_this_products_rejects_bad_catalogs(
             await client.more_like_this_products(source_uuid="p1", catalogs=catalogs)
 
     assert not route.called
+
+
+@respx.mock
+async def test_more_like_this_products_leaves_relax_to_the_server() -> None:
+    # The server defaults `relax` to true; the SDK sends it only when set, and
+    # never sends the removed `include_facets`.
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": {
+                    "catalogKey": "acme",
+                    "uuid": "p1",
+                    "productUrl": "https://example.com/p1",
+                },
+                "items": [],
+                "nextCursor": None,
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.more_like_this_products(source_uuid="p1")
+        await client.more_like_this_products(source_uuid="p1", relax=True)
+
+    first, second = (json.loads(call.request.read()) for call in route.calls)
+    assert first == {
+        "source": {"uuid": "p1"},
+        "limit": 12,
+        "price_preference": "any",
+        "debug": False,
+    }
+    assert second["relax"] is True
+    for body in (first, second):
+        assert "include_facets" not in body
+
+
+@respx.mock
+async def test_more_like_this_products_parses_relaxation() -> None:
+    respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": {
+                    "catalogKey": "acme",
+                    "uuid": "p1",
+                    "productUrl": "https://example.com/p1",
+                },
+                "items": [],
+                "nextCursor": None,
+                "effectiveQuery": {
+                    "text": "linen dress",
+                    "limit": 12,
+                    "brandQualityMin": 3,
+                    "relaxation": {
+                        "rounds": 1,
+                        "declinedRounds": 0,
+                        "droppedFacets": [
+                            {
+                                "name": "color_family",
+                                "values": ["Blue"],
+                                "source": "generated",
+                            }
+                        ],
+                    },
+                },
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(source_uuid="p1")
+
+    effective = page.effective_query
+    assert effective is not None
+    assert effective.brand_quality_min == 3
+    assert effective.relaxation is not None
+    assert effective.relaxation.rounds == 1
+    assert effective.relaxation.dropped_facets is not None
+    assert effective.relaxation.dropped_facets[0].name == "color_family"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            {
+                "facets": [
+                    {"name": "gender", "values": ["female"]},
+                    {"name": "gender", "values": ["male"]},
+                ]
+            },
+            "more than once",
+        ),
+        ({"price_min": 200, "price_max": 100}, "price_min must not exceed"),
+        (
+            {"brand_quality_min": 5, "brand_quality_max": 2},
+            "brand_quality_min must not exceed",
+        ),
+        ({"brand_quality_min": 7}, "less than or equal to 6"),
+        ({"price_min": -1}, "greater than or equal to 0"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_contradictions(
+    kwargs: dict[str, Any], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match=match):
+            await client.more_like_this_products(source_uuid="p1", **kwargs)
+
+    assert not route.called
+
+
+async def test_more_like_this_products_no_longer_takes_include_facets() -> None:
+    # The server refuses `include_facets` with a 422 naming `facets`; 0.8
+    # removed the keyword, and the request model forbids the field.
+    legacy_kwargs: dict[str, Any] = {
+        "source_uuid": "p1",
+        "include_facets": [{"name": "gender", "values": ["female"]}],
+    }
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(TypeError, match="include_facets"):
+            await client.more_like_this_products(**legacy_kwargs)
+    with pytest.raises(ValueError, match="include_facets"):
+        ProgrammaticMoreLikeThisRequest.model_validate(
+            {"source": {"uuid": "p1"}, "include_facets": []}
+        )
 
 
 async def test_more_like_this_products_no_longer_takes_catalog() -> None:

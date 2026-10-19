@@ -299,17 +299,38 @@ curl -sS https://api.storerouter.ai/v1/products/more-like-this \
 
 Request fields:
 
-| Field              | Type    | Notes                                                                                                 |
-| ------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
-| `source.url`       | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.               |
-| `source.uuid`      | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                |
-| `catalogs`         | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.     |
-| `limit`            | integer | Page size from 1 to 100. Defaults to 12.                                                              |
-| `cursor`           | string  | Opaque pagination cursor from the previous response.                                                  |
-| `include_facets`   | array   | Additional include facets appended after server-generated audience facets.                            |
-| `exclude_facets`   | array   | Facets to exclude from results.                                                                       |
-| `price_preference` | string  | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`.        |
-| `debug`            | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval. |
+| Field                                     | Type    | Notes                                                                                                                                                                                                                                |
+| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `source.url`                              | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                              |
+| `source.uuid`                             | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                               |
+| `catalogs`                                | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.                                                                                                                                    |
+| `limit`                                   | integer | Page size from 1 to 100. Defaults to 12.                                                                                                                                                                                             |
+| `cursor`                                  | string  | Opaque pagination cursor from the previous response.                                                                                                                                                                                 |
+| `facets`                                  | array   | Filters a product must match, as on search. A facet you send replaces every generated facet of the same name and is never relaxed. Each name at most once. Replaces `include_facets`, which is refused with a `422` naming `facets`. |
+| `exclude_facets`                          | array   | Filters a product must not match, as on search. Each name at most once.                                                                                                                                                              |
+| `omit_generated_facets`                   | array   | Names of server-generated facets to drop before search and relaxation. Never affects `facets` or `exclude_facets`.                                                                                                                   |
+| `price_min` / `price_max`                 | number  | Inclusive price bounds, at least 0. Combined with the `price_preference` bound by keeping the tighter one. Never relaxed.                                                                                                            |
+| `brand_quality_min` / `brand_quality_max` | number  | Inclusive brand-quality bounds, 1 (very poor) to 6 (exceptional). Never relaxed.                                                                                                                                                     |
+| `price_preference`                        | string  | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`.                                                                                                                                       |
+| `relax`                                   | boolean | Defaults to `true`. Retries a short page 1 with generated facets dropped in stages, least trusted first. See below.                                                                                                                  |
+| `retrieval_embedding_columns`             | array   | Embedding columns that retrieve candidates. Overrides the server default (style/tags embeddings when the source has styles or tags, otherwise the base embedding).                                                                   |
+| `ranking_embedding_columns`               | array   | Embedding columns that rescore and rank the retrieved candidates. Defaults to the base embedding.                                                                                                                                    |
+| `debug`                                   | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval.                                                                                                                                |
+
+`relax` follows the rule search follows: what you send is never silently
+dropped, but the server may drop its own inferences. On more-like-this the
+generated facets are Platform's inference from the source product, not words
+you sent, so `relax` defaults to `true`; search defaults to `false` because its
+generated facets come from your `q`. When relaxation runs depends on the
+source:
+
+- A `url` or `uuid` source relaxes a first page (no `cursor`) that has fewer
+  than `min(5, limit)` results and no `nextCursor`. A stage is adopted only if
+  it reaches that floor, or returns anything for an empty page.
+- An image source relaxes only an empty first page, as search does.
+
+A relaxed page's `nextCursor` continues the same relaxed results. Sending it
+with `relax: false` returns `400`.
 
 Response:
 
@@ -338,9 +359,13 @@ Response:
 ```
 
 With `"debug": true`, the response adds `effectiveQuery` containing only the
-server-derived fields intended for public inspection: `text`,
+server-derived fields intended for public inspection, among them `text`,
 `retrievalEmbeddingColumns`, `rankingEmbeddingColumns`, `facets`,
-`exclusionFacets`, `priceMin`, `priceMax`, and `limit`.
+`exclusionFacets`, `priceMin`, `priceMax`, `brandQualityMin`,
+`brandQualityMax`, `limit` and, with `relax: true`, `relaxation` in search's
+shape (`rounds`, `declinedRounds`, `droppedFacets`). `relaxation` replaces the
+former top-level `relaxationRounds`, `relaxationDroppedFacets` and
+`relaxationDeclinedRounds`.
 
 ### Taxonomy and facet counts
 

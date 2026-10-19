@@ -418,18 +418,42 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
     """More Like This request, optionally restricted to a catalog allowlist.
 
     ``catalogs`` restricts the *results*; the source product may live outside it.
+    ``facets``, ``exclude_facets`` and the price and brand-quality bounds mean
+    what they mean on search, and the same cheap ``422`` rules fail here: a
+    facet name sent twice, a minimum above its maximum. ``include_facets`` is
+    gone; ``facets`` replaces it and the server refuses the old name.
+
+    ``relax`` is left out unless set, so the server default (``True``) applies:
+    a short page 1 is retried with Platform's generated facets dropped, never
+    the ones you sent.
     """
 
     source: ProgrammaticMoreLikeThisSource
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=100)
     cursor: str | None = None
     limit: int = Field(default=12, ge=1, le=100)
-    include_facets: list[Facet] | None = None
-    exclude_facets: list[Facet] | None = None
+    facets: list[Facet] | None = Field(default=None, max_length=50)
+    exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    price_min: float | None = Field(default=None, ge=0)
+    price_max: float | None = Field(default=None, ge=0)
+    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
+    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
     price_preference: PricePreference = PricePreference.ANY
+    relax: bool | None = None
     debug: bool = False
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> ProgrammaticMoreLikeThisRequest:
+        _facet_names(self.facets, "facets")
+        _facet_names(self.exclude_facets, "exclude_facets")
+        for field in ("price", "brand_quality"):
+            low = getattr(self, f"{field}_min")
+            high = getattr(self, f"{field}_max")
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{field}_min must not exceed {field}_max")
+        return self
 
 
 class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):
@@ -463,6 +487,11 @@ class ProgrammaticMoreLikeThisEffectiveQuery(_ResponseModel):
     )
     price_min: float | None = Field(default=None, alias="priceMin")
     price_max: float | None = Field(default=None, alias="priceMax")
+    brand_quality_min: float | None = Field(default=None, alias="brandQualityMin")
+    brand_quality_max: float | None = Field(default=None, alias="brandQualityMax")
+    #: What relaxation did, in search's shape (``rounds`` is 0 when page 1
+    #: needed none). ``None`` with ``relax=False``.
+    relaxation: ProgrammaticProductSearchRelaxation | None = None
     limit: int
 
 

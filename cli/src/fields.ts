@@ -93,6 +93,12 @@ export const SEARCH_FIELDS = {
 // ── POST /products/more-like-this ──────────────────────────────────────────
 
 export const SIMILAR_FIELDS = {
+  brand_quality_max: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
+  ),
+  brand_quality_min: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
+  ),
   catalogs: { flag: "--catalog", multiple: true },
   cursor: { flag: "--cursor" },
   debug: unsupported("Effective-query debugging; reach it with `storerouter api`."),
@@ -103,20 +109,17 @@ export const SIMILAR_FIELDS = {
     multiple: true,
     placeholder: "k=v",
   },
-  include_facets: {
-    flag: "--facet",
-    sdkName: "includeFacets",
-    codec: "facets",
-    multiple: true,
-    placeholder: "k=v",
-  },
+  facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects a server-generated facet visible only in `effectiveQuery`, which " +
       "this command does not request.",
   ),
+  price_max: { flag: "--price-max", sdkName: "priceMax" },
+  price_min: { flag: "--price-min", sdkName: "priceMin" },
   price_preference: { flag: "--price-preference", sdkName: "pricePreference" },
   ranking_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
+  relax: { flag: "--relax", negatable: true },
   retrieval_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
   source: { flag: "<url|uuid> (positional)", codec: "custom" },
 } satisfies FieldMap<MoreLikeThisRequest>;

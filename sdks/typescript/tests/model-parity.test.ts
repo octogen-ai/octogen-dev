@@ -5,7 +5,9 @@ import type {
   MerchantProductImageMetadataView,
   MerchantProductListItem,
   MerchantProductView,
+  MoreLikeThisEffectiveQuery,
   ProgrammaticFacetCountsRequest,
+  ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductSearchPage,
   ProgrammaticProductSearchRequest,
 } from "../src/models.js";
@@ -25,6 +27,10 @@ type GeneratedSearchRequest = components["schemas"]["ProgrammaticProductSearchRe
 type GeneratedSearchPage = components["schemas"]["ProgrammaticProductSearchPage"];
 type GeneratedFacetCountsRequest =
   components["schemas"]["ProgrammaticFacetCountsRequest"];
+type GeneratedMoreLikeThisRequest =
+  components["schemas"]["ProgrammaticMoreLikeThisRequest"];
+type GeneratedMoreLikeThisEffectiveQuery =
+  components["schemas"]["ProgrammaticMoreLikeThisEffectiveQuery"];
 
 type Extends<A, B> = A extends B ? true : false;
 
@@ -93,6 +99,40 @@ const facetCountsRequestKeysCurrent: ExtraFacetCountsRequestKeys extends never
   ? true
   : ExtraFacetCountsRequestKeys = true;
 
+// The more-like-this body must not carry a field the contract retired (as it
+// retired `include_facets` for `facets`), and must cover every field except
+// the ones this SDK does not expose yet.
+type UnexposedMoreLikeThisRequestKeys =
+  "omit_generated_facets" | "ranking_embedding_columns" | "retrieval_embedding_columns";
+type MissingMoreLikeThisRequestKeys = Exclude<
+  keyof GeneratedMoreLikeThisRequest,
+  keyof ProgrammaticMoreLikeThisRequest | UnexposedMoreLikeThisRequestKeys
+>;
+type ExtraMoreLikeThisRequestKeys = Exclude<
+  keyof ProgrammaticMoreLikeThisRequest,
+  keyof GeneratedMoreLikeThisRequest
+>;
+// Its effective query must not declare a field the server stopped sending, as
+// it stopped sending `relaxationRounds` for `relaxation`.
+type ExtraMoreLikeThisEffectiveQueryKeys = Exclude<
+  keyof MoreLikeThisEffectiveQuery,
+  keyof GeneratedMoreLikeThisEffectiveQuery
+>;
+
+const moreLikeThisRequestKeysCovered: MissingMoreLikeThisRequestKeys extends never
+  ? true
+  : MissingMoreLikeThisRequestKeys = true;
+const moreLikeThisRequestKeysCurrent: ExtraMoreLikeThisRequestKeys extends never
+  ? true
+  : ExtraMoreLikeThisRequestKeys = true;
+const moreLikeThisEffectiveQueryKeysCurrent: ExtraMoreLikeThisEffectiveQueryKeys extends never
+  ? true
+  : ExtraMoreLikeThisEffectiveQueryKeys = true;
+const moreLikeThisRelaxationParity: Extends<
+  NonNullable<GeneratedMoreLikeThisEffectiveQuery["relaxation"]>,
+  NonNullable<MoreLikeThisEffectiveQuery["relaxation"]>
+> = true;
+
 // The image fields must accept exactly what the contract sends.
 const imageViewParity: Extends<GeneratedImageView, MerchantProductImageMetadataView> =
   true;
@@ -117,5 +157,9 @@ describe("Unit: view model parity with the generated contract", () => {
     expect(searchPageKeysCovered).toBe(true);
     expect(facetCountsRequestKeysCovered).toBe(true);
     expect(facetCountsRequestKeysCurrent).toBe(true);
+    expect(moreLikeThisRequestKeysCovered).toBe(true);
+    expect(moreLikeThisRequestKeysCurrent).toBe(true);
+    expect(moreLikeThisEffectiveQueryKeysCurrent).toBe(true);
+    expect(moreLikeThisRelaxationParity).toBe(true);
   });
 });

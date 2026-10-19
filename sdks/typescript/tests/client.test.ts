@@ -481,9 +481,14 @@ describe("OctogenClient", () => {
       catalogs: ["acme", "globex"],
       debug: true,
       excludeFacets: [{ name: FacetName.COLOR_FAMILY, values: ["Black"] }],
-      includeFacets: [{ name: FacetName.GENDER, values: ["female"] }],
+      facets: [{ name: FacetName.GENDER, values: ["female"] }],
+      priceMin: 50,
+      priceMax: 300,
+      brandQualityMin: 3,
+      brandQualityMax: 6,
       limit: 3,
       pricePreference: PricePreference.HIGHER,
+      relax: false,
       source: { url: "https://example.com/products/linen-dress" },
     });
 
@@ -494,15 +499,108 @@ describe("OctogenClient", () => {
       catalogs: ["acme", "globex"],
       debug: true,
       exclude_facets: [{ name: "color_family", values: ["Black"] }],
-      include_facets: [{ name: "gender", values: ["female"] }],
+      facets: [{ name: "gender", values: ["female"] }],
+      price_min: 50,
+      price_max: 300,
+      brand_quality_min: 3,
+      brand_quality_max: 6,
       limit: 3,
       price_preference: "higher",
+      relax: false,
       source: { url: "https://example.com/products/linen-dress" },
     });
     expect(page.source.catalogKey).toBe("acme");
     expect(page.items[0]?.catalogKey).toBe("acme");
     expect(page.items[0]?.displayMatchScore).toBe(92);
     expect(page.effectiveQuery?.priceMin).toBe(128);
+  });
+
+  it("leaves more-like-this relax to the server and never sends include_facets", async () => {
+    const source = {
+      catalogKey: "acme",
+      productUrl: "https://example.com/p1",
+      uuid: "p1",
+    };
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      nextCursor: null,
+      source,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.moreLikeThisProducts({ source: { uuid: "p1" } });
+    await client.moreLikeThisProducts({ relax: true, source: { uuid: "p1" } });
+
+    const [first, second] = calls.map((call) => requestBodyJson(call));
+    expect(first).toEqual({
+      debug: false,
+      limit: 12,
+      price_preference: "any",
+      source: { uuid: "p1" },
+    });
+    expect(second).toMatchObject({ relax: true });
+    for (const body of [first, second]) {
+      expect(body).not.toHaveProperty("include_facets");
+    }
+  });
+
+  it("parses more-like-this relaxation in search's shape", async () => {
+    const { fetchMock } = createFetchMock({
+      effectiveQuery: {
+        brandQualityMin: 3,
+        limit: 12,
+        relaxation: {
+          declinedRounds: 0,
+          droppedFacets: [
+            { name: "color_family", source: "generated", values: ["Blue"] },
+          ],
+          rounds: 1,
+        },
+        text: "linen dress",
+      },
+      items: [],
+      nextCursor: null,
+      source: { catalogKey: "acme", productUrl: "https://example.com/p1", uuid: "p1" },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({ source: { uuid: "p1" } });
+
+    expect(page.effectiveQuery?.brandQualityMin).toBe(3);
+    expect(page.effectiveQuery?.relaxation?.rounds).toBe(1);
+    expect(page.effectiveQuery?.relaxation?.droppedFacets?.[0]?.name).toBe(
+      "color_family",
+    );
+  });
+
+  it("rejects more-like-this contradictions and include_facets before a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    const source = { uuid: "p1" };
+
+    await expect(
+      client.moreLikeThisProducts({
+        facets: [
+          { name: FacetName.GENDER, values: ["female"] },
+          { name: FacetName.GENDER, values: ["male"] },
+        ],
+        source,
+      }),
+    ).rejects.toThrow('facets lists facet "gender" more than once');
+    await expect(
+      client.moreLikeThisProducts({ priceMax: 100, priceMin: 200, source }),
+    ).rejects.toThrow("priceMin must not exceed priceMax");
+    await expect(
+      client.moreLikeThisProducts({ brandQualityMin: 7, source }),
+    ).rejects.toThrow("brandQualityMin must be a number");
+    await expect(
+      client.moreLikeThisProducts({
+        // A JavaScript caller still on the 0.5.0 name.
+        ...({ includeFacets: [{ name: "gender", values: ["female"] }] } as object),
+        source,
+      }),
+    ).rejects.toThrow("moreLikeThisProducts takes facets, not includeFacets");
+    expect(calls).toHaveLength(0);
   });
 
   it("rejects invalid more-like-this sources before making a request", async () => {
