@@ -57,7 +57,8 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   Results come back as `items` + `nextCursor`, each item carrying `productUrl`,
   plus `effectiveQuery`, the search that ran.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys). `facets`,
+  or UUID, or to a set of 1–20 product UUIDs passed as `sources`, optionally
+  restricted to `catalogs` (1–100 keys). `facets`,
   `excludeFacets` and the price and brand-quality bounds work as on search.
   `relax` defaults to `true` on the server: a short page 1 is retried with
   Platform's generated facets dropped, never yours, and reported in

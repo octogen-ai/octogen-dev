@@ -1631,7 +1631,7 @@ export interface components {
             ranking_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
             /**
              * Relax
-             * @description Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.
+             * @description Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, and for `sources`, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.
              * @default true
              */
             relax: boolean;
@@ -1640,7 +1640,13 @@ export interface components {
              * @description Embedding columns used to retrieve candidate products. Overrides the server-selected default (style/tags embeddings when the source product has styles or tags, otherwise the base embedding).
              */
             retrieval_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
-            source: components["schemas"]["ProgrammaticMoreLikeThisSource"];
+            /** @description The product or image to find similar products for. Send exactly one of `source` and `sources`. */
+            source?: components["schemas"]["ProgrammaticMoreLikeThisSource"] | null;
+            /**
+             * Sources
+             * @description Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.
+             */
+            sources?: string[] | null;
         };
         /** ProgrammaticMoreLikeThisResponse */
         ProgrammaticMoreLikeThisResponse: {
@@ -1661,6 +1667,11 @@ export interface components {
             resolution?: string | null;
             source?: components["schemas"]["ProgrammaticMoreLikeThisSourceResponse"] | null;
             sourceImage?: components["schemas"]["ProgrammaticMoreLikeThisSourceImageResponse"] | null;
+            /**
+             * Sources
+             * @description The resolved `sources`, in request order. Present only when the request sent `sources`.
+             */
+            sources?: components["schemas"]["ProgrammaticMoreLikeThisSourceResponse"][] | null;
         };
         /**
          * ProgrammaticMoreLikeThisSource

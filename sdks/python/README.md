@@ -66,7 +66,8 @@ if that stops being true — see
   Results come back as `items` + `next_cursor`, each item carrying
   `product_url`, plus `effective_query` with `debug=True`.
 - `more_like_this_products(...)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys). `facets`,
+  or UUID, or to a set of 1–20 product UUIDs passed as `sources`, optionally
+  restricted to `catalogs` (1–100 keys). `facets`,
   `exclude_facets` and the price and brand-quality bounds work as on search.
   `relax` defaults to `True` on the server: a short page 1 is retried with
   Platform's generated facets dropped, never yours, and reported in

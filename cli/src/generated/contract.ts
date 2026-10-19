@@ -955,7 +955,7 @@ export const PUBLIC_CONTRACT = {
           },
           "relax": {
             "default": true,
-            "description": "Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.",
+            "description": "Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, and for `sources`, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.",
             "title": "Relax",
             "type": "boolean"
           },
@@ -983,85 +983,108 @@ export const PUBLIC_CONTRACT = {
             "title": "Retrieval Embedding Columns"
           },
           "source": {
-            "additionalProperties": false,
-            "description": "Source product identifier for a More Like This request.",
-            "properties": {
-              "image": {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "description": "Source image for a More Like This request (OCT-3654 phase 1).\n\nThe image resolves through the generation pipeline (~5-8s typical) —\nsee the MLT image-input proposal for the phased resolution ladder.",
-                    "properties": {
-                      "b64": {
-                        "anyOf": [
-                          {
-                            "minLength": 1,
-                            "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "description": "Source product identifier for a More Like This request.",
+                "properties": {
+                  "image": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "description": "Source image for a More Like This request (OCT-3654 phase 1).\n\nThe image resolves through the generation pipeline (~5-8s typical) —\nsee the MLT image-input proposal for the phased resolution ladder.",
+                        "properties": {
+                          "b64": {
+                            "anyOf": [
+                              {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Base64-encoded image bytes (decoded size capped at 8 MB).",
+                            "title": "B64"
                           },
-                          {
-                            "type": "null"
+                          "url": {
+                            "anyOf": [
+                              {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "HTTP(S) image URL, fetched server-side. Only hosts on the deployment allowlist are permitted.",
+                            "title": "Url"
                           }
-                        ],
-                        "description": "Base64-encoded image bytes (decoded size capped at 8 MB).",
-                        "title": "B64"
+                        },
+                        "title": "ProgrammaticMoreLikeThisImageSource",
+                        "type": "object"
                       },
-                      "url": {
-                        "anyOf": [
-                          {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "HTTP(S) image URL, fetched server-side. Only hosts on the deployment allowlist are permitted.",
-                        "title": "Url"
+                      {
+                        "type": "null"
                       }
-                    },
-                    "title": "ProgrammaticMoreLikeThisImageSource",
-                    "type": "object"
+                    ],
+                    "description": "Source image to derive the query from (OCT-3654). Slower than url/uuid sources: the image runs through query generation (~5-8s typical)."
                   },
-                  {
-                    "type": "null"
+                  "url": {
+                    "anyOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Canonical product URL to use as the source product.",
+                    "title": "Url"
+                  },
+                  "uuid": {
+                    "anyOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Indexed product UUID to use as the source product.",
+                    "title": "Uuid"
                   }
-                ],
-                "description": "Source image to derive the query from (OCT-3654). Slower than url/uuid sources: the image runs through query generation (~5-8s typical)."
+                },
+                "title": "ProgrammaticMoreLikeThisSource",
+                "type": "object"
               },
-              "url": {
-                "anyOf": [
-                  {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Canonical product URL to use as the source product.",
-                "title": "Url"
-              },
-              "uuid": {
-                "anyOf": [
-                  {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Indexed product UUID to use as the source product.",
-                "title": "Uuid"
+              {
+                "type": "null"
               }
-            },
-            "title": "ProgrammaticMoreLikeThisSource",
-            "type": "object"
+            ],
+            "description": "The product or image to find similar products for. Send exactly one of `source` and `sources`."
+          },
+          "sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.",
+            "title": "Sources"
           }
         },
-        "required": [
-          "source"
-        ],
         "title": "ProgrammaticMoreLikeThisRequest",
         "type": "object"
       },
@@ -1476,6 +1499,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "3dbb7f436784b713f491252b80b6f567d8e7550ea98c56da4f2d49f114ed5ac8",
+  "sha256": "616662408ab832281e7710670902a78f7e9b790f81f2634a3228ced67f938155",
   "version": "1.0.0"
 } as const;

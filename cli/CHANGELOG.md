@@ -7,6 +7,8 @@
   on 0.4.0 and older. Run `lookup` directly; a miss no longer points at
   `domains --check`. `status` still checks credentials with `GET /v1/me`.
 - Keyless trial messages name only `lookup` and `search`.
+- `similar` does not expose more-like-this `sources`; send several source
+  products with `storerouter api`.
 - Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
 
 ## 0.4.0 — 2026-10-19 (`next`)

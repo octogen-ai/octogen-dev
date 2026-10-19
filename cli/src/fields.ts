@@ -122,6 +122,9 @@ export const SIMILAR_FIELDS = {
   relax: { flag: "--relax", negatable: true },
   retrieval_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
   source: { flag: "<url|uuid> (positional)", codec: "custom" },
+  sources: unsupported(
+    "Several source products at once; reach them with `storerouter api`.",
+  ),
 } satisfies FieldMap<MoreLikeThisRequest>;
 
 export const PRICE_PREFERENCES = choices("moreLikeThisProducts", "price_preference");

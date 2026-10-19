@@ -16,6 +16,21 @@
 - Regenerate the contract mirror without the `listDomains` operation and its
   schemas.
 
+More-like-this takes several source products at once.
+
+- `more_like_this_products` takes `sources`, 1-20 distinct indexed product
+  UUIDs treated as one set, for example a collection. Pass exactly one of
+  `source_url`, `source_uuid` and `sources`. Results exclude every source; a
+  facet is generated only when every source has it; and `price_preference`
+  compares with the sources' median price.
+- `ProgrammaticMoreLikeThisRequest` declares `sources`, and `source` is now
+  optional. Both or neither, an empty or over-long list, an empty UUID or a
+  UUID sent twice raises `ValidationError` before any request.
+- `ProgrammaticMoreLikeThisResponse.sources` carries the resolved sources in
+  request order when the request sent `sources`. `source` is then `None`, so
+  it is now typed `ProgrammaticMoreLikeThisSourceResponse | None`.
+- Regenerate the contract mirror for `sources`.
+
 ## 0.8.0 — 2026-10-19
 
 More-like-this takes the same caller controls as search. **Breaking:** the
