@@ -6,6 +6,7 @@ import type {
   MerchantProductListItem,
   MerchantProductView,
   MoreLikeThisEffectiveQuery,
+  MoreLikeThisProductsResponse,
   ProgrammaticFacetCountsRequest,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductSearchPage,
@@ -29,6 +30,8 @@ type GeneratedFacetCountsRequest =
   components["schemas"]["ProgrammaticFacetCountsRequest"];
 type GeneratedMoreLikeThisRequest =
   components["schemas"]["ProgrammaticMoreLikeThisRequest"];
+type GeneratedMoreLikeThisResponse =
+  components["schemas"]["ProgrammaticMoreLikeThisResponse"];
 type GeneratedMoreLikeThisEffectiveQuery =
   components["schemas"]["ProgrammaticMoreLikeThisEffectiveQuery"];
 
@@ -128,6 +131,10 @@ const moreLikeThisRequestKeysCurrent: ExtraMoreLikeThisRequestKeys extends never
 const moreLikeThisEffectiveQueryKeysCurrent: ExtraMoreLikeThisEffectiveQueryKeys extends never
   ? true
   : ExtraMoreLikeThisEffectiveQueryKeys = true;
+const moreLikeThisSourcesParity: Extends<
+  NonNullable<GeneratedMoreLikeThisResponse["sources"]>[number],
+  NonNullable<MoreLikeThisProductsResponse["sources"]>[number]
+> = true;
 const moreLikeThisRelaxationParity: Extends<
   NonNullable<GeneratedMoreLikeThisEffectiveQuery["relaxation"]>,
   NonNullable<MoreLikeThisEffectiveQuery["relaxation"]>
@@ -161,5 +168,6 @@ describe("Unit: view model parity with the generated contract", () => {
     expect(moreLikeThisRequestKeysCurrent).toBe(true);
     expect(moreLikeThisEffectiveQueryKeysCurrent).toBe(true);
     expect(moreLikeThisRelaxationParity).toBe(true);
+    expect(moreLikeThisSourcesParity).toBe(true);
   });
 });
