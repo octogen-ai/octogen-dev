@@ -1,6 +1,6 @@
 # Changelog — `octogen-ai-sdk`
 
-## Unreleased
+## 0.7.0 — 2026-10-19
 
 - Add `list_taxonomy_categories`, `list_taxonomy_attributes` and
   `list_taxonomy_attribute_values` for `GET /v1/taxonomy/...`: categories with
