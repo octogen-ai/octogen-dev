@@ -92,6 +92,13 @@ jobs:
         run: npm run test:published-contract
         env:
           OCTOGEN_REQUIRE_PUBLISHED_CONTRACT: "1"
+        # One-off exemption (OCT-4498, approved by Ram 2026-10-19). These three
+        # releases declare OCT-4435's more-like-this contract (`facets`,
+        # `relax`), so their snapshot is deliberately ahead of the CDN, and
+        # OCT-4435 may only deploy after they publish. The step still runs and
+        # logs the diff; only these exact tags may pass while it is red. Remove
+        # this line once OCT-4435 has deployed.
+        continue-on-error: ${{ contains(fromJSON('["sdk-ts-v0.6.0", "cli-v0.4.0", "sdk-py-v0.8.0"]'), github.ref_name) }}
       - name: Packed CLI matches its exact registry SDK
         if: startsWith(github.ref_name, 'cli-v')
         run: npm run test:cli-release
