@@ -1039,8 +1039,15 @@ function toMoreLikeThisPayload(
     debug: params.debug ?? false,
     limit,
     price_preference: params.pricePreference ?? "any",
-    source: toMoreLikeThisSourcePayload(params.source),
   };
+  if (params.sources === undefined) {
+    payload.source = toMoreLikeThisSourcePayload(params.source);
+  } else {
+    if (params.source !== undefined) {
+      throw new TypeError("Exactly one of source or sources is required");
+    }
+    payload.sources = toMoreLikeThisSourcesPayload(params.sources);
+  }
 
   if (params.catalogs !== undefined) {
     payload.catalogs = [...params.catalogs];
@@ -1096,6 +1103,23 @@ function toMoreLikeThisSourcePayload(
   }
   assertNonEmptyString(source.uuid, "source.uuid");
   return { uuid: source.uuid };
+}
+
+function toMoreLikeThisSourcesPayload(sources: unknown): string[] {
+  if (!Array.isArray(sources) || sources.length < 1 || sources.length > 20) {
+    throw new TypeError("sources must contain between 1 and 20 product UUIDs");
+  }
+  const uuids: string[] = [];
+  for (const uuid of sources) {
+    if (typeof uuid !== "string" || uuid.length === 0) {
+      throw new TypeError("sources must contain only non-empty product UUIDs");
+    }
+    uuids.push(uuid);
+  }
+  if (new Set(uuids).size !== uuids.length) {
+    throw new TypeError("sources lists a product UUID more than once");
+  }
+  return uuids;
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {

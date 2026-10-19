@@ -294,6 +294,7 @@ Request fields:
 | ----------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `source.url`                              | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                              |
 | `source.uuid`                             | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                               |
+| `sources`                                 | array   | 1–20 distinct indexed product UUIDs treated as one set, for example a collection. Send exactly one of `source` and `sources`; both or neither is a `422`. See below.                                                                 |
 | `catalogs`                                | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.                                                                                                                                    |
 | `limit`                                   | integer | Page size from 1 to 100. Defaults to 12.                                                                                                                                                                                             |
 | `cursor`                                  | string  | Opaque pagination cursor from the previous response.                                                                                                                                                                                 |
@@ -322,6 +323,15 @@ source:
 
 A relaxed page's `nextCursor` continues the same relaxed results. Sending it
 with `relax: false` returns `400`.
+
+`sources` finds products similar to several products at once. Results exclude
+every source. One UUID behaves exactly like `source: {"uuid": ...}`. With
+several, their style and tag terms are blended into one query, most widely
+shared first; a facet is generated only when every source has it, with the
+values of all of them; and `price_preference` compares with the sources'
+median price. Relaxation treats `sources` like a `uuid` source. The response
+then carries `sources`, the resolved products in request order, instead of
+`source`.
 
 Response:
 

@@ -599,7 +599,9 @@ async def test_more_like_this_products_sends_typed_request() -> None:
         "relax": False,
         "debug": True,
     }
+    assert page.source is not None
     assert page.source.catalog_key == "acme"
+    assert page.sources is None
     assert page.items[0].catalog_key == "acme"
     assert page.items[0].display_match_score == 92
     assert page.effective_query is not None
@@ -739,6 +741,87 @@ async def test_more_like_this_products_rejects_contradictions(
             await client.more_like_this_products(source_uuid="p1", **kwargs)
 
     assert not route.called
+
+
+@respx.mock
+async def test_more_like_this_products_sends_sources() -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "sources": [
+                    {
+                        "catalogKey": "acme",
+                        "uuid": "p1",
+                        "productUrl": "https://example.com/p1",
+                        "title": "Linen Dress",
+                    },
+                    {
+                        "catalogKey": "globex",
+                        "uuid": "p2",
+                        "productUrl": "https://example.com/p2",
+                    },
+                ],
+                "items": [],
+                "nextCursor": None,
+                "requestId": "req-1",
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(sources=("p1", "p2"), limit=5)
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "sources": ["p1", "p2"],
+        "limit": 5,
+        "price_preference": "any",
+        "debug": False,
+    }
+    assert page.source is None
+    assert page.sources is not None
+    assert [source.uuid for source in page.sources] == ["p1", "p2"]
+    assert page.sources[1].catalog_key == "globex"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({}, ValueError, "Exactly one of url or uuid"),
+        ({"source_uuid": "p1", "sources": ["p2"]}, ValueError, "source or sources"),
+        (
+            {"source_url": "https://example.com/p1", "sources": ["p2"]},
+            ValueError,
+            "source or sources",
+        ),
+        ({"sources": []}, ValueError, "at least 1 item"),
+        ({"sources": [f"p{i}" for i in range(21)]}, ValueError, "at most 20 items"),
+        ({"sources": ["p1", "p1"]}, ValueError, "more than once"),
+        ({"sources": [""]}, ValueError, "at least 1 character"),
+        ({"sources": "p1"}, TypeError, "not a string"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_bad_sources(
+    kwargs: dict[str, Any], error: type[Exception], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(error, match=match):
+            await client.more_like_this_products(**kwargs)
+
+    assert not route.called
+
+
+def test_more_like_this_request_takes_exactly_one_of_source_and_sources() -> None:
+    assert ProgrammaticMoreLikeThisRequest(sources=["p1"]).source is None
+    with pytest.raises(ValueError, match="source or sources"):
+        ProgrammaticMoreLikeThisRequest()
+    with pytest.raises(ValueError, match="source or sources"):
+        ProgrammaticMoreLikeThisRequest.model_validate(
+            {"source": {"uuid": "p1"}, "sources": ["p2"]}
+        )
 
 
 async def test_more_like_this_products_no_longer_takes_include_facets() -> None:

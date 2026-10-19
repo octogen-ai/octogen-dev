@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -430,9 +430,16 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
     ``relax`` is left out unless set, so the server default (``True``) applies:
     a short page 1 is retried with Platform's generated facets dropped, never
     the ones you sent.
+
+    Send exactly one of ``source`` and ``sources``. ``sources`` is 1-20
+    distinct indexed product UUIDs treated as one set: results exclude every
+    source, and a facet is generated only when every source has it.
     """
 
-    source: ProgrammaticMoreLikeThisSource
+    source: ProgrammaticMoreLikeThisSource | None = None
+    sources: list[Annotated[str, Field(min_length=1)]] | None = Field(
+        default=None, min_length=1, max_length=20
+    )
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=100)
     cursor: str | None = None
     limit: int = Field(default=12, ge=1, le=100)
@@ -450,6 +457,10 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
 
     @model_validator(mode="after")
     def reject_contradictions(self) -> ProgrammaticMoreLikeThisRequest:
+        if (self.source is None) == (self.sources is None):
+            raise ValueError("Exactly one of source or sources is required")
+        if self.sources is not None and len(set(self.sources)) != len(self.sources):
+            raise ValueError("sources lists a product UUID more than once")
         _facet_names(self.facets, "facets")
         _facet_names(self.exclude_facets, "exclude_facets")
         for field in ("price", "brand_quality"):
@@ -500,7 +511,11 @@ class ProgrammaticMoreLikeThisEffectiveQuery(_ResponseModel):
 
 
 class ProgrammaticMoreLikeThisResponse(_ResponseModel):
-    source: ProgrammaticMoreLikeThisSourceResponse
+    #: The resolved ``source``; ``None`` when the request sent ``sources``.
+    source: ProgrammaticMoreLikeThisSourceResponse | None = None
+    #: The resolved ``sources``, in request order; ``None`` unless the request
+    #: sent ``sources``.
+    sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = None
     items: list[MerchantProductListItem] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, alias="nextCursor")
     effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(

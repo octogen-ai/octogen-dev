@@ -265,7 +265,17 @@ export interface MoreLikeThisSource {
 }
 
 export interface MoreLikeThisProductsParams {
-  source: MoreLikeThisSource;
+  /** The product to find similar products for. Pass exactly one of `source` and `sources`. */
+  source?: MoreLikeThisSource;
+  /**
+   * 1–20 distinct indexed product UUIDs to find products similar to as a set,
+   * for example a collection. Results exclude every source; a facet is
+   * generated only when every source has it, with the values of all of them;
+   * and `pricePreference` compares with the sources' median price. One UUID
+   * behaves exactly like `source: { uuid }`. The response then carries
+   * `sources`, in request order, instead of `source`.
+   */
+  sources?: readonly string[];
   /**
    * Restrict results to these catalog keys (1–100). The source product itself
    * may live outside the list. Omit to draw results from every active catalog.
@@ -303,7 +313,8 @@ export interface MoreLikeThisProductsParams {
 }
 
 export interface ProgrammaticMoreLikeThisRequest {
-  source: MoreLikeThisSource;
+  source?: MoreLikeThisSource;
+  sources?: string[];
   catalogs?: string[];
   cursor?: string;
   limit: number;
@@ -346,7 +357,10 @@ export interface MoreLikeThisEffectiveQuery {
 }
 
 export interface MoreLikeThisProductsResponse {
-  source: MoreLikeThisSourceResponse;
+  /** The resolved `source`; absent when the request sent `sources`. */
+  source?: MoreLikeThisSourceResponse | null;
+  /** The resolved `sources`, in request order; present only when the request sent `sources`. */
+  sources?: MoreLikeThisSourceResponse[] | null;
   items: MerchantProductListItem[];
   nextCursor?: string | null;
   effectiveQuery?: MoreLikeThisEffectiveQuery | null;

@@ -81,15 +81,21 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     });
   }
 
+  // This command always sends `source`, so the API always echoes it; only a
+  // `sources` request gets `sources` back instead.
+  const source = response.source ?? null;
   writer.emit({
     command: context.command,
     data: {
-      source: {
-        uuid: response.source.uuid,
-        catalog: response.source.catalogKey,
-        productUrl: response.source.productUrl,
-        title: response.source.title ?? null,
-      },
+      source:
+        source === null
+          ? null
+          : {
+              uuid: source.uuid,
+              catalog: source.catalogKey,
+              productUrl: source.productUrl,
+              title: source.title ?? null,
+            },
       count: response.items.length,
       nextCursor: response.nextCursor ?? null,
       items: response.items.map((item) => ({
@@ -105,7 +111,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     human: () =>
       [
         `${String(response.items.length)} similar to ${
-          response.source.title ?? response.source.productUrl
+          source?.title ?? source?.productUrl ?? target
         }`,
         ...response.items.map(
           (item) =>

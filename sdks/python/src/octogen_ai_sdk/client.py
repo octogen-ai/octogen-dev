@@ -609,6 +609,7 @@ class OctogenClient:
         *,
         source_url: str | None = None,
         source_uuid: str | None = None,
+        sources: Sequence[str] | None = None,
         catalogs: Sequence[str] | None = None,
         facets: Sequence[FacetInput] | None = None,
         exclude_facets: Sequence[FacetInput] | None = None,
@@ -624,7 +625,15 @@ class OctogenClient:
         request: ProgrammaticMoreLikeThisRequest | None = None,
         timeout: Timeout | None = None,
     ) -> ProgrammaticMoreLikeThisResponse:
-        """Find products similar to a source product URL or UUID.
+        """Find products similar to a source product URL or UUID, or to a set.
+
+        Pass exactly one of ``source_url``, ``source_uuid`` and ``sources``.
+        ``sources`` is 1-20 distinct indexed product UUIDs, for example a
+        collection, combined into one query: results exclude every source, a
+        facet is generated only when every source has it, and
+        ``price_preference`` compares with the sources' median price. One UUID
+        behaves exactly like ``source_uuid``. The response then carries
+        ``sources`` in request order instead of ``source``.
 
         ``catalogs`` (1-100 keys) restricts the results; the source product may
         live outside it. Omit it to draw results from every active catalog.
@@ -652,6 +661,7 @@ class OctogenClient:
                 "more_like_this_products",
                 source_url=source_url,
                 source_uuid=source_uuid,
+                sources=sources,
                 catalogs=catalogs,
                 facets=facets,
                 exclude_facets=exclude_facets,
@@ -670,10 +680,17 @@ class OctogenClient:
             )
         else:
             resolved = ProgrammaticMoreLikeThisRequest(
-                source=ProgrammaticMoreLikeThisSource(
-                    url=source_url,
-                    uuid=source_uuid,
+                source=(
+                    None
+                    if sources is not None
+                    and source_url is None
+                    and source_uuid is None
+                    else ProgrammaticMoreLikeThisSource(
+                        url=source_url,
+                        uuid=source_uuid,
+                    )
                 ),
+                sources=_string_list(sources, "sources"),
                 catalogs=_catalog_list(catalogs),
                 cursor=cursor,
                 limit=12 if limit is None else limit,

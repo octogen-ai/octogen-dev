@@ -12,6 +12,8 @@
   price histogram), as a summary or `--json`. A URL is normalized to its host.
   `404 domain_not_covered` exits `6` with `covered: false`. It takes one host;
   there is no list mode and no host cache.
+- `similar` does not expose more-like-this `sources`; send several source
+  products with `storerouter api`.
 - Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
 
 ## 0.4.0 — 2026-10-19 (`next`)

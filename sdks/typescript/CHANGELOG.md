@@ -22,6 +22,20 @@ fail against it on every version that has them.
   `DomainCatalogCoverage`, `DomainField`, `DomainFieldValue`,
   `PriceDistribution` and `PriceBucket` types.
 
+More-like-this takes several source products at once.
+
+- `moreLikeThisProducts` takes `sources`, 1–20 distinct indexed product UUIDs
+  treated as one set, for example a collection. Pass exactly one of `source`
+  and `sources`; `source` is now optional in `MoreLikeThisProductsParams` and
+  `ProgrammaticMoreLikeThisRequest`. Results exclude every source; a facet is
+  generated only when every source has it; and `pricePreference` compares
+  with the sources' median price. Both or neither, an empty or over-long list,
+  an empty UUID or a UUID sent twice throws `TypeError` before any request.
+- `MoreLikeThisProductsResponse.sources` carries the resolved sources in
+  request order when the request sent `sources`. `source` is then absent, so
+  it is now optional.
+- Regenerate the public contract mirror for `sources`.
+
 ## 0.6.0 — 2026-10-19
 
 More-like-this takes the same caller controls as search, and this release

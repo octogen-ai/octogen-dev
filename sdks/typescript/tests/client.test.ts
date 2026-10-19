@@ -509,7 +509,8 @@ describe("OctogenClient", () => {
       relax: false,
       source: { url: "https://example.com/products/linen-dress" },
     });
-    expect(page.source.catalogKey).toBe("acme");
+    expect(page.source?.catalogKey).toBe("acme");
+    expect(page.sources).toBeUndefined();
     expect(page.items[0]?.catalogKey).toBe("acme");
     expect(page.items[0]?.displayMatchScore).toBe(92);
     expect(page.effectiveQuery?.priceMin).toBe(128);
@@ -615,6 +616,65 @@ describe("OctogenClient", () => {
     await expect(client.moreLikeThisProducts({ source: { url: "" } })).rejects.toThrow(
       "source.url is required",
     );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("sends more-like-this sources and parses them in request order", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      nextCursor: null,
+      requestId: "req-1",
+      sources: [
+        {
+          catalogKey: "acme",
+          productUrl: "https://example.com/p1",
+          title: "Linen Dress",
+          uuid: "p1",
+        },
+        { catalogKey: "globex", productUrl: "https://example.com/p2", uuid: "p2" },
+      ],
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({ limit: 5, sources: ["p1", "p2"] });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      debug: false,
+      limit: 5,
+      price_preference: "any",
+      sources: ["p1", "p2"],
+    });
+    expect(page.source).toBeUndefined();
+    expect(page.sources?.map((source) => source.uuid)).toEqual(["p1", "p2"]);
+    expect(page.sources?.[1]?.catalogKey).toBe("globex");
+  });
+
+  it("rejects invalid more-like-this sources lists before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.moreLikeThisProducts({})).rejects.toThrow("source is required");
+    await expect(
+      client.moreLikeThisProducts({ source: { uuid: "p1" }, sources: ["p2"] }),
+    ).rejects.toThrow("Exactly one of source or sources is required");
+    await expect(client.moreLikeThisProducts({ sources: [] })).rejects.toThrow(
+      "between 1 and 20",
+    );
+    await expect(
+      client.moreLikeThisProducts({
+        sources: Array.from({ length: 21 }, (_, i) => `p${String(i)}`),
+      }),
+    ).rejects.toThrow("between 1 and 20");
+    await expect(
+      client.moreLikeThisProducts({ sources: ["p1", "p1"] }),
+    ).rejects.toThrow("more than once");
+    await expect(client.moreLikeThisProducts({ sources: [""] })).rejects.toThrow(
+      "non-empty product UUIDs",
+    );
+    const bare = { sources: "p1" } as unknown as Parameters<
+      OctogenClient["moreLikeThisProducts"]
+    >[0];
+    await expect(client.moreLikeThisProducts(bare)).rejects.toThrow("between 1 and 20");
     expect(calls).toHaveLength(0);
   });
 
