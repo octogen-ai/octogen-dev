@@ -5,6 +5,14 @@ interface Token {
   kind: "word" | "operator";
   value: string;
 }
+/** `$` and backticks expand in a real shell, so say how to keep them literal. */
+function expansionError(ch: string): Error {
+  const what = ch === "$" ? "Shell expansion ($)" : "Command substitution (`)";
+  const example = ch === "$" ? "'under $300'" : "'`'";
+  return new Error(
+    `${what} is unsupported. For a literal ${ch}, use single quotes (${example}) or escape it (\\${ch}).`,
+  );
+}
 /** Bounded shell grammar. Quoting is lexical; no eval, expansion or host shell. */
 export function tokenize(line: string): Token[] {
   if (line.length > 65536) throw new Error("Command exceeds 64 KiB");
@@ -34,7 +42,7 @@ export function tokenize(line: string): Token[] {
     if (quote === '"') {
       if (ch === '"') quote = "";
       else {
-        if (ch === "$" || ch === "`") throw new Error("Shell expansion is unsupported");
+        if (ch === "$" || ch === "`") throw expansionError(ch);
         word += ch;
       }
       continue;
@@ -51,8 +59,8 @@ export function tokenize(line: string): Token[] {
         i++;
       }
       tokens.push({ kind: "operator", value });
-    } else if (";&`$()".includes(ch))
-      throw new Error(`Unsupported shell syntax: ${ch}`);
+    } else if (ch === "$" || ch === "`") throw expansionError(ch);
+    else if (";&()".includes(ch)) throw new Error(`Unsupported shell syntax: ${ch}`);
     else {
       word += ch;
       started = true;
@@ -103,6 +111,8 @@ function parse(line: string): Stage[] {
 }
 export interface ShellOptions {
   line: string;
+  /** The host renders a terminal: the final, unredirected stage's stdout is a TTY. */
+  terminal?: boolean;
   files: VirtualFiles;
   signal: AbortSignal;
   runId: string;
@@ -111,6 +121,7 @@ export interface ShellOptions {
     argv: string[],
     stdin: string,
     emit: (event: ExecutionEvent) => void,
+    isTty: boolean,
   ) => Promise<ExecutionResult>;
   jq: (
     input: string,
@@ -123,7 +134,7 @@ export async function executeShell(options: ShellOptions): Promise<ExecutionResu
   let input = "";
   let stderr = "";
   let code = 0;
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     options.signal.throwIfAborted();
     if (stage.input)
       input = options.files.read(
@@ -132,9 +143,16 @@ export async function executeShell(options: ShellOptions): Promise<ExecutionResu
     const [name, ...args] = stage.argv;
     let result: { stdout: string; stderr: string; code: number };
     if (name === "storerouter" || name === "octogen") {
-      result = await options.cli(args, input, (event) => {
-        if (event.type === "result" || event.type === "stderr") options.emit(event);
-      });
+      const isTty =
+        options.terminal === true && index === stages.length - 1 && !stage.output;
+      result = await options.cli(
+        args,
+        input,
+        (event) => {
+          if (event.type === "result" || event.type === "stderr") options.emit(event);
+        },
+        isTty,
+      );
     } else if (name === "jq") {
       const filter = args.at(-1);
       const flags = args.slice(0, -1);

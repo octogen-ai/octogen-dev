@@ -70,6 +70,8 @@ export async function run(options: RunOptions): Promise<ExitCode> {
   // means a usage error is still reported in the caller's chosen format, which
   // is the format an agent is parsing.
   const preliminary = looseParse(argv);
+  const unavailable = new Set(options.host.unavailableCommands ?? []);
+  const commands = COMMAND_LIST.filter((command) => !unavailable.has(command.name));
   const writer = new Writer({
     json: resolveJsonMode({ isTty, json: preliminary.json }),
     quiet: preliminary.quiet,
@@ -103,7 +105,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     if (bare.length === 0) {
       // No command at all is not an error: print help on stderr, keep stdout
       // clean, and exit `2` because nothing was asked for.
-      writer.diagnostic(renderRootHelp(COMMAND_LIST, options.host.version));
+      writer.diagnostic(renderRootHelp(commands, options.host.version));
       return ExitCode.Usage;
     }
 
@@ -112,6 +114,12 @@ export async function run(options: RunOptions): Promise<ExitCode> {
       throw usageError(`Unknown command: ${bare[0] ?? ""}`, "unknown_command");
     }
     const { command } = matched;
+    if (unavailable.has(command.name)) {
+      throw usageError(
+        `storerouter ${command.name} is not available here. Install the CLI to use it: npm i -g @storerouter/cli`,
+        "unavailable_command",
+      );
+    }
     const specs: FlagSpecs = { ...GLOBAL_FLAGS, ...(command.flags ?? {}) };
     const parsed = parseArgs(argv, specs);
     const args = new Args(parsed);

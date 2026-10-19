@@ -86,6 +86,16 @@ worker next time. Host transports must honor their `AbortSignal`; late results
 are ignored even if they do not. `timeoutMs` sets a whole-run deadline, capped at
 two minutes; the default is two minutes. The SDK's `--timeout` remains per request.
 
+Pass `terminal: true` when the host renders stdout as a terminal. The final
+pipeline stage, unless redirected, then sees a TTY and prints the CLI's human
+format, as an installed CLI does in a shell. Piped and redirected stages, and
+any stage given `--json`, keep the one-line JSON envelope. The default (`false`)
+keeps every stage non-TTY, so stdout is always JSON.
+
+Keyless CLI calls print a credentials notice on stderr. The browser default says
+the transport is host-injected; pass `keylessNotice` to word it for your host, or
+`""` when the host's server proxy holds the key and the notice would only confuse.
+
 Idle workers retain loaded WASM modules. Each CLI stage gets a fresh QuickJS
 context/runtime with a 128 MiB guest allocation limit, 512 KiB stack limit, CPU
 interrupt deadline, promise job pump, and deterministic handle disposal. Network,
@@ -124,8 +134,8 @@ destinations, query smuggling, unknown body fields, mutation/admin routes and
 lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Store is
 `GET /domains/{host}` for exactly one already-normalized host (lowercase, no
 `www.`, port, encoding or extra segment) with no body; `GET /domains`, the
-covered-host list, stays denied. Raw `api` may
-call these same approved operations; it cannot escape the policy. Browser headers
+covered-host list, stays denied. The browser profile refuses raw `api` outright
+(see below). Browser headers
 are reduced to Accept/Content-Type/If-None-Match; Authorization and User-Agent
 are never forwarded. Policy failures use existing CLI network failure semantics.
 
@@ -143,9 +153,12 @@ installed CLI's legacy trial notice with a host-transport notice.
 ## Bounded shell and files
 
 Supported executables: `storerouter`, compatibility `octogen`, genuine `jq`,
-`cat`, `echo`. CLI `parse` remains the existing `lookup` alias. All existing CLI
-commands remain in shared help; hosts explicitly refuse disallowed capabilities
-at the network boundary. No Voyager surface is added.
+`cat`, `echo`. CLI `parse` remains the existing `lookup` alias. The browser
+profile refuses `storerouter api` and `storerouter status` before any request
+and leaves them out of root help: its server proxy holds the host's own key, and
+`status` reports that organization while `api` returns its raw envelope and
+rate-limit headers. Other disallowed capabilities are refused at the network
+boundary. No Voyager surface is added.
 
 - Single/double quoted strings, backslash escapes, quoted empty arguments.
 - At most eight buffered pipeline stages, `<`, `>`, `>>`. Relative files resolve
@@ -162,6 +175,8 @@ at the network boundary. No Voyager surface is added.
   JSON processing works; byte-exact whitespace-sensitive jq output is unsupported.
 - No Bash, expansion, substitutions, globbing, `;`, `&&`, `||`, background jobs,
   package manager, shell scripts, host processes, symlinks or disk mounts.
+  `$` and backticks are refused, unquoted or in double quotes, with a hint to
+  single-quote them (`'under $300'`) or escape them (`\$`).
 
 The harness has editable command input, output, ↑/↓ session history, cancellation,
 reset and a virtual file editor. It uses basic repository-neutral styling because

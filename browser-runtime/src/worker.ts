@@ -16,6 +16,8 @@ export interface RunMessage {
   type: "run";
   runId: string;
   line: string;
+  terminal?: boolean;
+  keylessNotice?: string;
   files: Record<string, string>;
 }
 export interface ResponseMessage {
@@ -30,6 +32,12 @@ export type WorkerMessage =
   | { type: "request"; runId: string; id: number; request: TransportRequest }
   | { type: "abortRequest"; runId: string; id: number };
 const engine = loadEngine();
+/**
+ * The browser profile's transport is a host proxy holding the host's key, so
+ * commands that report on the caller (`status`: GET /me) or return the raw
+ * response envelope and rate-limit headers (`api`) are refused outright.
+ */
+const BROWSER_UNAVAILABLE_COMMANDS = ["api", "status"];
 let jq: ReturnType<typeof loadJq> | undefined;
 let sequence = 0;
 let active = false;
@@ -64,19 +72,23 @@ self.onmessage = (event: MessageEvent<RunMessage | ResponseMessage>) => {
       const module = await engine;
       const result = await executeShell({
         line: message.line,
+        terminal: message.terminal === true,
         files,
         signal,
         runId,
         emit: send,
-        cli: (argv, stdin, emit) =>
+        cli: (argv, stdin, emit, isTty) =>
           executeWasm({
             module,
             argv,
             stdin,
+            isTty,
+            unavailableCommands: BROWSER_UNAVAILABLE_COMMANDS,
             files,
             signal,
             runId,
             keylessNotice:
+              message.keylessNotice ??
               "Browser transport is host-injected. Anonymous production API access is not assumed.",
             version: {
               version: manifest.version,

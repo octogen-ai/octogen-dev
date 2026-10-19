@@ -9,23 +9,25 @@ import { nodeHost } from "../../cli/src/node-host.js";
 import type { ExecutionEvent, TransportRequest } from "../src/protocol.js";
 const engine = loadEngine();
 const jq = loadJq();
-async function shell(line: string, files = new VirtualFiles()) {
+async function shell(line: string, files = new VirtualFiles(), terminal = false) {
   const events: ExecutionEvent[] = [];
   const signal = new AbortController().signal;
   let calls = 0;
   const result = await executeShell({
     line,
+    terminal,
     files,
     signal,
     runId: "shell",
     emit: (event) => {
       events.push(event);
     },
-    cli: async (argv, stdin, emit) =>
+    cli: async (argv, stdin, emit, isTty) =>
       executeWasm({
         module: await engine,
         argv,
         stdin,
+        isTty,
         emit,
         files,
         signal,
@@ -51,6 +53,94 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     ]);
     expect(result.calls).toBe(1);
     expect(result.events.filter((event) => event.type === "result")).toHaveLength(1);
+  });
+  it("terminal hosts give only the final unredirected stage a TTY", async () => {
+    const files = new VirtualFiles();
+    const human = await shell(
+      "storerouter search 'linen dress' --limit 8",
+      files,
+      true,
+    );
+    expect(human.code).toBe(0);
+    expect(human.stdout).toContain('results for "linen dress"');
+    expect(() => {
+      JSON.parse(human.stdout);
+    }).toThrow();
+    const piped = await shell(
+      "storerouter search 'linen dress' --limit 8 | jq '.count'",
+      files,
+      true,
+    );
+    expect(piped.stdout).toBe("1");
+    await shell("storerouter search 'linen dress' --limit 8 > found.json", files, true);
+    expect(JSON.parse(files.read("/session/found.json"))).toMatchObject({ count: 1 });
+    const flagged = await shell(
+      "storerouter search 'linen dress' --limit 8 --json",
+      files,
+      true,
+    );
+    expect(JSON.parse(flagged.stdout)).toMatchObject({ count: 1 });
+    const headless = await shell("storerouter search 'linen dress' --limit 8", files);
+    expect(JSON.parse(headless.stdout)).toMatchObject({ count: 1 });
+  });
+  it("hosts can replace or silence the keyless notice", async () => {
+    const run = async (keylessNotice?: string) =>
+      executeWasm({
+        module: await engine,
+        argv: ["search", "linen dress", "--limit", "8"],
+        files: new VirtualFiles(),
+        signal: new AbortController().signal,
+        runId: "notice",
+        version: nodeHost.version,
+        emit: () => undefined,
+        transport: withDemoPolicy(fixtureTransport),
+        ...(keylessNotice === undefined ? {} : { keylessNotice }),
+      });
+    expect((await run()).stderr).toContain("No API key found");
+    expect((await run("Demo key held by the server.")).stderr).toBe(
+      "Demo key held by the server.\n",
+    );
+    const silent = await run("");
+    expect(silent.code).toBe(0);
+    expect(silent.stderr).toBe("");
+  });
+  it("hosts can refuse commands before any request and hide them from help", async () => {
+    let calls = 0;
+    const run = async (argv: string[]) =>
+      executeWasm({
+        module: await engine,
+        argv,
+        files: new VirtualFiles(),
+        signal: new AbortController().signal,
+        runId: "unavailable",
+        version: nodeHost.version,
+        emit: () => undefined,
+        unavailableCommands: ["api", "status"],
+        transport: withDemoPolicy((request, signal) => {
+          calls++;
+          return fixtureTransport(request, signal);
+        }),
+      });
+    const api = await run([
+      "api",
+      "POST",
+      "/products/search",
+      "--data",
+      '{"q":"dress"}',
+    ]);
+    expect(api.code).toBe(2);
+    // Without a TTY the failure is the JSON envelope on stdout.
+    const envelope = JSON.parse(api.stdout) as { ok: boolean; message: string };
+    expect(envelope.ok).toBe(false);
+    expect(envelope.message).toContain("storerouter api is not available here");
+    const status = await run(["--json", "status"]);
+    expect(status.code).toBe(2);
+    expect(JSON.parse(status.stdout)).toMatchObject({ code: "unavailable_command" });
+    const help = await run([]);
+    expect(help.stderr).toContain("search");
+    expect(help.stderr).not.toMatch(/^\s+(api|status)\s/m);
+    expect(calls).toBe(0);
+    expect((await run(["search", "linen dress", "--limit", "8"])).code).toBe(0);
   });
   it("literal requested .data.items respects the existing flattened envelope", async () => {
     const result = await shell(
@@ -94,6 +184,17 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
       "echo a && echo b",
     ])
       expect(() => tokenize(line)).toThrow();
+  });
+  it("explains how to keep $ and backticks literal", () => {
+    for (const line of [`echo "under $300"`, "echo under $300"])
+      expect(() => tokenize(line)).toThrow(
+        "Shell expansion ($) is unsupported. For a literal $, use single quotes ('under $300') or escape it (\\$).",
+      );
+    for (const line of ['echo "`id`"', "echo `id`"])
+      expect(() => tokenize(line)).toThrow("Command substitution (`) is unsupported.");
+    expect(
+      tokenize(`echo "men's belts under \\$300" 'under $300'`).map((x) => x.value),
+    ).toEqual(["echo", "men's belts under $300", "under $300"]);
   });
   it("rejects malformed pipelines and unknown executables", async () => {
     for (const line of [
