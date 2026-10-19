@@ -5,6 +5,7 @@ import type {
   MerchantProductImageMetadataView,
   MerchantProductListItem,
   MerchantProductView,
+  ProgrammaticFacetCountsRequest,
   ProgrammaticProductSearchPage,
   ProgrammaticProductSearchRequest,
 } from "../src/models.js";
@@ -22,6 +23,8 @@ type GeneratedProductView = components["schemas"]["MerchantProductView"];
 type GeneratedImageView = components["schemas"]["MerchantProductImageMetadataView"];
 type GeneratedSearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
 type GeneratedSearchPage = components["schemas"]["ProgrammaticProductSearchPage"];
+type GeneratedFacetCountsRequest =
+  components["schemas"]["ProgrammaticFacetCountsRequest"];
 
 type Extends<A, B> = A extends B ? true : false;
 
@@ -72,6 +75,24 @@ const searchPageKeysCovered: MissingSearchPageKeys extends never
   ? true
   : MissingSearchPageKeys = true;
 
+// The facet-counts body is hand-written for the same reason as the search body
+// (defaulted contract fields come out required), so it is pinned the same way.
+type MissingFacetCountsRequestKeys = Exclude<
+  keyof GeneratedFacetCountsRequest,
+  keyof ProgrammaticFacetCountsRequest
+>;
+type ExtraFacetCountsRequestKeys = Exclude<
+  keyof ProgrammaticFacetCountsRequest,
+  keyof GeneratedFacetCountsRequest
+>;
+
+const facetCountsRequestKeysCovered: MissingFacetCountsRequestKeys extends never
+  ? true
+  : MissingFacetCountsRequestKeys = true;
+const facetCountsRequestKeysCurrent: ExtraFacetCountsRequestKeys extends never
+  ? true
+  : ExtraFacetCountsRequestKeys = true;
+
 // The image fields must accept exactly what the contract sends.
 const imageViewParity: Extends<GeneratedImageView, MerchantProductImageMetadataView> =
   true;
@@ -94,5 +115,7 @@ describe("Unit: view model parity with the generated contract", () => {
     expect(searchRequestKeysCovered).toBe(true);
     expect(searchRequestKeysCurrent).toBe(true);
     expect(searchPageKeysCovered).toBe(true);
+    expect(facetCountsRequestKeysCovered).toBe(true);
+    expect(facetCountsRequestKeysCurrent).toBe(true);
   });
 });

@@ -55,17 +55,25 @@ export const SEARCH_FIELDS = {
   catalogs: { flag: "--catalog", codec: "singleton" },
   cursor: { flag: "--cursor" },
   debug: unsupported(
-    "Returns the effective query for query-understanding analysis. A debugging " +
-      "surface, not a session one; reach it with `storerouter api`.",
+    "Reserved for diagnostic detail; the effective query arrives without it. " +
+      "Reach it with `storerouter api`.",
+  ),
+  diversity: unsupported(
+    "Opt-in retailer spreading changes page 1's results. Use `storerouter api` " +
+      "when you need it.",
   ),
   exclude_facets: unsupported(
     "Not yet a flag on `search`; send it with `storerouter api POST /products/search`.",
   ),
   facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
+  fallback_category: unsupported(
+    "Constrains vague queries to a category when understanding finds none. Use " +
+      "`storerouter api` when you need it.",
+  ),
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects an understood facet visible only in `effectiveQuery`, which this " +
-      "command does not request.",
+      "command does not show.",
   ),
   price_max: { flag: "--price-max", sdkName: "priceMax" },
   price_min: { flag: "--price-min", sdkName: "priceMin" },

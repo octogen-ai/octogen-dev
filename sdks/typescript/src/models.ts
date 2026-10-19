@@ -158,6 +158,14 @@ export interface SearchProductsParams {
    */
   similarToBrands?: string[];
   /**
+   * Category path, root first (1–4 names as the `category_path.depth_N` facets
+   * accept them, e.g. `["apparel & accessories", "clothing"]`), searched when
+   * understanding finds no category in `q`. Not applied when the understood
+   * query has a top-level category or `facets` has a `category_path` facet;
+   * reported in `effectiveQuery` as `generated`. Requires understood `q`.
+   */
+  fallbackCategory?: string[];
+  /**
    * Restrict results to these catalog keys (1–500). Omit to search every
    * catalog your key can access. Keys are sent as given; one outside your
    * grants simply matches nothing.
@@ -173,7 +181,17 @@ export interface SearchProductsParams {
    * `q`; replay a relaxed page's cursor with `relax: true`.
    */
   relax?: boolean;
-  /** Include {@link ProgrammaticProductSearchPage.effectiveQuery} in the response. */
+  /**
+   * Spread page 1 across retailers and drop products whose image repeats one
+   * already on the page. No effect with `catalogs`, a key limited to specific
+   * catalogs, or a `brand_name` facet. A cursor continues only with the
+   * setting it was minted under.
+   */
+  diversity?: boolean;
+  /**
+   * Reserved for diagnostic detail.
+   * {@link ProgrammaticProductSearchPage.effectiveQuery} arrives without it.
+   */
   debug?: boolean;
 }
 
@@ -189,10 +207,12 @@ export interface ProgrammaticProductSearchRequest {
   brand_quality_min?: number;
   brand_quality_max?: number;
   similar_to_brands?: string[];
+  fallback_category?: string[];
   catalogs?: string[];
   limit: number;
   cursor?: string;
   relax?: boolean;
+  diversity?: boolean;
   debug?: boolean;
 }
 
@@ -216,7 +236,10 @@ export type ProgrammaticProductSearchEffectiveQuery =
 export interface ProgrammaticProductSearchPage extends MerchantProductListPage {
   /** Server-generated UUID for this execution, matching `X-Request-ID`. */
   requestId: string;
-  /** Present with `debug: true`. */
+  /**
+   * The search that actually ran. Present on every response; servers that
+   * predate it send it only with `debug: true`.
+   */
   effectiveQuery?: ProgrammaticProductSearchEffectiveQuery | null;
 }
 
@@ -468,6 +491,26 @@ export interface MerchantProductListItem {
   rawScore?: number | null;
   displayMatchScore?: number | null;
   updatedAt?: string | null;
+  // Card fields on search and more-like-this results; null or absent when the
+  // product does not carry them or the server predates them.
+  /** ISO 4217 currency of the prices; null when unknown or mixed. */
+  currency?: string | null;
+  /** Product-family availability, not a particular color's or size's stock. */
+  inStock?: boolean | null;
+  /** Product-family color labels; the linked variant may differ. */
+  colors?: string[] | null;
+  sizes?: string[] | null;
+  /**
+   * `"male"`, `"female"` or `"unisex"`; null when unknown or when several are
+   * listed. Typed open so a new value is not a type error.
+   */
+  gender?: "male" | "female" | "unisex" | CustomString | null;
+  /**
+   * Taxonomy category path, root first, in the names the `category_path.depth_N`
+   * facets accept.
+   */
+  categoryPath?: string[] | null;
+  catalogDisplayName?: string | null;
 }
 
 export interface MerchantProductListPage {
@@ -477,7 +520,13 @@ export interface MerchantProductListPage {
 
 export interface MerchantProductView extends Omit<
   MerchantProductListItem,
-  "uuid" | "isActive"
+  | "uuid"
+  | "isActive"
+  | "colors"
+  | "sizes"
+  | "gender"
+  | "categoryPath"
+  | "catalogDisplayName"
 > {
   uuid: string | null;
   isActive?: boolean | null;
@@ -641,3 +690,119 @@ export interface ResolveProductFromHtmlParams {
 
 export type ProgrammaticResolveFromHtmlRequest =
   components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
+
+// ── Taxonomy (/v1/taxonomy) ─────────────────────────────────────────────────
+
+/** One canonical category; its `facets` select it in search unchanged. */
+export type TaxonomyCategory = components["schemas"]["TaxonomyCategory"];
+
+/** One page of a category's children, or of the root categories. */
+export type TaxonomyCategoryPage = components["schemas"]["TaxonomyCategoryPage"];
+
+/** One attribute definition; `facetName` is `null` when not filterable. */
+export type TaxonomyAttribute = components["schemas"]["TaxonomyAttribute"];
+
+/** One page of the attributes a category carries. */
+export type TaxonomyAttributePage = components["schemas"]["TaxonomyAttributePage"];
+
+/** One canonical value; send `handle` in the attribute facet's `values`. */
+export type TaxonomyAttributeValue = components["schemas"]["TaxonomyAttributeValue"];
+
+/** One page of an attribute's values. */
+export type TaxonomyAttributeValuePage =
+  components["schemas"]["TaxonomyAttributeValuePage"];
+
+/** `offset`/`limit` paging; continue with the page's `nextOffset`. */
+export interface TaxonomyPageParams {
+  offset?: number;
+  limit?: number;
+}
+
+export interface ListTaxonomyCategoriesParams extends TaxonomyPageParams {
+  /**
+   * A category UUID, a section handle such as `apparel`, or a category path
+   * such as `Apparel & Accessories > Clothing` (any letter case). Omit for the
+   * root categories.
+   */
+  parent?: string;
+}
+
+// ── Facet counts (/v1/products/facet-counts) ────────────────────────────────
+
+/** Facets whose values `countProductFacets` can count. */
+export type FacetCountName = "color_family" | "category_path.depth_0";
+
+/** One category to count, named by the facets that select it. */
+export interface FacetCountCategory {
+  /** Your identifier; its count carries it back. */
+  key: string;
+  /** 1–10 facets, such as a {@link TaxonomyCategory}'s `facets`. */
+  facets: Facet[];
+}
+
+export interface CountProductFacetsParams {
+  /**
+   * Free-text query, understood as search understands it. Its understood
+   * filters narrow the counts; the text itself does not.
+   */
+  q?: string;
+  /** Filters a product must match, as on `searchProducts`. */
+  facets?: Facet[];
+  /** Filters a product must not match, as on `searchProducts`. */
+  excludeFacets?: Facet[];
+  /** Understood facets to drop, as on `searchProducts`. Requires `q`. */
+  omitGeneratedFacets?: string[];
+  /** Category path to filter to when `q` names none. Requires `q`. */
+  fallbackCategory?: string[];
+  priceMin?: number;
+  priceMax?: number;
+  brandQualityMin?: number;
+  brandQualityMax?: number;
+  /** Catalog keys to count in (1–500). Omit for every catalog your key can access. */
+  catalogs?: readonly string[];
+  /** Categories to count (at most 100); each count also applies its facets. */
+  categories?: FacetCountCategory[];
+  /**
+   * Attribute handles such as `neckline` (at most 50). A value's count ignores
+   * your own facet on that attribute.
+   */
+  attributes?: string[];
+  /** Facets whose values to count; the server counts `color_family` when omitted. */
+  facetNames?: FacetCountName[];
+  /** Most values returned per attribute and facet, 1–1000 (server default 100). */
+  valueLimit?: number;
+}
+
+/** The `POST /v1/products/facet-counts` body, under its wire names. */
+export interface ProgrammaticFacetCountsRequest {
+  q?: string;
+  facets?: Facet[];
+  exclude_facets?: Facet[];
+  omit_generated_facets?: string[];
+  fallback_category?: string[];
+  price_min?: number;
+  price_max?: number;
+  brand_quality_min?: number;
+  brand_quality_max?: number;
+  catalogs?: string[];
+  categories?: FacetCountCategory[];
+  attributes?: string[];
+  facet_names?: FacetCountName[];
+  value_limit?: number;
+}
+
+/** Counts under one set of search filters, with the filters applied. */
+export type ProgrammaticFacetCountsResponse =
+  components["schemas"]["ProgrammaticFacetCountsResponse"];
+
+export type ProgrammaticCategoryCount =
+  components["schemas"]["ProgrammaticCategoryCount"];
+
+export type ProgrammaticAttributeCounts =
+  components["schemas"]["ProgrammaticAttributeCounts"];
+
+export type ProgrammaticFacetValueCounts =
+  components["schemas"]["ProgrammaticFacetValueCounts"];
+
+export type ProgrammaticFacetValueCount =
+  components["schemas"]["ProgrammaticFacetValueCount"];

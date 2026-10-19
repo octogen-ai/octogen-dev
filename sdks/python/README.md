@@ -73,6 +73,14 @@ if that stops being true — see
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
+- `list_taxonomy_categories(parent=...)`, `list_taxonomy_attributes(category)`
+  and `list_taxonomy_attribute_values(handle)` discover categories, their
+  attributes and the attributes' value handles, paged with `offset`/`limit`.
+  A category's `facets` and an attribute's `facet_name` plus value `handle` go
+  back into `search_products` unchanged.
+- `count_product_facets(...)` counts the products `search_products` would
+  filter to — by `categories`, `attributes` and `facet_names` — under the same
+  `q`, facets, bounds and `catalogs`.
 
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
@@ -106,6 +114,20 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         urls=["https://warrenlotas.com/products/black-hoodie"],
     )
     print(result.url_count, [r.code for r in result.rejected])
+```
+
+```python
+async with OctogenClient() as client:
+    children = await client.list_taxonomy_categories(
+        parent="Apparel & Accessories > Clothing"
+    )
+    dresses = next(c for c in children.categories if c.name == "Dresses")
+    counts = await client.count_product_facets(
+        q="red",
+        categories=[{"key": dresses.id, "facets": dresses.facets}],
+        attributes=["neckline"],
+    )
+    print(counts.categories[0].count, counts.attributes[0].values[:3])
 ```
 
 ### Search controls
@@ -148,6 +170,44 @@ Contradictions the API would refuse — `relax` or `understand=False` without a
 `catalogs=[key]`; `text_search_query=` → use `q` with `understand=False` and
 your filters in `facets` and `exclude_facets`. See the
 [CHANGELOG](./CHANGELOG.md#050--2026-10-14) for the migration.
+
+### Prebuilt requests, timeouts, and errors
+
+Every operation with a request body also takes `request=`, a prebuilt request
+model sent as is. A subclass's extra fields go out too, which bridges a field
+the API accepts before this SDK declares it. Passing `request=` together with
+the keyword form is a `TypeError`.
+
+```python
+class MySearchRequest(ProgrammaticProductSearchRequest):
+    new_control: bool | None = None
+
+page = await client.search_products(
+    request=MySearchRequest(q="linen dress", new_control=True),
+    timeout=2.5,  # this call only; also works with an injected http_client
+)
+```
+
+Every operation takes `timeout` (seconds or an `httpx.Timeout`). The SDK never
+retries, so map failures by type and retry what is safe for your call:
+
+| Error | When | Fields |
+| --- | --- | --- |
+| `OctogenRateLimitError` | `429` | `retry_after` (seconds or `None`) |
+| `OctogenInsufficientCreditError` | `402` | `detail` has `top_up_url` |
+| `OctogenServerError` | `5xx` | `retry_after` on a back-pressure `503` |
+| `OctogenTimeoutError` | `httpx` timeout, or `504` (`OctogenGatewayTimeoutError`) | — |
+| `OctogenConnectionError` | connection refused or reset | — |
+
+`lookup_product_markdown(url)` returns the product as LLM-ready Markdown
+(`format: "markdown"`, `Accept: text/markdown`) in a
+`ProductMarkdownLookupResult`, with `request_id`, `product_uuid`, `catalog`,
+`matched_via` and `normalized_url` from the response's identity headers.
+
+Every `OctogenAPIError` carries `status_code`, `detail`, and `request_id` (the
+response's `x-request-id`). `OctogenTimeoutError` subclasses
+`OctogenConnectionError`; a `504` is both an `OctogenTimeoutError` and an
+`OctogenServerError`.
 
 ## Coverage URL lists CLI
 
@@ -326,6 +386,12 @@ OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python
 by `npm run codegen` (at the repository root) and committed, so a contract
 change arrives as a reviewable diff. **Response** models are re-exported from it
 under the contract's own names.
+
+Response models are forward compatible, generated or hand-written: they keep
+unknown fields (`extra="allow"`, read them from `model_extra` or
+`model_dump(by_alias=True)`), and their enums are open (`Literal[...] | str`),
+so a value the server adds after this release parses instead of failing the
+response. Request models keep closed enums and `extra="forbid"`.
 
 **Request** models stay hand-written in `models.py`, for two reasons: rules the
 contract cannot express (`extra="forbid"` catches a misspelled key, but not

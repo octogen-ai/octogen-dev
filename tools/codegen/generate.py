@@ -162,6 +162,81 @@ def _without_validation_keywords(node: object) -> object:
     return node
 
 
+# Response models must survive a server that is one release ahead: a new field
+# or a new enum value is not a reason to fail the whole response. So in the
+# spec the Python mirror is generated from (never the committed snapshot, and
+# never the TypeScript input), every schema reachable only from a response
+# gets `additionalProperties: true` (pydantic `extra="allow"`, matching the
+# hand-written `_ResponseModel`), and every string `enum` or `const` in one
+# becomes `anyOf: [<the enum>, string]` (`Literal[...] | str`). Request schemas keep
+# their closed enums and `extra="forbid"`, so a bad value still fails locally.
+def _ref_names(node: object, schemas: dict[str, object], found: set[str]) -> None:
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+            name = ref.rsplit("/", 1)[1]
+            if name not in found:
+                found.add(name)
+                _ref_names(schemas[name], schemas, found)
+        for value in node.values():
+            _ref_names(value, schemas, found)
+    elif isinstance(node, list):
+        for item in node:
+            _ref_names(item, schemas, found)
+
+
+def _response_only_schemas(spec: dict) -> set[str]:
+    schemas = spec["components"]["schemas"]
+    requests: set[str] = set()
+    responses: set[str] = set()
+    for operations in spec["paths"].values():
+        for operation in operations.values():
+            if not isinstance(operation, dict):
+                continue
+            _ref_names(operation.get("requestBody"), schemas, requests)
+            _ref_names(operation.get("parameters"), schemas, requests)
+            _ref_names(operation.get("responses"), schemas, responses)
+    return responses - requests
+
+
+_ANNOTATION_KEYWORDS = ("title", "description", "default", "examples")
+
+
+def _open_enums(node: object) -> object:
+    if isinstance(node, list):
+        return [_open_enums(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    opened = {key: _open_enums(value) for key, value in node.items()}
+    values = opened.get("enum")
+    if (
+        isinstance(values, list)
+        and values
+        and all(isinstance(value, str) for value in values)
+    ) or isinstance(opened.get("const"), str):
+        closed = {
+            key: value
+            for key, value in opened.items()
+            if key not in _ANNOTATION_KEYWORDS
+        }
+        annotations = {
+            key: value for key, value in opened.items() if key in _ANNOTATION_KEYWORDS
+        }
+        return {**annotations, "anyOf": [closed, {"type": "string"}]}
+    return opened
+
+
+def _forward_compatible_responses(spec: dict) -> dict:
+    schemas = spec["components"]["schemas"]
+    for name in sorted(_response_only_schemas(spec)):
+        schema = _open_enums(schemas[name])
+        assert isinstance(schema, dict)
+        if schema.get("type") == "object" and "additionalProperties" not in schema:
+            schema["additionalProperties"] = True
+        schemas[name] = schema
+    return spec
+
+
 def generate_python(destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
@@ -169,8 +244,10 @@ def generate_python(destination: Path) -> None:
         spec = Path(tmp) / "openapi.json"
         spec.write_text(
             json.dumps(
-                _without_validation_keywords(
-                    json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+                _forward_compatible_responses(
+                    _without_validation_keywords(
+                        json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+                    )
                 ),
                 indent=2,
                 sort_keys=True,

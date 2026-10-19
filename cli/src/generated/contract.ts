@@ -75,6 +75,292 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}/urls/contains"
     },
+    "countProductFacets": {
+      "body": {
+        "additionalProperties": false,
+        "description": "Count the products a search would filter to, by category and value.\n\nThe filter fields mean exactly what they mean on `POST /products/search`.\nThe rest say what to count.",
+        "properties": {
+          "attributes": {
+            "description": "Attribute handles, such as `neckline`, whose values to count. Find a category's handles with `GET /taxonomy/attributes`. A value's count ignores your own facet on that attribute, so every value shows what selecting it would return.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Attributes",
+            "type": "array"
+          },
+          "brand_quality_max": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Quality Max"
+          },
+          "brand_quality_min": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Quality Min"
+          },
+          "catalogs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog keys to count in. Omit to count every catalog your key can access. Keys your key cannot access count nothing.",
+            "title": "Catalogs"
+          },
+          "categories": {
+            "description": "Categories to count. Each count is the products matching the filters above and the category's own facets.",
+            "items": {
+              "additionalProperties": false,
+              "description": "One category to count, named by the facets that select it.",
+              "properties": {
+                "facets": {
+                  "description": "Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.",
+                  "items": {
+                    "properties": {
+                      "name": {
+                        "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+                        "title": "Name",
+                        "type": "string"
+                      },
+                      "values": {
+                        "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "title": "Values",
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "values"
+                    ],
+                    "title": "Facet",
+                    "type": "object"
+                  },
+                  "maxItems": 10,
+                  "minItems": 1,
+                  "title": "Facets",
+                  "type": "array"
+                },
+                "key": {
+                  "description": "Your identifier for this category; its count carries it back.",
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "title": "Key",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "facets",
+                "key"
+              ],
+              "title": "ProgrammaticFacetCountCategory",
+              "type": "object"
+            },
+            "maxItems": 100,
+            "title": "Categories",
+            "type": "array"
+          },
+          "exclude_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "properties": {
+                    "name": {
+                      "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "values": {
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "Facet",
+                  "type": "object"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters a product must not match, as on search.",
+            "title": "Exclude Facets"
+          },
+          "facet_names": {
+            "description": "Facets whose values to count, ignoring your own facet of that name like `attributes`. `category_path.depth_0` counts top-level categories.",
+            "items": {
+              "enum": [
+                "color_family",
+                "category_path.depth_0"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Facet Names",
+            "type": "array"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "properties": {
+                    "name": {
+                      "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "values": {
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "Facet",
+                  "type": "object"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters a product must match, as on search. A facet you send replaces any understood facet of the same name. Each name at most once.",
+            "title": "Facets"
+          },
+          "fallback_category": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Category path to filter to when understanding finds no category in `q`, as on search. Requires `q`.",
+            "title": "Fallback Category"
+          },
+          "omit_generated_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Understood facets to drop, as on search. Requires `q`.",
+            "title": "Omit Generated Facets"
+          },
+          "price_max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Max"
+          },
+          "price_min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Min"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text query, understood as search understands it. The category, gender, colour, brand, price and attribute filters understood from it apply to the counts; the text itself does not narrow them. Blank is the same as omitted.",
+            "title": "Q"
+          },
+          "value_limit": {
+            "default": 100,
+            "description": "Most values returned per attribute and per facet, by count.",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Value Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ProgrammaticFacetCountsRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/products/facet-counts"
+    },
     "createUrlList": {
       "body": {
         "additionalProperties": false,
@@ -144,6 +430,147 @@ export const PUBLIC_CONTRACT = {
         }
       ],
       "path": "/coverage/url-lists/{urlListId}"
+    },
+    "listTaxonomyAttributeValues": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Attribute handle from `GET /taxonomy/attributes`.",
+          "in": "path",
+          "name": "handle",
+          "required": true,
+          "schema": {
+            "description": "Attribute handle from `GET /taxonomy/attributes`.",
+            "title": "Handle",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/taxonomy/attributes/{handle}/values"
+    },
+    "listTaxonomyAttributes": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+          "in": "query",
+          "name": "category",
+          "required": true,
+          "schema": {
+            "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/taxonomy/attributes"
+    },
+    "listTaxonomyCategories": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+          "in": "query",
+          "name": "parent",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+            "title": "Parent"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 25,
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/taxonomy/categories"
     },
     "listUrlListUrls": {
       "body": {
@@ -780,13 +1207,19 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "`nextCursor` from the previous page, passed back verbatim with the same request body.",
+            "description": "`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
             "title": "Cursor"
           },
           "debug": {
             "default": false,
-            "description": "Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
+            "description": "Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
             "title": "Debug",
+            "type": "boolean"
+          },
+          "diversity": {
+            "default": false,
+            "description": "Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+            "title": "Diversity",
             "type": "boolean"
           },
           "exclude_facets": {
@@ -862,6 +1295,23 @@ export const PUBLIC_CONTRACT = {
             ],
             "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
             "title": "Facets"
+          },
+          "fallback_category": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Category path, root first, to search when understanding finds no category in `q`, e.g. `[\"apparel & accessories\", \"clothing\"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.",
+            "title": "Fallback Category"
           },
           "limit": {
             "default": 50,
@@ -964,6 +1414,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "9162c3eb1e1d566658246ae68484a25612e44ed70b7c94ebf1550cdc7735c3b4",
+  "sha256": "b78ff351cc97dc0c62c2feedd611ad209bbc4a5250fbfc1fd4d433f5ea827d62",
   "version": "1.0.0"
 } as const;

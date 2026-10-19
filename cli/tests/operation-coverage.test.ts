@@ -68,15 +68,25 @@ describe("command coverage of the published operation set", () => {
     }
   });
 
-  it("excludes URL-list operations and the exact lookup alias", () => {
+  it("excludes URL-list operations, catalog discovery and the exact lookup alias", () => {
     // Named rather than counted, so widening the exclusion list is a visible
     // change to this test rather than a number going up.
+    const catalogDiscovery = [
+      "countProductFacets",
+      "listTaxonomyAttributeValues",
+      "listTaxonomyAttributes",
+      "listTaxonomyCategories",
+    ];
     expect([...excluded].sort()).toEqual([
       "addUrlListUrls",
       "checkUrlListUrls",
+      "countProductFacets",
       "createUrlList",
       "deleteUrlList",
       "getUrlList",
+      "listTaxonomyAttributeValues",
+      "listTaxonomyAttributes",
+      "listTaxonomyCategories",
       "listUrlListUrls",
       "listUrlLists",
       "parseProductAlias",
@@ -84,7 +94,7 @@ describe("command coverage of the published operation set", () => {
     ]);
     expect(OPERATIONS.parseProductAlias.path).toBe("/products/parse");
     for (const operationId of [...excluded].filter(
-      (id) => id !== "parseProductAlias",
+      (id) => id !== "parseProductAlias" && !catalogDiscovery.includes(id),
     )) {
       expect(
         OPERATIONS[operationId as OperationId].path,

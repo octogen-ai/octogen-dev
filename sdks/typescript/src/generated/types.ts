@@ -162,6 +162,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products/facet-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count products by category and filter value
+         * @description Count the products `POST /products/search` would filter to.
+         *
+         *     Counts span every catalog your key can access unless `catalogs` narrows
+         *     them, and apply the same filters, bounds and understood facets as a
+         *     search with the same fields.
+         */
+        post: operations["countProductFacets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products/lookup": {
         parameters: {
             query?: never;
@@ -274,6 +298,66 @@ export interface paths {
          *     de-duplicate by `uuid`.
          */
         post: operations["searchProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/taxonomy/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a category's attributes
+         * @description The attribute definitions a category carries, such as `neckline` for dresses. Read an attribute's values from `GET /taxonomy/attributes/{handle}/values`.
+         */
+        get: operations["listTaxonomyAttributes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/taxonomy/attributes/{handle}/values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an attribute's values
+         * @description Canonical values of one attribute. Filter search with `{"name": attribute.facetName, "values": [value.handle]}`.
+         */
+        get: operations["listTaxonomyAttributeValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/taxonomy/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List taxonomy categories
+         * @description Without `parent`, the root categories; with it, that category's direct children. Each category carries the search `facets` that select it. Definitions only: a category listed here may hold no products.
+         */
+        get: operations["listTaxonomyCategories"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -773,10 +857,30 @@ export interface components {
         MerchantProductListItem: {
             brand?: components["schemas"]["BrandView"] | null;
             /**
+             * Catalogdisplayname
+             * @description Display name of the catalog that supplied it.
+             */
+            catalogDisplayName?: string | null;
+            /**
              * Catalogkey
              * @description Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.
              */
             catalogKey?: string | null;
+            /**
+             * Categorypath
+             * @description Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.
+             */
+            categoryPath?: string[] | null;
+            /**
+             * Colors
+             * @description Product-family color labels; the linked variant may differ.
+             */
+            colors?: string[] | null;
+            /**
+             * Currency
+             * @description ISO 4217 currency of the prices; null when unknown or mixed.
+             */
+            currency?: string | null;
             /** Currentprice */
             currentPrice?: number | null;
             /**
@@ -784,6 +888,8 @@ export interface components {
              * @description User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.
              */
             displayMatchScore?: number | null;
+            /** @description Target gender; null when unknown or when several are listed. */
+            gender?: components["schemas"]["Gender"] | null;
             /**
              * Images
              * @default []
@@ -794,6 +900,11 @@ export interface components {
              * @description Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.
              */
             imageUrl?: string | null;
+            /**
+             * Instock
+             * @description Product-family availability; null when unknown. Does not establish stock for a specific color or size.
+             */
+            inStock?: boolean | null;
             /**
              * Isactive
              * @default true
@@ -811,6 +922,11 @@ export interface components {
              * @description Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.
              */
             rawScore?: number | null;
+            /**
+             * Sizes
+             * @description Product-family size labels.
+             */
+            sizes?: string[] | null;
             /** Title */
             title?: string | null;
             /** Updatedat */
@@ -1207,6 +1323,164 @@ export interface components {
          * @enum {string}
          */
         ProductResolverCachePolicyV1: "prefer_cache" | "refresh";
+        /** ProgrammaticAttributeCounts */
+        ProgrammaticAttributeCounts: {
+            /**
+             * Facetname
+             * @description The search facet name for its values.
+             */
+            facetName: string;
+            /**
+             * Handle
+             * @description The attribute handle you sent.
+             */
+            handle: string;
+            /**
+             * Values
+             * @description Values with at least one product, most products first.
+             */
+            values: components["schemas"]["ProgrammaticFacetValueCount"][];
+        };
+        /** ProgrammaticCategoryCount */
+        ProgrammaticCategoryCount: {
+            /** Count */
+            count: number;
+            /**
+             * Key
+             * @description The `key` you sent for the category.
+             */
+            key: string;
+        };
+        /**
+         * ProgrammaticFacetCountCategory
+         * @description One category to count, named by the facets that select it.
+         */
+        ProgrammaticFacetCountCategory: {
+            /**
+             * Facets
+             * @description Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.
+             */
+            facets: components["schemas"]["Facet"][];
+            /**
+             * Key
+             * @description Your identifier for this category; its count carries it back.
+             */
+            key: string;
+        };
+        /**
+         * ProgrammaticFacetCountsRequest
+         * @description Count the products a search would filter to, by category and value.
+         *
+         *     The filter fields mean exactly what they mean on `POST /products/search`.
+         *     The rest say what to count.
+         */
+        ProgrammaticFacetCountsRequest: {
+            /**
+             * Attributes
+             * @description Attribute handles, such as `neckline`, whose values to count. Find a category's handles with `GET /taxonomy/attributes`. A value's count ignores your own facet on that attribute, so every value shows what selecting it would return.
+             */
+            attributes?: string[];
+            /** Brand Quality Max */
+            brand_quality_max?: number | null;
+            /** Brand Quality Min */
+            brand_quality_min?: number | null;
+            /**
+             * Catalogs
+             * @description Catalog keys to count in. Omit to count every catalog your key can access. Keys your key cannot access count nothing.
+             */
+            catalogs?: string[] | null;
+            /**
+             * Categories
+             * @description Categories to count. Each count is the products matching the filters above and the category's own facets.
+             */
+            categories?: components["schemas"]["ProgrammaticFacetCountCategory"][];
+            /**
+             * Exclude Facets
+             * @description Filters a product must not match, as on search.
+             */
+            exclude_facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Facet Names
+             * @description Facets whose values to count, ignoring your own facet of that name like `attributes`. `category_path.depth_0` counts top-level categories.
+             */
+            facet_names?: ("color_family" | "category_path.depth_0")[];
+            /**
+             * Facets
+             * @description Filters a product must match, as on search. A facet you send replaces any understood facet of the same name. Each name at most once.
+             */
+            facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Fallback Category
+             * @description Category path to filter to when understanding finds no category in `q`, as on search. Requires `q`.
+             */
+            fallback_category?: string[] | null;
+            /**
+             * Omit Generated Facets
+             * @description Understood facets to drop, as on search. Requires `q`.
+             */
+            omit_generated_facets?: string[] | null;
+            /** Price Max */
+            price_max?: number | null;
+            /** Price Min */
+            price_min?: number | null;
+            /**
+             * Q
+             * @description Free-text query, understood as search understands it. The category, gender, colour, brand, price and attribute filters understood from it apply to the counts; the text itself does not narrow them. Blank is the same as omitted.
+             */
+            q?: string | null;
+            /**
+             * Value Limit
+             * @description Most values returned per attribute and per facet, by count.
+             * @default 100
+             */
+            value_limit: number;
+        };
+        /**
+         * ProgrammaticFacetCountsResponse
+         * @description Product counts under one set of search filters.
+         */
+        ProgrammaticFacetCountsResponse: {
+            /**
+             * Attributes
+             * @description One entry per requested attribute, in request order.
+             */
+            attributes: components["schemas"]["ProgrammaticAttributeCounts"][];
+            /**
+             * Categories
+             * @description One count per requested category, in request order.
+             */
+            categories: components["schemas"]["ProgrammaticCategoryCount"][];
+            /** @description The filters and bounds the counts applied, with each facet's origin, as search reports them. */
+            effectiveQuery: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"];
+            /**
+             * Facets
+             * @description One entry per requested facet name, in request order.
+             */
+            facets: components["schemas"]["ProgrammaticFacetValueCounts"][];
+        };
+        /** ProgrammaticFacetValueCount */
+        ProgrammaticFacetValueCount: {
+            /** Count */
+            count: number;
+            /**
+             * Value
+             * @description A value to send back in that facet's `values`.
+             */
+            value: string;
+        };
+        /** ProgrammaticFacetValueCounts */
+        ProgrammaticFacetValueCounts: {
+            /**
+             * Name
+             * @description The facet name you sent.
+             */
+            name: string;
+            /**
+             * Values
+             * @description Values with at least one product, most products first.
+             */
+            values: components["schemas"]["ProgrammaticFacetValueCount"][];
+        };
         /** ProgrammaticMoreLikeThisEffectiveFacet */
         ProgrammaticMoreLikeThisEffectiveFacet: {
             /** Name */
@@ -1536,6 +1810,9 @@ export interface components {
         /**
          * ProgrammaticProductSearchEffectiveQuery
          * @description The search that actually ran, in the request's own vocabulary.
+         *
+         *     It is a report, not a request fragment: understood facets of one name can
+         *     AND together, which a request cannot express.
          */
         ProgrammaticProductSearchEffectiveQuery: {
             /** Brandqualitymax */
@@ -1574,8 +1851,8 @@ export interface components {
          * @description One page of search results.
          */
         ProgrammaticProductSearchPage: {
-            /** @description Present with `debug: true`. */
-            effectiveQuery?: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"] | null;
+            /** @description The text, filters and bounds that actually ran, with each facet's origin. Present on every response. */
+            effectiveQuery: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"];
             /**
              * Items
              * @default []
@@ -1641,15 +1918,21 @@ export interface components {
             catalogs?: string[] | null;
             /**
              * Cursor
-             * @description `nextCursor` from the previous page, passed back verbatim with the same request body.
+             * @description `nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.
              */
             cursor?: string | null;
             /**
              * Debug
-             * @description Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.
+             * @description Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.
              * @default false
              */
             debug: boolean;
+            /**
+             * Diversity
+             * @description Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.
+             * @default false
+             */
+            diversity: boolean;
             /**
              * Exclude Facets
              * @description Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.
@@ -1660,6 +1943,11 @@ export interface components {
              * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.
              */
             facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Fallback Category
+             * @description Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.
+             */
+            fallback_category?: string[] | null;
             /**
              * Limit
              * @description Maximum results per page.
@@ -1749,6 +2037,164 @@ export interface components {
             publishedAt?: string | null;
             /** Rating */
             rating?: number | null;
+        };
+        /**
+         * TaxonomyAttribute
+         * @description One taxonomy attribute definition.
+         */
+        TaxonomyAttribute: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Facetname
+             * @description The search facet name for this attribute; send its value handles under this name in `facets`. Null when the attribute is not filterable.
+             */
+            facetName: string | null;
+            /**
+             * Handle
+             * @description Canonical attribute handle, such as `neckline`.
+             */
+            handle: string;
+            /**
+             * Matching
+             * @description How a facet on this attribute matches; null when not filterable.
+             */
+            matching: string | null;
+            /**
+             * Name
+             * @description Display name, such as `Neckline`.
+             */
+            name: string;
+            /**
+             * Valuecount
+             * @description Number of canonical values.
+             */
+            valueCount: number;
+        };
+        /**
+         * TaxonomyAttributePage
+         * @description One page of the attributes a category carries.
+         */
+        TaxonomyAttributePage: {
+            /** Attributes */
+            attributes: components["schemas"]["TaxonomyAttribute"][];
+            category: components["schemas"]["TaxonomyCategory"];
+            /**
+             * Nextoffset
+             * @description Offset of the next page; repeat the request with it. Null on the last page.
+             */
+            nextOffset: number | null;
+            /**
+             * Taxonomyversion
+             * @description Canonical taxonomy version name.
+             */
+            taxonomyVersion: string;
+            /**
+             * Total
+             * @description Number of attributes across all pages.
+             */
+            total: number;
+        };
+        /**
+         * TaxonomyAttributeValue
+         * @description One canonical attribute value.
+         */
+        TaxonomyAttributeValue: {
+            /**
+             * Handle
+             * @description Canonical value handle, such as `neckline__halter`; send it unchanged in the attribute facet's `values`.
+             */
+            handle: string;
+            /**
+             * Name
+             * @description Display label, such as `Halter`.
+             */
+            name: string;
+        };
+        /**
+         * TaxonomyAttributeValuePage
+         * @description One page of an attribute's canonical values.
+         */
+        TaxonomyAttributeValuePage: {
+            attribute: components["schemas"]["TaxonomyAttribute"];
+            /**
+             * Nextoffset
+             * @description Offset of the next page; repeat the request with it. Null on the last page.
+             */
+            nextOffset: number | null;
+            /**
+             * Taxonomyversion
+             * @description Canonical taxonomy version name.
+             */
+            taxonomyVersion: string;
+            /**
+             * Total
+             * @description Number of values across all pages.
+             */
+            total: number;
+            /** Values */
+            values: components["schemas"]["TaxonomyAttributeValue"][];
+        };
+        /**
+         * TaxonomyCategory
+         * @description One canonical taxonomy category.
+         */
+        TaxonomyCategory: {
+            /**
+             * Childcount
+             * @description Number of direct child categories.
+             */
+            childCount: number;
+            /**
+             * Depth
+             * @description 0 for a root category.
+             */
+            depth: number;
+            /**
+             * Facets
+             * @description Search `facets` that select this category, one `category_path.depth_N` facet per level; send them unchanged to `POST /products/search`. Null for a category too deep to filter on.
+             */
+            facets: components["schemas"]["Facet"][] | null;
+            /**
+             * Id
+             * @description Canonical category UUID.
+             */
+            id: string;
+            /**
+             * Name
+             * @description Display name, such as `Dresses`.
+             */
+            name: string;
+            /**
+             * Path
+             * @description Fully qualified name, root first and ` > ` separated, such as `Apparel & Accessories > Clothing > Dresses`.
+             */
+            path: string;
+        };
+        /**
+         * TaxonomyCategoryPage
+         * @description One page of a category's children, or of the root categories.
+         */
+        TaxonomyCategoryPage: {
+            /** Categories */
+            categories: components["schemas"]["TaxonomyCategory"][];
+            /**
+             * Nextoffset
+             * @description Offset of the next page; repeat the request with it. Null on the last page.
+             */
+            nextOffset: number | null;
+            /** @description The requested parent category; null when listing roots. */
+            parent: components["schemas"]["TaxonomyCategory"] | null;
+            /**
+             * Taxonomyversion
+             * @description Canonical taxonomy version name.
+             */
+            taxonomyVersion: string;
+            /**
+             * Total
+             * @description Number of children across all pages.
+             */
+            total: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -2441,6 +2887,57 @@ export interface operations {
             };
         };
     };
+    countProductFacets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgrammaticFacetCountsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticFacetCountsResponse"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     lookupProduct: {
         parameters: {
             query?: never;
@@ -2871,7 +3368,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProgrammaticProductSearchPage"];
                 };
             };
-            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, or records a relaxation round that no longer maps onto the current query. Restart from page 1 (omit the cursor). */
+            /** @description The pagination cursor is structurally invalid, was minted under a different cursor version, records a relaxation round that no longer maps onto the current query, or does not carry the understanding of this request's `q` that page 1 ran. Restart from page 1 (omit the cursor). */
             400: {
                 headers: {
                     /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
@@ -2943,6 +3440,217 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listTaxonomyAttributes: {
+        parameters: {
+            query: {
+                /** @description A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case). */
+                category: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonomyAttributePage"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unknown category. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listTaxonomyAttributeValues: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Attribute handle from `GET /taxonomy/attributes`. */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonomyAttributeValuePage"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unknown attribute handle. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listTaxonomyCategories: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                /** @description A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case). */
+                parent?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonomyCategoryPage"];
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unknown parent category. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
         };
     };
