@@ -1,12 +1,35 @@
 # Changelog — `@storerouter/cli`
 
-## 0.4.0 (unreleased, `next`)
+## 0.5.0 (unreleased, `next`)
+
+- **Breaking:** remove `storerouter domains` and its local coverage cache. The
+  API no longer serves `GET /v1/domains` (octogen#13525), so `domains` fails
+  on 0.4.0 and older. Run `lookup` directly; a miss no longer points at
+  `domains --check`. `status` still checks credentials with `GET /v1/me`.
+- Keyless trial messages name only `lookup` and `search`.
+- Add `storerouter store <host|url>`: one covered store's coverage snapshot
+  from `GET /v1/domains/{host}` (catalogs, product counts, populated fields,
+  price histogram), as a summary or `--json`. A URL is normalized to its host.
+  `404 domain_not_covered` exits `6` with `covered: false`. It takes one host;
+  there is no list mode and no host cache.
+- `similar` does not expose more-like-this `sources`; send several source
+  products with `storerouter api`.
+- Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
+
+## 0.4.0 — 2026-10-19 (`next`)
 
 - Generate request validation and help from the public contract; include the
   contract runtime in the package.
 - Preserve numeric, string, array, and nested-path validation errors through
   nullable schemas. Genuine unions report all type-compatible alternatives.
 - **Breaking:** remove customer Voyage commands; Voyage is admin-only.
+- `similar --facet` sends `facets` instead of `include_facets`, which the API
+  now refuses with a `422`. 0.3.0 and older break on `similar --facet` once
+  that API change deploys, so upgrade first.
+- `similar` sends `relax`, `true` by default as the contract says: a short
+  first page is retried with the server's own generated facets dropped, never
+  your `--facet` or price bounds. `--no-relax` turns it off.
+- `similar` takes `--price-min` and `--price-max`, as `search` does.
 - Pin SDK 0.6.0. Publish that SDK before releasing this CLI.
 
 ## 0.3.0 — 2026-10-16 (`next`)

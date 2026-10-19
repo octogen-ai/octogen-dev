@@ -27,6 +27,7 @@ from octogen_ai_sdk import (
     ProductLookupCachePolicy,
     ProductLookupResolutionMode,
     ProductResolutionMetadata,
+    ProgrammaticMoreLikeThisRequest,
     ProgrammaticMoreLikeThisSource,
     ProgrammaticProductLookupRequest,
     ProgrammaticProductSearchEffectiveQuery,
@@ -201,10 +202,12 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
             brand_quality_min=3,
             brand_quality_max=6,
             similar_to_brands=("Warren Lotas",),
+            fallback_category=("apparel & accessories", "clothing"),
             catalogs=["warrenlotas"],
             limit=25,
             cursor="cursor-1",
             relax=True,
+            diversity=True,
             debug=True,
         )
 
@@ -219,10 +222,12 @@ async def test_search_products_sends_every_control_under_its_wire_name() -> None
         "brand_quality_min": 3,
         "brand_quality_max": 6,
         "similar_to_brands": ["Warren Lotas"],
+        "fallback_category": ["apparel & accessories", "clothing"],
         "catalogs": ["warrenlotas"],
         "limit": 25,
         "cursor": "cursor-1",
         "relax": True,
+        "diversity": True,
         "debug": True,
     }
 
@@ -248,16 +253,16 @@ async def test_search_products_sends_understand_false() -> None:
     }
 
 
-@pytest.mark.parametrize("removed", ["catalog", "text_search_query", "diversity"])
+@pytest.mark.parametrize("removed", ["catalog", "text_search_query"])
 async def test_search_products_no_longer_takes_removed_fields(removed: str) -> None:
-    # The API answers all three with a 422; 0.5 removed the keywords.
+    # The API answers both with a 422; 0.5 removed the keywords.
     legacy_kwargs: dict[str, Any] = {"q": "dress", removed: "acme"}
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(TypeError, match=removed):
             await client.search_products(**legacy_kwargs)
 
 
-@pytest.mark.parametrize("removed", ["catalog", "text_search_query", "diversity"])
+@pytest.mark.parametrize("removed", ["catalog", "text_search_query"])
 def test_search_request_forbids_removed_fields(removed: str) -> None:
     with pytest.raises(ValueError, match="Extra inputs are not permitted"):
         ProgrammaticProductSearchRequest.model_validate({"q": "dress", removed: "x"})
@@ -320,6 +325,20 @@ def test_text_search_query_model_is_gone() -> None:
         ({"similar_to_brands": []}, "at least 1 item"),
         ({"similar_to_brands": [f"b{i}" for i in range(11)]}, "at most 10 items"),
         ({"similar_to_brands": ["Acme", " "]}, "non-empty brand names"),
+        ({"fallback_category": ["clothing"]}, "fallback_category requires"),
+        (
+            {"q": "dress", "understand": False, "fallback_category": ["clothing"]},
+            "fallback_category requires",
+        ),
+        ({"q": "dress", "fallback_category": []}, "at least 1 item"),
+        (
+            {"q": "dress", "fallback_category": ["a", "b", "c", "d", "e"]},
+            "at most 4 items",
+        ),
+        (
+            {"q": "dress", "fallback_category": ["apparel & accessories", " "]},
+            "non-empty category names",
+        ),
     ],
 )
 @respx.mock
@@ -389,7 +408,91 @@ async def test_search_products_parses_debug_effective_query() -> None:
 
 
 @respx.mock
-async def test_search_products_without_debug_has_no_effective_query() -> None:
+async def test_search_products_parses_effective_query_without_debug() -> None:
+    # Current servers report the search that ran on every response.
+    respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [],
+                "nextCursor": None,
+                "requestId": "r-1",
+                "effectiveQuery": {
+                    "text": "party dress",
+                    "understood": True,
+                    "facets": [
+                        {
+                            "name": "category_path.depth_0",
+                            "values": ["apparel & accessories"],
+                            "source": "generated",
+                        }
+                    ],
+                },
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_products(
+            q="something for a party",
+            fallback_category=["apparel & accessories"],
+        )
+
+    assert page.effective_query is not None
+    assert [(f.name, f.source) for f in page.effective_query.facets or []] == [
+        ("category_path.depth_0", "generated")
+    ]
+
+
+@respx.mock
+async def test_search_products_parses_list_item_card_fields() -> None:
+    respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "uuid": "dress",
+                        "productUrl": "https://acme.example/dress",
+                        "currency": "USD",
+                        "inStock": False,
+                        "colors": ["Red", "Navy"],
+                        "sizes": ["S", "M"],
+                        "gender": "female",
+                        "categoryPath": ["apparel & accessories", "clothing"],
+                        "catalogDisplayName": "Acme",
+                    },
+                    {"uuid": "bare", "productUrl": "https://acme.example/bare"},
+                ],
+                "nextCursor": None,
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_products(q="dress")
+
+    full, bare = page.items
+    assert (full.currency, full.in_stock, full.colors, full.sizes) == (
+        "USD",
+        False,
+        ["Red", "Navy"],
+        ["S", "M"],
+    )
+    assert full.gender == "female"
+    assert full.category_path == ["apparel & accessories", "clothing"]
+    assert full.catalog_display_name == "Acme"
+    assert not full.model_extra
+    assert (bare.currency, bare.in_stock, bare.colors, bare.gender) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+@respx.mock
+async def test_search_products_from_an_older_server_has_no_effective_query() -> None:
     respx.post(f"{BASE_URL}/products/search").mock(
         return_value=httpx.Response(
             200,
@@ -469,9 +572,14 @@ async def test_more_like_this_products_sends_typed_request() -> None:
         page = await client.more_like_this_products(
             source_url="https://example.com/products/linen-dress",
             catalogs=["acme", "globex"],
-            include_facets=[{"name": FacetName.GENDER, "values": ["female"]}],
+            facets=[{"name": FacetName.GENDER, "values": ["female"]}],
             exclude_facets=[{"name": FacetName.COLOR_FAMILY, "values": ["Black"]}],
+            price_min=50,
+            price_max=300,
+            brand_quality_min=3,
+            brand_quality_max=6,
             price_preference=PricePreference.HIGHER,
+            relax=False,
             limit=3,
             debug=True,
         )
@@ -481,12 +589,19 @@ async def test_more_like_this_products_sends_typed_request() -> None:
         "source": {"url": "https://example.com/products/linen-dress"},
         "catalogs": ["acme", "globex"],
         "limit": 3,
-        "include_facets": [{"name": "gender", "values": ["female"]}],
+        "facets": [{"name": "gender", "values": ["female"]}],
         "exclude_facets": [{"name": "color_family", "values": ["Black"]}],
+        "price_min": 50,
+        "price_max": 300,
+        "brand_quality_min": 3,
+        "brand_quality_max": 6,
         "price_preference": "higher",
+        "relax": False,
         "debug": True,
     }
+    assert page.source is not None
     assert page.source.catalog_key == "acme"
+    assert page.sources is None
     assert page.items[0].catalog_key == "acme"
     assert page.items[0].display_match_score == 92
     assert page.effective_query is not None
@@ -512,6 +627,217 @@ async def test_more_like_this_products_rejects_bad_catalogs(
             await client.more_like_this_products(source_uuid="p1", catalogs=catalogs)
 
     assert not route.called
+
+
+@respx.mock
+async def test_more_like_this_products_leaves_relax_to_the_server() -> None:
+    # The server defaults `relax` to true; the SDK sends it only when set, and
+    # never sends the removed `include_facets`.
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": {
+                    "catalogKey": "acme",
+                    "uuid": "p1",
+                    "productUrl": "https://example.com/p1",
+                },
+                "items": [],
+                "nextCursor": None,
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.more_like_this_products(source_uuid="p1")
+        await client.more_like_this_products(source_uuid="p1", relax=True)
+
+    first, second = (json.loads(call.request.read()) for call in route.calls)
+    assert first == {
+        "source": {"uuid": "p1"},
+        "limit": 12,
+        "price_preference": "any",
+        "debug": False,
+    }
+    assert second["relax"] is True
+    for body in (first, second):
+        assert "include_facets" not in body
+
+
+@respx.mock
+async def test_more_like_this_products_parses_relaxation() -> None:
+    respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "source": {
+                    "catalogKey": "acme",
+                    "uuid": "p1",
+                    "productUrl": "https://example.com/p1",
+                },
+                "items": [],
+                "nextCursor": None,
+                "effectiveQuery": {
+                    "text": "linen dress",
+                    "limit": 12,
+                    "brandQualityMin": 3,
+                    "relaxation": {
+                        "rounds": 1,
+                        "declinedRounds": 0,
+                        "droppedFacets": [
+                            {
+                                "name": "color_family",
+                                "values": ["Blue"],
+                                "source": "generated",
+                            }
+                        ],
+                    },
+                },
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(source_uuid="p1")
+
+    effective = page.effective_query
+    assert effective is not None
+    assert effective.brand_quality_min == 3
+    assert effective.relaxation is not None
+    assert effective.relaxation.rounds == 1
+    assert effective.relaxation.dropped_facets is not None
+    assert effective.relaxation.dropped_facets[0].name == "color_family"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            {
+                "facets": [
+                    {"name": "gender", "values": ["female"]},
+                    {"name": "gender", "values": ["male"]},
+                ]
+            },
+            "more than once",
+        ),
+        ({"price_min": 200, "price_max": 100}, "price_min must not exceed"),
+        (
+            {"brand_quality_min": 5, "brand_quality_max": 2},
+            "brand_quality_min must not exceed",
+        ),
+        ({"brand_quality_min": 7}, "less than or equal to 6"),
+        ({"price_min": -1}, "greater than or equal to 0"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_contradictions(
+    kwargs: dict[str, Any], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match=match):
+            await client.more_like_this_products(source_uuid="p1", **kwargs)
+
+    assert not route.called
+
+
+@respx.mock
+async def test_more_like_this_products_sends_sources() -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "sources": [
+                    {
+                        "catalogKey": "acme",
+                        "uuid": "p1",
+                        "productUrl": "https://example.com/p1",
+                        "title": "Linen Dress",
+                    },
+                    {
+                        "catalogKey": "globex",
+                        "uuid": "p2",
+                        "productUrl": "https://example.com/p2",
+                    },
+                ],
+                "items": [],
+                "nextCursor": None,
+                "requestId": "req-1",
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(sources=("p1", "p2"), limit=5)
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "sources": ["p1", "p2"],
+        "limit": 5,
+        "price_preference": "any",
+        "debug": False,
+    }
+    assert page.source is None
+    assert page.sources is not None
+    assert [source.uuid for source in page.sources] == ["p1", "p2"]
+    assert page.sources[1].catalog_key == "globex"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({}, ValueError, "Exactly one of url or uuid"),
+        ({"source_uuid": "p1", "sources": ["p2"]}, ValueError, "source or sources"),
+        (
+            {"source_url": "https://example.com/p1", "sources": ["p2"]},
+            ValueError,
+            "source or sources",
+        ),
+        ({"sources": []}, ValueError, "at least 1 item"),
+        ({"sources": [f"p{i}" for i in range(21)]}, ValueError, "at most 20 items"),
+        ({"sources": ["p1", "p1"]}, ValueError, "more than once"),
+        ({"sources": [""]}, ValueError, "at least 1 character"),
+        ({"sources": "p1"}, TypeError, "not a string"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_bad_sources(
+    kwargs: dict[str, Any], error: type[Exception], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(error, match=match):
+            await client.more_like_this_products(**kwargs)
+
+    assert not route.called
+
+
+def test_more_like_this_request_takes_exactly_one_of_source_and_sources() -> None:
+    assert ProgrammaticMoreLikeThisRequest(sources=["p1"]).source is None
+    with pytest.raises(ValueError, match="source or sources"):
+        ProgrammaticMoreLikeThisRequest()
+    with pytest.raises(ValueError, match="source or sources"):
+        ProgrammaticMoreLikeThisRequest.model_validate(
+            {"source": {"uuid": "p1"}, "sources": ["p2"]}
+        )
+
+
+async def test_more_like_this_products_no_longer_takes_include_facets() -> None:
+    # The server refuses `include_facets` with a 422 naming `facets`; 0.8
+    # removed the keyword, and the request model forbids the field.
+    legacy_kwargs: dict[str, Any] = {
+        "source_uuid": "p1",
+        "include_facets": [{"name": "gender", "values": ["female"]}],
+    }
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(TypeError, match="include_facets"):
+            await client.more_like_this_products(**legacy_kwargs)
+    with pytest.raises(ValueError, match="include_facets"):
+        ProgrammaticMoreLikeThisRequest.model_validate(
+            {"source": {"uuid": "p1"}, "include_facets": []}
+        )
 
 
 async def test_more_like_this_products_no_longer_takes_catalog() -> None:
@@ -968,3 +1294,76 @@ SEARCH_DEBUG_PAGE: dict[str, Any] = {
         },
     },
 }
+
+
+DOMAIN_COVERAGE_JSON = {
+    "host": "thereformation.com",
+    "catalogs": [
+        {
+            "catalog": "reformation",
+            "catalogDisplayName": "Reformation",
+            "computedAt": "2026-10-19T00:00:00Z",
+            "productCount": 1200,
+            "fields": [
+                {
+                    "name": "color",
+                    "displayName": "Color",
+                    "source": "product",
+                    "populated": 1100,
+                    "coverage": 0.917,
+                    "distinct": 40,
+                    "truncated": True,
+                    "topValues": [{"value": "black", "label": "Black", "count": 300}],
+                }
+            ],
+            "price": {
+                "populated": 1150,
+                "median": 218.0,
+                "below": 5,
+                "above": 40,
+                "buckets": [{"min": 50.0, "max": 100.0, "count": 80}],
+            },
+        }
+    ],
+}
+
+
+@respx.mock
+async def test_get_domain_normalizes_a_url_to_one_host() -> None:
+    route = respx.get(f"{BASE_URL}/domains/thereformation.com").mock(
+        return_value=httpx.Response(200, json=DOMAIN_COVERAGE_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        coverage = await client.get_domain(
+            "https://WWW.TheReformation.com:443/products/x?color=red"
+        )
+
+    assert route.called
+    assert coverage.host == "thereformation.com"
+    catalog = coverage.catalogs[0]
+    assert catalog.product_count == 1200
+    assert catalog.fields[0].top_values[0].value == "black"
+    assert catalog.price is not None
+    assert catalog.price.buckets[0].count == 80
+
+
+@pytest.mark.parametrize("value", ["", "   ", "not a host/with a path"])
+async def test_get_domain_rejects_input_with_no_host(value: str) -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match="no host"):
+            await client.get_domain(value)
+
+
+@respx.mock
+async def test_get_domain_not_covered_is_a_not_found_error() -> None:
+    respx.get(f"{BASE_URL}/domains/example.com").mock(
+        return_value=httpx.Response(404, json={"detail": "domain_not_covered"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenNotFoundError) as exc_info:
+            await client.get_domain("example.com")
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "domain_not_covered"

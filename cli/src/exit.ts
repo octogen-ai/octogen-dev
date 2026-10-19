@@ -6,7 +6,7 @@
  * below has exactly one meaning.
  *
  * `NoResult` (6) is the load-bearing one. It means *the server answered and the
- * answer was empty* — a lookup miss, a host absent from a `200` coverage list,
+ * answer was empty* — a lookup miss, a search with no matches,
  * an unknown `task_id`. It is never a throttle, never a refusal, and never an
  * error we could not classify, because the expensive mistake this product can
  * cause is an agent reading "you are out of quota" as "Octogen does not cover
@@ -86,7 +86,7 @@ export interface CliFailureOptions {
    * Extra envelope fields for this failure.
    *
    * Exists so a *decided* answer that happens to be a failure can still carry
-   * its answer: `domains --check` on an uncovered host exits `6` and must emit
+   * its answer: lookup on a missing product exits `6` and must emit
    * `covered: false`, and routing that through the `noResult()` chokepoint is
    * better than letting the command emit its own envelope and bypass the one
    * constructor that can produce a `6`.

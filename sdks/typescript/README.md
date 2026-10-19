@@ -37,43 +37,10 @@ for (const product of results.items) {
 `OCTO_API_KEY` is still read as a **deprecated** fallback: it warns once and
 will be removed. Set `OCTOGEN_PLATFORM_API_KEY`.
 
-### Start with coverage
+### Product lookup
 
-Octogen does not cover every merchant, and the coverage check is the cheapest
-call you can make. `GET /v1/domains` returns hosts **normalized by the
-server** — lowercased, with a leading `www.` stripped — so it reports
-`macys.com` and never `www.macys.com`. Real product URLs usually _do_ carry
-`www.`, so comparing a raw URL host against that list reports covered
-merchants as uncovered. `fetchDomainCoverage` normalizes both sides for you:
-
-```ts
-const coverage = await client.fetchDomainCoverage();
-
-const url = "https://www.macys.com/shop/product/some-dress";
-if (coverage.isHostCovered(url)) {
-  const product = await client.lookupProduct(url);
-  console.log(product.product.title);
-} else {
-  console.log("Contact https://storerouter.ai/contact to discuss coverage.");
-}
-```
-
-The endpoint is `Cache-Control: max-age=300` behind a strong `ETag`, and clients
-are expected to revalidate rather than refetch. Pass the previous snapshot back
-and a `304` returns it untouched:
-
-```ts
-let coverage = await client.fetchDomainCoverage();
-// …later…
-coverage = await client.fetchDomainCoverage(coverage); // sends If-None-Match
-
-console.log(coverage.hosts.length, "covered hosts");
-console.log(coverage.catalogsFor("https://www.macys.com/x")); // ["macys"]
-```
-
-Use `listDomains({ ifNoneMatch })` directly if you manage the cache yourself; it
-reports `notModified`, `etag`, and `maxAgeSeconds` and leaves the decision to
-you.
+Look up a product URL directly. A missing product does not prove that its whole
+merchant domain is unsupported. Use `getMe` (Python: `get_me`) to check credentials.
 
 ## API
 
@@ -82,21 +49,38 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
 
 - `getMe()` returns the calling organization, key id and provenance, quotas, and
   rate-limit posture. Read-only and side-effect free: safe on startup and in CI.
-- `listDomains(options?)` and `fetchDomainCoverage(previous?)` return the covered
-  hosts, with `ETag` revalidation and host normalization.
+- `getDomain(urlOrHost)` returns one store's coverage snapshot
+  (`GET /v1/domains/{host}`): every catalog serving the host, with product
+  counts, populated facets and a price histogram. A URL is normalized to its
+  host first. An uncovered host throws `OctogenNotFoundError` with
+  `detail` `domain_not_covered`. There is no list of covered hosts.
+
 - `searchProducts(params)` searches every active catalog by default, or only
   the catalogs in `catalogs` (1–500 keys) when it is provided. The query field
   is `q`, understood by default; `understand`, `facets`, `excludeFacets`, the
   price and brand-quality bounds, `relax`, and `debug` refine it (see below).
   Results come back as `items` + `nextCursor`, each item carrying `productUrl`,
-  plus `effectiveQuery` with `debug: true`.
+  plus `effectiveQuery`, the search that ran.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys).
+  or UUID, or to a set of 1–20 product UUIDs passed as `sources`, optionally
+  restricted to `catalogs` (1–100 keys). `facets`,
+  `excludeFacets` and the price and brand-quality bounds work as on search.
+  `relax` defaults to `true` on the server: a short page 1 is retried with
+  Platform's generated facets dropped, never yours, and reported in
+  `effectiveQuery.relaxation` with `debug: true`. `facets` replaced `includeFacets` in 0.6.0.
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. `matchMode`, `resolutionMode`, and `onDemandCachePolicy` are optional;
   the request field is `url`.
 - `resolveProductFromHtml(params)` resolves a product from page HTML you already
   have — no index read, no outbound fetch.
+- `listTaxonomyCategories(params?)`, `listTaxonomyAttributes(category, params?)`
+  and `listTaxonomyAttributeValues(handle, params?)` discover categories, their
+  attributes and the attributes' value handles, paged with `offset`/`limit`.
+  A category's `facets` and an attribute's `facetName` plus value `handle` go
+  back into `searchProducts` unchanged.
+- `countProductFacets(params?)` counts the products `searchProducts` would
+  filter to — by `categories`, `attributes` and `facetNames` — under the same
+  `q`, facets, bounds and `catalogs`.
 
 - `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
   `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`
@@ -209,7 +193,7 @@ generated type, so `ProgrammaticProductLookupRequestBody` relaxes those three
 fields rather than forcing callers to send them.
 
 Everything else — the method layer, the payload builders, the typed error
-classes, `DomainCoverage` — is hand-written, because that ergonomics is the
+classes — is hand-written, because that ergonomics is the
 reason to install an SDK instead of calling `fetch`.
 
 `src/operations.ts` is the routing table. Its `path` is typed as `keyof paths`

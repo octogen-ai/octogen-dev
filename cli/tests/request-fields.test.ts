@@ -120,7 +120,7 @@ describe("every published request field is accounted for", () => {
       resolveProductFromHtml: "resolve",
       searchProducts: "search",
       getMe: "status",
-      listDomains: "domains",
+      getDomain: "store",
     };
 
     for (const [map, fields] of Object.entries(FIELD_MAPS)) {

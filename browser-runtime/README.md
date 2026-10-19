@@ -128,10 +128,14 @@ in the existing `cli.node` field for compatibility.
 serialized SDK request `{url, method, headers, body?}`. `BrowserRuntime` always
 applies `withDemoPolicy` before calling the supplied transport. It uses SDK
 `OPERATIONS` and the existing generated contract validator, not another command
-or schema registry. It allows only search, lookup/parse, similar, and domains on
+or schema registry. It allows only search, lookup/parse, similar and store on
 exact `https://api.storerouter.ai/v1` paths and methods; it denies arbitrary
 destinations, query smuggling, unknown body fields, mutation/admin routes and
-lookup auto/refresh. Lookup needs `--resolution-mode index_only`. The browser profile refuses raw `api` outright (see below). Browser headers
+lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Store is
+`GET /domains/{host}` for exactly one already-normalized host (lowercase, no
+`www.`, port, encoding or extra segment) with no body; `GET /domains`, the
+covered-host list, stays denied. The browser profile refuses raw `api` outright
+(see below). Browser headers
 are reduced to Accept/Content-Type/If-None-Match; Authorization and User-Agent
 are never forwarded. Policy failures use existing CLI network failure semantics.
 
@@ -142,7 +146,7 @@ authenticate/rate-limit/size-limit callers and redact upstream failures. It must
 not accept arbitrary upstream URLs or forward browser credentials. A proxy
 operation must issue one upstream request and return its result; previews consume
 `result` events and must not issue duplicate searches. No production proxy is
-implemented here. Anonymous GET `/v1/domains` returned 401 in the preceding
+implemented here. Anonymous GET `/v1/domains` (since removed) returned 401 in the preceding
 review; **keyless production access is not assumed**. The browser overrides the
 installed CLI's legacy trial notice with a host-transport notice.
 

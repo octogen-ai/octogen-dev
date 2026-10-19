@@ -1,4 +1,3 @@
-import { DomainCoverage } from "./domains.js";
 import {
   MissingAPIKeyError,
   OctogenAPIError,
@@ -8,24 +7,27 @@ import {
   OctogenNotFoundError,
   OctogenValidationError,
 } from "./errors.js";
+import { normalizeHost } from "./hosts.js";
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
+  CountProductFacetsParams,
   CoverageContainsResponse,
   CoveragePaginationParams,
   CoverageUrlList,
   CoverageUrlListPage,
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
-  ListDomainsOptions,
-  ListDomainsResponse,
-  ListDomainsResult,
+  DomainCoverageResponse,
+  ListTaxonomyCategoriesParams,
   MeResponse,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
   MoreLikeThisSource,
   LookupProductOptions,
   MerchantProductUrlLookupResponse,
+  ProgrammaticFacetCountsRequest,
+  ProgrammaticFacetCountsResponse,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductLookupRequestBody,
   ProgrammaticProductSearchPage,
@@ -34,11 +36,15 @@ import type {
   ResolveProductFromHtmlParams,
   SearchProductsParams,
   Facet,
+  TaxonomyAttributePage,
+  TaxonomyAttributeValuePage,
+  TaxonomyCategoryPage,
+  TaxonomyPageParams,
 } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.6.0";
+export const SDK_VERSION = "0.7.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -66,7 +72,6 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
  * is about to make is even eligible.
  */
 export const KEYLESS_TRIAL_OPERATIONS: readonly OperationId[] = Object.freeze([
-  "listDomains",
   "lookupProduct",
   "searchProducts",
 ]);
@@ -195,62 +200,23 @@ export class OctogenClient {
   }
 
   /**
-   * The covered-host set (`GET /v1/domains`), with `ETag` revalidation.
+   * One covered store's coverage snapshot (`GET /v1/domains/{host}`): every
+   * catalog serving the host, with product counts, populated facets and a
+   * price histogram.
    *
-   * Prefer {@link fetchDomainCoverage}, which handles the `304` and gives you
-   * a matcher that normalizes hosts. Use this when you manage the cache
-   * yourself.
+   * Takes a bare host or a URL and normalizes it the way the server does
+   * (lowercased, port and leading `www.` dropped), so
+   * `https://www.Reformation.com/p/x` asks about `reformation.com`. A host no
+   * catalog claims is a `404` with `detail.code` `domain_not_covered`. There is
+   * deliberately no way to list hosts: ask about the one you have.
    */
-  async listDomains(options: ListDomainsOptions = {}): Promise<ListDomainsResult> {
-    const headers: Record<string, string> = {};
-    if (options.ifNoneMatch !== undefined) {
-      headers["If-None-Match"] = options.ifNoneMatch;
+  async getDomain(urlOrHost: string): Promise<DomainCoverageResponse> {
+    const host = normalizeHost(urlOrHost);
+    if (host === undefined) {
+      throw new TypeError(`getDomain: no host in ${JSON.stringify(urlOrHost)}`);
     }
-    const { data, response } = await this.request("listDomains", { headers });
-    const etag = response.headers.get("ETag") ?? undefined;
-    const maxAgeSeconds = parseMaxAge(response.headers.get("Cache-Control"));
-
-    if (response.status === 304) {
-      return { notModified: true, domains: undefined, etag, maxAgeSeconds };
-    }
-    const body = data as ListDomainsResponse;
-    return {
-      notModified: false,
-      domains: body.domains,
-      etag,
-      maxAgeSeconds,
-    };
-  }
-
-  /**
-   * Fetch (or revalidate) the covered-domain snapshot.
-   *
-   * Pass the previous snapshot and this sends `If-None-Match`; on a `304` it
-   * returns that same snapshot untouched, which is what the endpoint's
-   * `max-age=300` and strong `ETag` are for.
-   *
-   * ```ts
-   * let coverage = await client.fetchDomainCoverage();
-   * if (coverage.isHostCovered("https://www.macys.com/shop/product/x")) {
-   *   await client.lookupProduct("https://www.macys.com/shop/product/x");
-   * }
-   * // Later — one cheap revalidation, no re-download while unchanged:
-   * coverage = await client.fetchDomainCoverage(coverage);
-   * ```
-   */
-  async fetchDomainCoverage(previous?: DomainCoverage): Promise<DomainCoverage> {
-    const options: ListDomainsOptions = {};
-    if (previous?.etag !== undefined) {
-      options.ifNoneMatch = previous.etag;
-    }
-    const result = await this.listDomains(options);
-    if (result.notModified && previous !== undefined) {
-      return previous;
-    }
-    return new DomainCoverage(result.domains ?? [], {
-      etag: result.etag,
-      maxAgeSeconds: result.maxAgeSeconds,
-    });
+    const data = await this.json("getDomain", { pathParams: { host } });
+    return data as DomainCoverageResponse;
   }
 
   /**
@@ -267,6 +233,66 @@ export class OctogenClient {
     const body = toSearchPayload(params);
     const data = await this.json("searchProducts", { body });
     return data as ProgrammaticProductSearchPage;
+  }
+
+  /**
+   * Count the products {@link searchProducts} would filter to, by category,
+   * attribute value and facet value (`POST /v1/products/facet-counts`).
+   *
+   * The filter params mean what they mean on `searchProducts`; counts span
+   * every catalog your key can access unless `catalogs` narrows them.
+   * Contradictions the server would refuse with `422` throw a `TypeError`.
+   */
+  async countProductFacets(
+    params: CountProductFacetsParams = {},
+  ): Promise<ProgrammaticFacetCountsResponse> {
+    const body = toFacetCountsPayload(params);
+    const data = await this.json("countProductFacets", { body });
+    return data as ProgrammaticFacetCountsResponse;
+  }
+
+  /**
+   * Root taxonomy categories, or one category's children
+   * (`GET /v1/taxonomy/categories`). Each category's `facets` select it in
+   * `searchProducts` and `countProductFacets` unchanged.
+   */
+  async listTaxonomyCategories(
+    params: ListTaxonomyCategoriesParams = {},
+  ): Promise<TaxonomyCategoryPage> {
+    const data = await this.json("listTaxonomyCategories", {
+      query: { parent: params.parent, offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyCategoryPage;
+  }
+
+  /**
+   * The attributes a category carries (`GET /v1/taxonomy/attributes`).
+   * `category` takes a UUID, section handle or category path.
+   */
+  async listTaxonomyAttributes(
+    category: string,
+    params: TaxonomyPageParams = {},
+  ): Promise<TaxonomyAttributePage> {
+    assertNonEmptyString(category.trim(), "category");
+    const data = await this.json("listTaxonomyAttributes", {
+      query: { category, offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyAttributePage;
+  }
+
+  /**
+   * An attribute's canonical values (`GET /v1/taxonomy/attributes/{handle}/values`).
+   * Filter search with `{ name: page.attribute.facetName, values: [value.handle] }`.
+   */
+  async listTaxonomyAttributeValues(
+    handle: string,
+    params: TaxonomyPageParams = {},
+  ): Promise<TaxonomyAttributeValuePage> {
+    const data = await this.json("listTaxonomyAttributeValues", {
+      pathParams: { handle },
+      query: { offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyAttributeValuePage;
   }
 
   async moreLikeThisProducts(
@@ -591,17 +617,6 @@ function readEnvApiKey(): string | undefined {
 }
 
 /** `max-age` in seconds from a `Cache-Control` header, when present. */
-function parseMaxAge(header: string | null): number | undefined {
-  if (header === null) {
-    return undefined;
-  }
-  const match = /(?:^|[\s,])max-age\s*=\s*(\d+)/i.exec(header);
-  if (match?.[1] === undefined) {
-    return undefined;
-  }
-  const seconds = Number.parseInt(match[1], 10);
-  return Number.isFinite(seconds) ? seconds : undefined;
-}
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
@@ -645,7 +660,6 @@ function assertCatalogs(catalogs: unknown, max: number): void {
  */
 const REMOVED_SEARCH_PARAMS: Readonly<Record<string, string>> = Object.freeze({
   catalog: "searchProducts takes catalogs: [key], not catalog",
-  diversity: "searchProducts no longer takes diversity; the API removed it",
   textSearchQuery:
     "searchProducts no longer takes textSearchQuery; pass q with understand: false, " +
     "and your filters in facets and excludeFacets",
@@ -701,6 +715,9 @@ function toSearchPayload(
   if (params.similarToBrands !== undefined) {
     payload.similar_to_brands = [...params.similarToBrands];
   }
+  if (params.fallbackCategory !== undefined) {
+    payload.fallback_category = [...params.fallbackCategory];
+  }
   if (params.catalogs !== undefined) {
     payload.catalogs = [...params.catalogs];
   }
@@ -709,6 +726,9 @@ function toSearchPayload(
   }
   if (params.relax !== undefined) {
     payload.relax = params.relax;
+  }
+  if (params.diversity !== undefined) {
+    payload.diversity = params.diversity;
   }
   if (params.debug !== undefined) {
     payload.debug = params.debug;
@@ -777,6 +797,146 @@ function assertSearchControls(params: SearchProductsParams): void {
       throw new TypeError("similarToBrands must contain only non-empty brand names");
     }
   }
+
+  const fallback = params.fallbackCategory;
+  if (fallback !== undefined) {
+    assertStringArray(fallback, "fallbackCategory");
+    if (fallback.length < 1 || fallback.length > 4) {
+      throw new TypeError(
+        "fallbackCategory must contain between 1 and 4 category names",
+      );
+    }
+    if (fallback.some((part) => part.trim().length === 0)) {
+      throw new TypeError(
+        "fallbackCategory must contain only non-empty category names",
+      );
+    }
+    if (!hasQuery || !understood) {
+      throw new TypeError(
+        "fallbackCategory requires an understood q (q set, understand not false)",
+      );
+    }
+  }
+}
+
+const FACET_COUNT_NAMES: ReadonlySet<string> = new Set([
+  "color_family",
+  "category_path.depth_0",
+]);
+
+function toFacetCountsPayload(
+  params: CountProductFacetsParams,
+): ProgrammaticFacetCountsRequest {
+  // The server treats a blank `q` as omitted.
+  const hasQuery = params.q !== undefined && params.q.trim().length > 0;
+  if (params.catalogs !== undefined) {
+    assertCatalogs(params.catalogs, 500);
+  }
+  const facetNames = assertFacetList(params.facets, "facets");
+  assertFacetList(params.excludeFacets, "excludeFacets");
+  const omitted = params.omitGeneratedFacets;
+  if (omitted !== undefined) {
+    assertStringArray(omitted, "omitGeneratedFacets");
+    if (omitted.length > 0 && !hasQuery) {
+      throw new TypeError("omitGeneratedFacets requires q");
+    }
+    for (const name of omitted) {
+      if (facetNames.has(name)) {
+        throw new TypeError(
+          `facet ${JSON.stringify(name)} is in both facets and omitGeneratedFacets; ` +
+            "a facet you send already replaces the understood one",
+        );
+      }
+    }
+  }
+  if (params.fallbackCategory !== undefined) {
+    assertStringArray(params.fallbackCategory, "fallbackCategory");
+    if (!hasQuery) {
+      throw new TypeError("fallbackCategory requires q");
+    }
+  }
+  assertBounds(params.priceMin, params.priceMax, "price", 0, undefined);
+  assertBounds(params.brandQualityMin, params.brandQualityMax, "brandQuality", 1, 6);
+
+  const categories = params.categories;
+  if (categories !== undefined) {
+    if (!Array.isArray(categories) || categories.length > 100) {
+      throw new TypeError("categories accepts at most 100 categories");
+    }
+    const keys = new Set<string>();
+    for (const category of categories) {
+      if (keys.has(category.key)) {
+        throw new TypeError("categories keys must be unique");
+      }
+      keys.add(category.key);
+      if (category.facets.length < 1 || category.facets.length > 10) {
+        throw new TypeError(
+          `category ${JSON.stringify(category.key)} needs 1-10 facets`,
+        );
+      }
+      assertFacetList(category.facets, `category ${JSON.stringify(category.key)}`);
+    }
+  }
+  for (const [field, values] of [
+    ["attributes", params.attributes],
+    ["facetNames", params.facetNames],
+  ] as const) {
+    if (values === undefined) {
+      continue;
+    }
+    assertStringArray(values, field);
+    if (new Set(values).size !== values.length) {
+      throw new TypeError(`${field} lists a value more than once`);
+    }
+  }
+  if (params.attributes !== undefined && params.attributes.length > 50) {
+    throw new TypeError("attributes accepts at most 50 handles");
+  }
+  if (params.facetNames?.some((name) => !FACET_COUNT_NAMES.has(name)) === true) {
+    throw new TypeError("facetNames accepts color_family and category_path.depth_0");
+  }
+  if (
+    params.facetNames?.length === 0 &&
+    (categories?.length ?? 0) === 0 &&
+    (params.attributes?.length ?? 0) === 0
+  ) {
+    throw new TypeError("nothing to count: send categories, attributes or facetNames");
+  }
+  const valueLimit = params.valueLimit;
+  if (
+    valueLimit !== undefined &&
+    (!Number.isInteger(valueLimit) || valueLimit < 1 || valueLimit > 1000)
+  ) {
+    throw new TypeError("valueLimit must be an integer between 1 and 1000");
+  }
+
+  const payload: ProgrammaticFacetCountsRequest = {};
+  if (params.q !== undefined) payload.q = params.q;
+  if (params.facets !== undefined) payload.facets = params.facets;
+  if (params.excludeFacets !== undefined) payload.exclude_facets = params.excludeFacets;
+  if (omitted !== undefined) payload.omit_generated_facets = [...omitted];
+  if (params.fallbackCategory !== undefined) {
+    payload.fallback_category = [...params.fallbackCategory];
+  }
+  if (params.priceMin !== undefined) payload.price_min = params.priceMin;
+  if (params.priceMax !== undefined) payload.price_max = params.priceMax;
+  if (params.brandQualityMin !== undefined) {
+    payload.brand_quality_min = params.brandQualityMin;
+  }
+  if (params.brandQualityMax !== undefined) {
+    payload.brand_quality_max = params.brandQualityMax;
+  }
+  if (params.catalogs !== undefined) payload.catalogs = [...params.catalogs];
+  if (categories !== undefined) {
+    payload.categories = categories.map((category) => ({
+      key: category.key,
+      facets: category.facets,
+    }));
+  }
+  if (params.attributes !== undefined) payload.attributes = [...params.attributes];
+  if (params.facetNames !== undefined) payload.facet_names = [...params.facetNames];
+  if (valueLimit !== undefined) payload.value_limit = valueLimit;
+  return payload;
 }
 
 /**
@@ -859,17 +1019,35 @@ function toMoreLikeThisPayload(
     assertCatalogs(params.catalogs, 100);
   }
 
+  // `facets` replaced `include_facets`, which the API now refuses with a 422.
+  if ("includeFacets" in params || "include_facets" in params) {
+    throw new TypeError(
+      "moreLikeThisProducts takes facets, not includeFacets; the API no longer accepts include_facets",
+    );
+  }
+
   const limit = params.limit ?? 12;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("limit must be an integer between 1 and 100");
   }
+  assertFacetList(params.facets, "facets");
+  assertFacetList(params.excludeFacets, "excludeFacets");
+  assertBounds(params.priceMin, params.priceMax, "price", 0, undefined);
+  assertBounds(params.brandQualityMin, params.brandQualityMax, "brandQuality", 1, 6);
 
   const payload: ProgrammaticMoreLikeThisRequest = {
     debug: params.debug ?? false,
     limit,
     price_preference: params.pricePreference ?? "any",
-    source: toMoreLikeThisSourcePayload(params.source),
   };
+  if (params.sources === undefined) {
+    payload.source = toMoreLikeThisSourcePayload(params.source);
+  } else {
+    if (params.source !== undefined) {
+      throw new TypeError("Exactly one of source or sources is required");
+    }
+    payload.sources = toMoreLikeThisSourcesPayload(params.sources);
+  }
 
   if (params.catalogs !== undefined) {
     payload.catalogs = [...params.catalogs];
@@ -877,11 +1055,26 @@ function toMoreLikeThisPayload(
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;
   }
-  if (params.includeFacets !== undefined) {
-    payload.include_facets = params.includeFacets;
+  if (params.facets !== undefined) {
+    payload.facets = params.facets;
   }
   if (params.excludeFacets !== undefined) {
     payload.exclude_facets = params.excludeFacets;
+  }
+  if (params.priceMin !== undefined) {
+    payload.price_min = params.priceMin;
+  }
+  if (params.priceMax !== undefined) {
+    payload.price_max = params.priceMax;
+  }
+  if (params.brandQualityMin !== undefined) {
+    payload.brand_quality_min = params.brandQualityMin;
+  }
+  if (params.brandQualityMax !== undefined) {
+    payload.brand_quality_max = params.brandQualityMax;
+  }
+  if (params.relax !== undefined) {
+    payload.relax = params.relax;
   }
 
   return payload;
@@ -910,6 +1103,23 @@ function toMoreLikeThisSourcePayload(
   }
   assertNonEmptyString(source.uuid, "source.uuid");
   return { uuid: source.uuid };
+}
+
+function toMoreLikeThisSourcesPayload(sources: unknown): string[] {
+  if (!Array.isArray(sources) || sources.length < 1 || sources.length > 20) {
+    throw new TypeError("sources must contain between 1 and 20 product UUIDs");
+  }
+  const uuids: string[] = [];
+  for (const uuid of sources) {
+    if (typeof uuid !== "string" || uuid.length === 0) {
+      throw new TypeError("sources must contain only non-empty product UUIDs");
+    }
+    uuids.push(uuid);
+  }
+  if (new Set(uuids).size !== uuids.length) {
+    throw new TypeError("sources lists a product UUID more than once");
+  }
+  return uuids;
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {

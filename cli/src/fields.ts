@@ -55,17 +55,25 @@ export const SEARCH_FIELDS = {
   catalogs: { flag: "--catalog", codec: "singleton" },
   cursor: { flag: "--cursor" },
   debug: unsupported(
-    "Returns the effective query for query-understanding analysis. A debugging " +
-      "surface, not a session one; reach it with `storerouter api`.",
+    "Reserved for diagnostic detail; the effective query arrives without it. " +
+      "Reach it with `storerouter api`.",
+  ),
+  diversity: unsupported(
+    "Opt-in retailer spreading changes page 1's results. Use `storerouter api` " +
+      "when you need it.",
   ),
   exclude_facets: unsupported(
     "Not yet a flag on `search`; send it with `storerouter api POST /products/search`.",
   ),
   facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
+  fallback_category: unsupported(
+    "Constrains vague queries to a category when understanding finds none. Use " +
+      "`storerouter api` when you need it.",
+  ),
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects an understood facet visible only in `effectiveQuery`, which this " +
-      "command does not request.",
+      "command does not show.",
   ),
   price_max: { flag: "--price-max", sdkName: "priceMax" },
   price_min: { flag: "--price-min", sdkName: "priceMin" },
@@ -85,6 +93,12 @@ export const SEARCH_FIELDS = {
 // ── POST /products/more-like-this ──────────────────────────────────────────
 
 export const SIMILAR_FIELDS = {
+  brand_quality_max: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
+  ),
+  brand_quality_min: unsupported(
+    "Brand-quality bounds are a ranking-policy knob; reach them with `storerouter api`.",
+  ),
   catalogs: { flag: "--catalog", multiple: true },
   cursor: { flag: "--cursor" },
   debug: unsupported("Effective-query debugging; reach it with `storerouter api`."),
@@ -95,22 +109,22 @@ export const SIMILAR_FIELDS = {
     multiple: true,
     placeholder: "k=v",
   },
-  include_facets: {
-    flag: "--facet",
-    sdkName: "includeFacets",
-    codec: "facets",
-    multiple: true,
-    placeholder: "k=v",
-  },
+  facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
   limit: { flag: "--limit" },
   omit_generated_facets: unsupported(
     "Corrects a server-generated facet visible only in `effectiveQuery`, which " +
       "this command does not request.",
   ),
+  price_max: { flag: "--price-max", sdkName: "priceMax" },
+  price_min: { flag: "--price-min", sdkName: "priceMin" },
   price_preference: { flag: "--price-preference", sdkName: "pricePreference" },
   ranking_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
+  relax: { flag: "--relax", negatable: true },
   retrieval_embedding_columns: unsupported("Retrieval tuning; not a session concern."),
   source: { flag: "<url|uuid> (positional)", codec: "custom" },
+  sources: unsupported(
+    "Several source products at once; reach them with `storerouter api`.",
+  ),
 } satisfies FieldMap<MoreLikeThisRequest>;
 
 export const PRICE_PREFERENCES = choices("moreLikeThisProducts", "price_preference");
@@ -121,6 +135,12 @@ export const RESOLVE_FIELDS = {
   html: { flag: "--html", codec: "custom", placeholder: "file|-" },
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
+
+// ── GET /domains/{host} ─────────────────────────────────────────────────────
+
+export const STORE_FIELDS = {
+  host: { flag: "<host|url> (positional)" },
+} satisfies FieldMap<{ host: string }>;
 
 /**
  * Every field map, including operations with no request fields.
@@ -133,5 +153,5 @@ export const FIELD_MAPS: Readonly<
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   getMe: {},
-  listDomains: {},
+  getDomain: STORE_FIELDS,
 });

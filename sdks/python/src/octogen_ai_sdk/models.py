@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -31,13 +31,17 @@ from octogen_ai_sdk.generated import models as _contract
 # `url` or `uuid`"), and constructor ergonomics — the generator turns a
 # `minLength`/`maxLength` string into a constrained root-model alias, so a
 # generated request body would not accept a plain `str`.
-DomainEntry = _contract.DomainEntry
-ListDomainsResponse = _contract.ListDomainsResponse
+DomainCatalogCoverage = _contract.DomainCatalogCoverage
+DomainCoverageResponse = _contract.DomainCoverageResponse
+DomainField = _contract.DomainField
+DomainFieldValue = _contract.DomainFieldValue
 MeKey = _contract.MeKey
 MeOrganization = _contract.MeOrganization
 MeQuotas = _contract.MeQuotas
 MeRateLimit = _contract.MeRateLimit
 MeResponse = _contract.MeResponse
+PriceBucket = _contract.PriceBucket
+PriceDistribution = _contract.PriceDistribution
 ProgrammaticProductSearchEffectiveFacet = (
     _contract.ProgrammaticProductSearchEffectiveFacet
 )
@@ -45,6 +49,17 @@ ProgrammaticProductSearchEffectiveQuery = (
     _contract.ProgrammaticProductSearchEffectiveQuery
 )
 ProgrammaticProductSearchRelaxation = _contract.ProgrammaticProductSearchRelaxation
+ProgrammaticAttributeCounts = _contract.ProgrammaticAttributeCounts
+ProgrammaticCategoryCount = _contract.ProgrammaticCategoryCount
+ProgrammaticFacetCountsResponse = _contract.ProgrammaticFacetCountsResponse
+ProgrammaticFacetValueCount = _contract.ProgrammaticFacetValueCount
+ProgrammaticFacetValueCounts = _contract.ProgrammaticFacetValueCounts
+TaxonomyAttribute = _contract.TaxonomyAttribute
+TaxonomyAttributePage = _contract.TaxonomyAttributePage
+TaxonomyAttributeValue = _contract.TaxonomyAttributeValue
+TaxonomyAttributeValuePage = _contract.TaxonomyAttributeValuePage
+TaxonomyCategory = _contract.TaxonomyCategory
+TaxonomyCategoryPage = _contract.TaxonomyCategoryPage
 
 
 class _ResponseModel(BaseModel):
@@ -167,6 +182,12 @@ def _validate_brand_names(brands: list[str] | None) -> list[str] | None:
     return brands
 
 
+def _validate_fallback_category(path: list[str] | None) -> list[str] | None:
+    if path is not None and any(not part.strip() for part in path):
+        raise ValueError("fallback_category must contain only non-empty category names")
+    return path
+
+
 def _facet_names(facets: list[Facet] | None, field: str) -> set[str]:
     """Reject a repeated facet name; return the names for cross-field checks."""
     names: set[str] = set()
@@ -201,16 +222,25 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     similar_to_brands: list[str] | None = Field(
         default=None, min_length=1, max_length=10
     )
+    #: Category path, root first (1-4 names as the ``category_path.depth_N``
+    #: facets accept them), searched when understanding finds no category.
+    fallback_category: list[str] | None = Field(
+        default=None, min_length=1, max_length=4
+    )
     # An empty list is refused rather than sent: omitting the field already
     # means every catalog.
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
     limit: int = Field(default=50, ge=1, le=100)
     cursor: str | None = None
     relax: bool | None = None
+    diversity: bool | None = None
     debug: bool | None = None
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
     _check_brand_names = field_validator("similar_to_brands")(_validate_brand_names)
+    _check_fallback_category = field_validator("fallback_category")(
+        _validate_fallback_category
+    )
 
     @model_validator(mode="after")
     def reject_contradictions(self) -> ProgrammaticProductSearchRequest:
@@ -228,6 +258,11 @@ class ProgrammaticProductSearchRequest(_RequestModel):
                 "omit_generated_facets requires an understood q "
                 "(q set, understand not False)"
             )
+        if self.fallback_category is not None and not (has_query and understood):
+            raise ValueError(
+                "fallback_category requires an understood q "
+                "(q set, understand not False)"
+            )
 
         facet_names = _facet_names(self.facets, "facets")
         _facet_names(self.exclude_facets, "exclude_facets")
@@ -243,6 +278,95 @@ class ProgrammaticProductSearchRequest(_RequestModel):
             high = getattr(self, f"{field}_max")
             if low is not None and high is not None and low > high:
                 raise ValueError(f"{field}_min must not exceed {field}_max")
+        return self
+
+
+FacetCountName = Literal["color_family", "category_path.depth_0"]
+
+
+class ProgrammaticFacetCountCategory(_RequestModel):
+    """One category to count, named by the facets that select it.
+
+    A :class:`TaxonomyCategory`'s ``facets`` go here unchanged.
+    """
+
+    key: str = Field(min_length=1, max_length=200)
+    facets: list[Facet] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="after")
+    def reject_repeated_facets(self) -> ProgrammaticFacetCountCategory:
+        _facet_names(self.facets, f"category {self.key!r}")
+        return self
+
+
+class ProgrammaticFacetCountsRequest(_RequestModel):
+    """Body for ``POST /v1/products/facet-counts``.
+
+    The filter fields mean what they mean on
+    :class:`ProgrammaticProductSearchRequest`; ``q`` is always understood, and
+    only its understood filters narrow the counts. ``categories``,
+    ``attributes`` and ``facet_names`` say what to count. The contradictions
+    the server refuses with a ``422`` and that are cheap to mirror fail here.
+    """
+
+    q: str | None = None
+    facets: list[Facet] | None = Field(default=None, max_length=50)
+    exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    omit_generated_facets: list[str] | None = Field(default=None, max_length=50)
+    fallback_category: list[str] | None = Field(
+        default=None, min_length=1, max_length=4
+    )
+    price_min: float | None = Field(default=None, ge=0)
+    price_max: float | None = Field(default=None, ge=0)
+    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
+    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
+    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
+    categories: list[ProgrammaticFacetCountCategory] | None = Field(
+        default=None, max_length=100
+    )
+    attributes: list[str] | None = Field(default=None, max_length=50)
+    #: ``None`` sends nothing, and the server counts ``color_family``.
+    facet_names: list[FacetCountName] | None = Field(default=None, max_length=2)
+    value_limit: int | None = Field(default=None, ge=1, le=1000)
+
+    _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+    _check_fallback_category = field_validator("fallback_category")(
+        _validate_fallback_category
+    )
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> ProgrammaticFacetCountsRequest:
+        has_query = self.q is not None and bool(self.q.strip())
+        if self.omit_generated_facets and not has_query:
+            raise ValueError("omit_generated_facets requires q")
+        if self.fallback_category is not None and not has_query:
+            raise ValueError("fallback_category requires q")
+
+        facet_names = _facet_names(self.facets, "facets")
+        _facet_names(self.exclude_facets, "exclude_facets")
+        for name in self.omit_generated_facets or ():
+            if name in facet_names:
+                raise ValueError(
+                    f"facet {name!r} is in both facets and omit_generated_facets; "
+                    "a facet you send already replaces the understood one"
+                )
+        for field in ("price", "brand_quality"):
+            low = getattr(self, f"{field}_min")
+            high = getattr(self, f"{field}_max")
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{field}_min must not exceed {field}_max")
+
+        keys = [category.key for category in self.categories or ()]
+        if len(set(keys)) != len(keys):
+            raise ValueError("categories keys must be unique")
+        for field in ("attributes", "facet_names"):
+            values = getattr(self, field) or []
+            if len(set(values)) != len(values):
+                raise ValueError(f"{field} lists a value more than once")
+        if self.facet_names == [] and not (self.categories or self.attributes):
+            raise ValueError(
+                "nothing to count: send categories, attributes or facet_names"
+            )
         return self
 
 
@@ -298,18 +422,53 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
     """More Like This request, optionally restricted to a catalog allowlist.
 
     ``catalogs`` restricts the *results*; the source product may live outside it.
+    ``facets``, ``exclude_facets`` and the price and brand-quality bounds mean
+    what they mean on search, and the same cheap ``422`` rules fail here: a
+    facet name sent twice, a minimum above its maximum. ``include_facets`` is
+    gone; ``facets`` replaces it and the server refuses the old name.
+
+    ``relax`` is left out unless set, so the server default (``True``) applies:
+    a short page 1 is retried with Platform's generated facets dropped, never
+    the ones you sent.
+
+    Send exactly one of ``source`` and ``sources``. ``sources`` is 1-20
+    distinct indexed product UUIDs treated as one set: results exclude every
+    source, and a facet is generated only when every source has it.
     """
 
-    source: ProgrammaticMoreLikeThisSource
+    source: ProgrammaticMoreLikeThisSource | None = None
+    sources: list[Annotated[str, Field(min_length=1)]] | None = Field(
+        default=None, min_length=1, max_length=20
+    )
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=100)
     cursor: str | None = None
     limit: int = Field(default=12, ge=1, le=100)
-    include_facets: list[Facet] | None = None
-    exclude_facets: list[Facet] | None = None
+    facets: list[Facet] | None = Field(default=None, max_length=50)
+    exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    price_min: float | None = Field(default=None, ge=0)
+    price_max: float | None = Field(default=None, ge=0)
+    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
+    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
     price_preference: PricePreference = PricePreference.ANY
+    relax: bool | None = None
     debug: bool = False
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> ProgrammaticMoreLikeThisRequest:
+        if (self.source is None) == (self.sources is None):
+            raise ValueError("Exactly one of source or sources is required")
+        if self.sources is not None and len(set(self.sources)) != len(self.sources):
+            raise ValueError("sources lists a product UUID more than once")
+        _facet_names(self.facets, "facets")
+        _facet_names(self.exclude_facets, "exclude_facets")
+        for field in ("price", "brand_quality"):
+            low = getattr(self, f"{field}_min")
+            high = getattr(self, f"{field}_max")
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{field}_min must not exceed {field}_max")
+        return self
 
 
 class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):
@@ -343,11 +502,20 @@ class ProgrammaticMoreLikeThisEffectiveQuery(_ResponseModel):
     )
     price_min: float | None = Field(default=None, alias="priceMin")
     price_max: float | None = Field(default=None, alias="priceMax")
+    brand_quality_min: float | None = Field(default=None, alias="brandQualityMin")
+    brand_quality_max: float | None = Field(default=None, alias="brandQualityMax")
+    #: What relaxation did, in search's shape (``rounds`` is 0 when page 1
+    #: needed none). ``None`` with ``relax=False``.
+    relaxation: ProgrammaticProductSearchRelaxation | None = None
     limit: int
 
 
 class ProgrammaticMoreLikeThisResponse(_ResponseModel):
-    source: ProgrammaticMoreLikeThisSourceResponse
+    #: The resolved ``source``; ``None`` when the request sent ``sources``.
+    source: ProgrammaticMoreLikeThisSourceResponse | None = None
+    #: The resolved ``sources``, in request order; ``None`` unless the request
+    #: sent ``sources``.
+    sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = None
     items: list[MerchantProductListItem] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, alias="nextCursor")
     effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
@@ -530,6 +698,22 @@ class MerchantProductListItem(_ResponseModel):
     raw_score: float | None = Field(default=None, alias="rawScore")
     display_match_score: int | None = Field(default=None, alias="displayMatchScore")
     updated_at: datetime | None = Field(default=None, alias="updatedAt")
+    # Card fields on search and more-like-this results; ``None`` when the
+    # product does not carry them or the server predates them.
+    #: ISO 4217 currency of the prices; ``None`` when unknown or mixed.
+    currency: str | None = None
+    #: Product-family availability, not a particular color's or size's stock.
+    in_stock: bool | None = Field(default=None, alias="inStock")
+    #: Product-family color labels; the linked variant may differ.
+    colors: list[str] | None = None
+    sizes: list[str] | None = None
+    #: ``"male"``, ``"female"`` or ``"unisex"``; ``None`` when unknown or
+    #: when several are listed. Typed open so a new value never fails parsing.
+    gender: str | None = None
+    #: Taxonomy category path, root first, in the names the
+    #: ``category_path.depth_N`` facets accept.
+    category_path: list[str] | None = Field(default=None, alias="categoryPath")
+    catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
 
 
 class MerchantProductListPage(_ResponseModel):
@@ -541,7 +725,8 @@ class ProgrammaticProductSearchPage(MerchantProductListPage):
     """One page of ``search_products`` results."""
 
     request_id: str | None = Field(default=None, alias="requestId")
-    #: The search that actually ran; present with ``debug=True``.
+    #: The search that actually ran. Present on every response; servers that
+    #: predate it send it only with ``debug=True``.
     effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
         default=None,
         alias="effectiveQuery",
@@ -569,11 +754,16 @@ class MerchantProductView(MerchantProductListItem):
     enrichment: ProductEnrichment | None = None
 
 
+# Response enums are open — `Literal[...] | str` — so a value the server adds
+# after this SDK was released parses instead of failing the whole response.
 class ProductResolutionMetadata(_ResponseModel):
-    completeness: Literal["complete", "partial"]
-    method: Literal[
-        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
-    ]
+    completeness: Literal["complete", "partial"] | str
+    method: (
+        Literal[
+            "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+        ]
+        | str
+    )
     rendered: bool | None = None
     missing_fields: list[str] | None = Field(
         default_factory=list, alias="missingFields"
@@ -582,7 +772,7 @@ class ProductResolutionMetadata(_ResponseModel):
 
 class MerchantProductUrlLookupResponse(_ResponseModel):
     request_id: str | None = Field(default=None, alias="requestId")
-    source: Literal["indexed", "on_demand", "client_html"]
+    source: Literal["indexed", "on_demand", "client_html"] | str
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
@@ -592,11 +782,35 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     normalized_url: str | None = Field(default=None, alias="normalizedUrl")
     canonical_url: str | None = Field(default=None, alias="canonicalUrl")
     resolution: ProductResolutionMetadata | None = None
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         default=None,
         alias="cacheStatus",
     )
+    #: Which index probe resolved the URL (``exact``, ``loose``,
+    #: ``learned_alias:<rule_id>``, …). Informational; values may be extended.
+    #: ``None`` for on-demand results.
+    matched_via: str | None = Field(default=None, alias="matchedVia")
     warnings: list[str] | None = Field(default_factory=list)
+
+
+class ProductMarkdownLookupResult(_ResponseModel):
+    """A product rendered as Markdown, with the identity headers that name it.
+
+    Returned by :meth:`OctogenClient.lookup_product_markdown`. Each header
+    field is ``None`` when the response omits it.
+    """
+
+    markdown: str
+    #: ``x-request-id``
+    request_id: str | None = None
+    #: ``x-octogen-product-uuid``
+    product_uuid: str | None = None
+    #: ``x-octogen-catalog``: the catalog key the product came from.
+    catalog: str | None = None
+    #: ``x-octogen-matched-via``: as ``MerchantProductUrlLookupResponse.matched_via``.
+    matched_via: str | None = None
+    #: ``x-octogen-normalized-url``
+    normalized_url: str | None = None
 
 
 class ValidationErrorModel(_ResponseModel):
@@ -643,7 +857,7 @@ class CoverageUrlList(_ResponseModel):
 
     url_list_id: str = Field(alias="urlListId")
     name: str
-    status: Literal["provisioning", "active", "delete_pending"]
+    status: Literal["provisioning", "active", "delete_pending"] | str
     url_count: int = Field(alias="urlCount")
     big_query: CoverageUrlListBigQuery | None = Field(default=None, alias="bigQuery")
     created_at: datetime = Field(alias="createdAt")
@@ -696,19 +910,3 @@ class CoverageUrlListUrl(_ResponseModel):
 class CoverageUrlListUrlsPage(_ResponseModel):
     items: list[CoverageUrlListUrl]
     next_cursor: str | None = Field(default=None, alias="nextCursor")
-
-
-class ListDomainsResult(_ResponseModel):
-    """The outcome of ``GET /v1/domains``, including the revalidation case."""
-
-    not_modified: bool
-    """``True`` when the server answered ``304`` — reuse the cached snapshot."""
-
-    domains: list[DomainEntry] | None = None
-    """The covered-domain set; ``None`` on a ``304``."""
-
-    etag: str | None = None
-    """The strong ``ETag`` to revalidate with next time."""
-
-    max_age_seconds: int | None = None
-    """``max-age`` from ``Cache-Control``, in seconds, when the server sent one."""

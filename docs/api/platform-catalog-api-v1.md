@@ -34,31 +34,26 @@ immediately on the next request.
 
 ## Endpoints
 
-The published contract carries **18 operations across 14 paths**. They use the
+The published contract carries **19 operations across 16 paths**. They use the
 same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `listDomains`, `resolveProductFromHtml`,
-and the eight
+SDK — `getMe`, `getDomain`, `resolveProductFromHtml`, the
+[taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
-| Operation                          | What it is for                                                        |
-| ---------------------------------- | --------------------------------------------------------------------- |
-| `GET /domains`                     | Every covered host. Check this before `lookup` — see the note below.  |
-| `GET /me`                          | Your organization, key id and provenance, quotas, rate-limit posture. |
-| `POST /products/resolve-from-html` | Resolve a product from HTML you already have. No index, no fetch.     |
-
-> **`GET /domains` returns hosts normalized by the server** — lowercased, with a
-> leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
-> Product URLs in the wild usually _do_ carry `www.`, so comparing a raw URL
-> host against that list reports covered merchants as uncovered. Normalize your
-> side the same way, or use the SDK helpers (`isHostCovered` /
-> `is_host_covered`), which do it for you. The endpoint carries a strong `ETag`
-> and `Cache-Control: max-age=300`: revalidate with `If-None-Match` rather than
-> refetching.
+| Operation                                  | What it is for                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `GET /me`                                  | Your organization, key id and provenance, quotas, rate-limit posture.                 |
+| `GET /domains/{host}`                      | One store's coverage: catalogs, product counts, populated facets, price histogram.    |
+| `POST /products/resolve-from-html`         | Resolve a product from HTML you already have. No index, no fetch.                     |
+| `GET /taxonomy/categories`                 | Root categories, or one category's children, with the facets that select each.        |
+| `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |
+| `GET /taxonomy/attributes/{handle}/values` | An attribute's canonical value handles, such as `neckline__halter`.                   |
+| `POST /products/facet-counts`              | Product counts by category, attribute value and colour family under search's filters. |
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -168,24 +163,26 @@ curl -sS https://api.storerouter.ai/v1/products/search \
 
 Request fields:
 
-| Field                                    | Type    | Notes                                                                                                                                                                                                       |
-| ---------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `q`                                      | string  | Free text. Omit (or send blank) to browse by filters alone. Understood by default: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it.              |
-| `understand`                             | boolean | Defaults to `true`. `false` matches `q` as written and filters only by what you send. Requires `q`.                                                                                                         |
-| `facets`                                 | array   | Filters a product must match: every facet, any value within a facet. Replaces any understood facet of the same name and is never relaxed. Each name at most once.                                           |
-| `exclude_facets`                         | array   | Filters a product must not match. Each name at most once.                                                                                                                                                   |
-| `omit_generated_facets`                  | array   | Names of understood facets to drop, for a derived filter that is wrong and that you have no value for. Use the names `effectiveQuery` reports. Requires understood `q`; a name may not also be in `facets`. |
-| `price_min`, `price_max`                 | number  | Inclusive, at least 0, min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                              |
-| `brand_quality_min`, `brand_quality_max` | number  | Brand quality score bounds from 1 (very poor) to 6 (exceptional), min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                   |
-| `similar_to_brands`                      | array   | 1 to 10 brand names whose style to favour. Ranks, does not filter. Replaces brands understood from `q`.                                                                                                     |
-| `catalogs`                               | array   | 1 to 500 catalog keys. Omit to search everything your key can access; keys you cannot access match nothing.                                                                                                 |
-| `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                   |
-| `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body.                                                                                                                                               |
-| `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                        |
-| `debug`                                  | boolean | Adds `effectiveQuery`: the text, filters and bounds that ran, each facet tagged `caller` or `generated`.                                                                                                    |
+| Field                                    | Type    | Notes                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `q`                                      | string  | Free text. Omit (or send blank) to browse by filters alone. Understood by default: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it.                                                                                                                            |
+| `understand`                             | boolean | Defaults to `true`. `false` matches `q` as written and filters only by what you send. Requires `q`.                                                                                                                                                                                                                       |
+| `facets`                                 | array   | Filters a product must match: every facet, any value within a facet. Replaces any understood facet of the same name and is never relaxed. Each name at most once.                                                                                                                                                         |
+| `exclude_facets`                         | array   | Filters a product must not match. Each name at most once.                                                                                                                                                                                                                                                                 |
+| `omit_generated_facets`                  | array   | Names of understood facets to drop, for a derived filter that is wrong and that you have no value for. Use the names `effectiveQuery` reports. Requires understood `q`; a name may not also be in `facets`.                                                                                                               |
+| `price_min`, `price_max`                 | number  | Inclusive, at least 0, min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                                                                                                                                            |
+| `brand_quality_min`, `brand_quality_max` | number  | Brand quality score bounds from 1 (very poor) to 6 (exceptional), min ≤ max. Combined with understood bounds by keeping the stricter one.                                                                                                                                                                                 |
+| `similar_to_brands`                      | array   | 1 to 10 brand names whose style to favour. Ranks, does not filter. Replaces brands understood from `q`.                                                                                                                                                                                                                   |
+| `fallback_category`                      | array   | 1 to 4 category names, root first, as the `category_path.depth_N` facets accept them, e.g. `["apparel & accessories", "clothing"]`; the path must exist in the taxonomy. Applied as `generated` category facets only when understanding finds no category and you send no `category_path` facet. Requires understood `q`. |
+| `catalogs`                               | array   | 1 to 500 catalog keys. Omit to search everything your key can access; keys you cannot access match nothing.                                                                                                                                                                                                               |
+| `limit`                                  | integer | 1 to 100. Defaults to 50.                                                                                                                                                                                                                                                                                                 |
+| `cursor`                                 | string  | `nextCursor` from the previous page, sent with the same body. Later pages reuse page 1's understanding of `q`; a cursor sent with a different `q` is a `400`.                                                                                                                                                             |
+| `relax`                                  | boolean | When an understood `q` returns nothing, drop understood filters in stages until a stage returns results. Facets you send are never dropped. Requires understood `q`.                                                                                                                                                      |
+| `diversity`                              | boolean | Defaults to `false`. Spreads page 1 across retailers and drops repeated images. No effect with `catalogs`, a catalog-limited key, or a `brand_name` facet. Changing it mid-search is a `400`.                                                                                                                             |
+| `debug`                                  | boolean | Reserved for diagnostic detail. `effectiveQuery` is returned without it.                                                                                                                                                                                                                                                  |
 
-`catalog`, `text_search_query`, and `diversity` were removed and are now a
-`422` whose message names the replacement: send `catalogs: ["<key>"]` for
+`catalog` and `text_search_query` were removed and are now a `422` whose
+message names the replacement: send `catalogs: ["<key>"]` for
 `catalog`, and `q` with `understand: false` (filters in `facets` and
 `exclude_facets`) for `text_search_query`.
 
@@ -211,21 +208,46 @@ Response:
       ],
       "currentPrice": 180,
       "originalPrice": null,
+      "currency": "USD",
+      "inStock": true,
+      "colors": ["Black"],
+      "sizes": ["S", "M", "L"],
+      "gender": "unisex",
+      "categoryPath": ["apparel & accessories", "clothing", "activewear"],
+      "catalogDisplayName": "Warren Lotas",
       "isActive": true,
       "updatedAt": "2026-05-19T18:04:10Z"
     }
   ],
   "nextCursor": "eyJzZWFyY2hBZnRlciI6Wy4uLl19",
-  "requestId": "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11"
+  "requestId": "3f2c0a52-5d8e-4a57-9a61-0c9f1f7b2d11",
+  "effectiveQuery": {
+    "text": "black hoodie",
+    "understood": true,
+    "facets": [
+      { "name": "color", "values": ["black"], "source": "caller" },
+      { "name": "product_type", "values": ["hoodie"], "source": "generated" }
+    ],
+    "excludeFacets": [],
+    "priceMin": 50,
+    "priceMax": 300,
+    "catalogs": ["warrenlotas"]
+  }
 }
 ```
 
+Each item's `currency`, `inStock`, `colors`, `sizes`, `gender` (`male`,
+`female` or `unisex`), `categoryPath` (root first, in the names the
+`category_path.depth_N` facets accept) and `catalogDisplayName` are null when
+the product does not carry them. `inStock` and `colors` describe the product
+family, not a particular variant.
+
 When `nextCursor` is non-null, pass it as `cursor` on the next request — with
 the same filters — to advance pagination. A null `nextCursor` means the page
-is the last one.
+is the last one. Query understanding runs once, on page 1; later pages reuse
+it.
 
-With `"debug": true` the page adds `effectiveQuery`, the search that actually
-ran: `text` (the understood rewrite of `q`, `q` itself with `understand: false`,
+Every page includes `effectiveQuery`, the search that actually ran: `text` (the understood rewrite of `q`, `q` itself with `understand: false`,
 or empty when browsing), `understood`, `facets` and `excludeFacets` (each
 `{name, values, source}` with `source` `caller` or `generated`), `priceMin`,
 `priceMax`, `brandQualityMin`, `brandQualityMax`, `similarToBrands`,
@@ -268,17 +290,48 @@ curl -sS https://api.storerouter.ai/v1/products/more-like-this \
 
 Request fields:
 
-| Field              | Type    | Notes                                                                                                 |
-| ------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
-| `source.url`       | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.               |
-| `source.uuid`      | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                |
-| `catalogs`         | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.     |
-| `limit`            | integer | Page size from 1 to 100. Defaults to 12.                                                              |
-| `cursor`           | string  | Opaque pagination cursor from the previous response.                                                  |
-| `include_facets`   | array   | Additional include facets appended after server-generated audience facets.                            |
-| `exclude_facets`   | array   | Facets to exclude from results.                                                                       |
-| `price_preference` | string  | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`.        |
-| `debug`            | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval. |
+| Field                                     | Type    | Notes                                                                                                                                                                                                                                |
+| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `source.url`                              | string  | Canonical source product URL. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                              |
+| `source.uuid`                             | string  | Indexed source product UUID. Exactly one of `source.url` or `source.uuid` is required.                                                                                                                                               |
+| `sources`                                 | array   | 1–20 distinct indexed product UUIDs treated as one set, for example a collection. Send exactly one of `source` and `sources`; both or neither is a `422`. See below.                                                                 |
+| `catalogs`                                | array   | Optional allowlist of 1–100 catalog keys. Restricts results only; the source may live outside it.                                                                                                                                    |
+| `limit`                                   | integer | Page size from 1 to 100. Defaults to 12.                                                                                                                                                                                             |
+| `cursor`                                  | string  | Opaque pagination cursor from the previous response.                                                                                                                                                                                 |
+| `facets`                                  | array   | Filters a product must match, as on search. A facet you send replaces every generated facet of the same name and is never relaxed. Each name at most once. Replaces `include_facets`, which is refused with a `422` naming `facets`. |
+| `exclude_facets`                          | array   | Filters a product must not match, as on search. Each name at most once.                                                                                                                                                              |
+| `omit_generated_facets`                   | array   | Names of server-generated facets to drop before search and relaxation. Never affects `facets` or `exclude_facets`.                                                                                                                   |
+| `price_min` / `price_max`                 | number  | Inclusive price bounds, at least 0. Combined with the `price_preference` bound by keeping the tighter one. Never relaxed.                                                                                                            |
+| `brand_quality_min` / `brand_quality_max` | number  | Inclusive brand-quality bounds, 1 (very poor) to 6 (exceptional). Never relaxed.                                                                                                                                                     |
+| `price_preference`                        | string  | `lower`, `any`, or `higher` relative to the source product's current price. Defaults to `any`.                                                                                                                                       |
+| `relax`                                   | boolean | Defaults to `true`. Retries a short page 1 with generated facets dropped in stages, least trusted first. See below.                                                                                                                  |
+| `retrieval_embedding_columns`             | array   | Embedding columns that retrieve candidates. Overrides the server default (style/tags embeddings when the source has styles or tags, otherwise the base embedding).                                                                   |
+| `ranking_embedding_columns`               | array   | Embedding columns that rescore and rank the retrieved candidates. Defaults to the base embedding.                                                                                                                                    |
+| `debug`                                   | boolean | Defaults to `false`. When `true`, includes the curated camelCase `effectiveQuery` used for retrieval.                                                                                                                                |
+
+`relax` follows the rule search follows: what you send is never silently
+dropped, but the server may drop its own inferences. On more-like-this the
+generated facets are Platform's inference from the source product, not words
+you sent, so `relax` defaults to `true`; search defaults to `false` because its
+generated facets come from your `q`. When relaxation runs depends on the
+source:
+
+- A `url` or `uuid` source relaxes a first page (no `cursor`) that has fewer
+  than `min(5, limit)` results and no `nextCursor`. A stage is adopted only if
+  it reaches that floor, or returns anything for an empty page.
+- An image source relaxes only an empty first page, as search does.
+
+A relaxed page's `nextCursor` continues the same relaxed results. Sending it
+with `relax: false` returns `400`.
+
+`sources` finds products similar to several products at once. Results exclude
+every source. One UUID behaves exactly like `source: {"uuid": ...}`. With
+several, their style and tag terms are blended into one query, most widely
+shared first; a facet is generated only when every source has it, with the
+values of all of them; and `price_preference` compares with the sources'
+median price. Relaxation treats `sources` like a `uuid` source. The response
+then carries `sources`, the resolved products in request order, instead of
+`source`.
 
 Response:
 
@@ -307,9 +360,67 @@ Response:
 ```
 
 With `"debug": true`, the response adds `effectiveQuery` containing only the
-server-derived fields intended for public inspection: `text`,
+server-derived fields intended for public inspection, among them `text`,
 `retrievalEmbeddingColumns`, `rankingEmbeddingColumns`, `facets`,
-`exclusionFacets`, `priceMin`, `priceMax`, and `limit`.
+`exclusionFacets`, `priceMin`, `priceMax`, `brandQualityMin`,
+`brandQualityMax`, `limit` and, with `relax: true`, `relaxation` in search's
+shape (`rounds`, `declinedRounds`, `droppedFacets`). `relaxation` replaces the
+former top-level `relaxationRounds`, `relaxationDroppedFacets` and
+`relaxationDeclinedRounds`.
+
+### Taxonomy and facet counts
+
+The taxonomy routes answer "which attributes do dresses have, and what values?"
+in the names `facets` accepts, so a value you discover goes straight back into
+search. They return canonical definitions, not inventory: a listed value may
+match no product. Page with `offset` and `limit` (categories 1–50, default 25;
+attributes and values 1–100, default 50) and continue with `nextOffset`.
+
+```bash
+# Children of a category, by path (a UUID or section handle such as `apparel` also works)
+curl -sS -G https://api.storerouter.ai/v1/taxonomy/categories \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  --data-urlencode "parent=Apparel & Accessories > Clothing"
+
+# Its attributes, then one attribute's values
+curl -sS -G https://api.storerouter.ai/v1/taxonomy/attributes \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  --data-urlencode "category=Apparel & Accessories > Clothing > Dresses"
+curl -sS https://api.storerouter.ai/v1/taxonomy/attributes/neckline/values \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY"
+```
+
+Each category carries `facets`, one `category_path.depth_N` facet per level,
+that select it. Each attribute carries `facetName` (`null` when it cannot be
+filtered on); filter with `{"name": facetName, "values": [value.handle]}`.
+
+`POST /products/facet-counts` takes search's filters — `q`, `facets`,
+`exclude_facets`, `omit_generated_facets`, `fallback_category`, the price and
+brand-quality bounds, and `catalogs` — and counts what search would filter to.
+`q` is understood as on search and only its understood filters narrow the
+counts. Say what to count with `categories` (`{key, facets}` entries, up to
+100), `attributes` (handles, up to 50) and `facet_names` (`color_family`, the
+default, and `category_path.depth_0`); `value_limit` caps the values returned
+per attribute and facet. A value's count ignores your own facet on that
+attribute, so it shows what selecting it would return.
+
+```bash
+curl -sS https://api.storerouter.ai/v1/products/facet-counts \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "q": "red dresses",
+    "categories": [
+      {"key": "dresses", "facets": [{"name": "category_path.depth_2", "values": ["dresses"]}]}
+    ],
+    "attributes": ["neckline"]
+  }'
+```
+
+The response has `categories` (`{key, count}` in request order), `attributes`
+(`{handle, facetName, values: [{value, count}]}`), `facets` (`{name, values}`)
+and `effectiveQuery`, the filters the counts applied in search's shape. Invalid
+facet names and unknown attribute handles are a `422`, as on search.
 
 ## Error model
 
@@ -372,7 +483,7 @@ https://cdn.storerouter.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- All 15 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
+- Operation IDs including `getMe`, `searchProducts`,
   `moreLikeThisProducts`, `lookupProduct`,
   `resolveProductFromHtml`.
 - Full request and response schemas for code generation.

@@ -44,44 +44,10 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-### Start with coverage
+### Product lookup
 
-Octogen does not cover every merchant, and the coverage check is the cheapest
-call you can make. `GET /v1/domains` returns hosts **normalized by the
-server** — lowercased, with a leading `www.` stripped — so it reports
-`macys.com` and never `www.macys.com`. Real product URLs usually *do* carry
-`www.`, so comparing a raw URL host against that list reports covered merchants
-as uncovered. `fetch_domain_coverage` normalizes both sides for you:
-
-```python
-async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
-    coverage = await client.fetch_domain_coverage()
-
-    url = "https://www.macys.com/shop/product/some-dress"
-    if coverage.is_host_covered(url):
-        found = await client.lookup_product(url)
-        print(found.product.title)
-    else:
-        print("Contact https://storerouter.ai/contact to discuss coverage.")
-```
-
-The endpoint is `Cache-Control: max-age=300` behind a strong `ETag`, and clients
-are expected to revalidate rather than refetch. Pass the previous snapshot back
-and a `304` returns it untouched:
-
-```python
-coverage = await client.fetch_domain_coverage()
-# …later…
-coverage = await client.fetch_domain_coverage(coverage)  # sends If-None-Match
-
-print(len(coverage.hosts), "covered hosts")
-print(coverage.catalogs_for("https://www.macys.com/x"))  # ("macys",)
-```
-
-Use `list_domains(if_none_match=...)` directly if you manage the cache
-yourself; it reports `not_modified`, `etag`, and `max_age_seconds` and leaves
-the decision to you. `normalize_host` and `is_host_covered` are exported for
-callers with their own storage.
+Look up a product URL directly. A missing product does not prove that its whole
+merchant domain is unsupported. Use `get_me()` to check credentials.
 
 ## API
 
@@ -92,8 +58,12 @@ if that stops being true — see
 - `get_me()` returns the calling organization, key id and provenance, quotas,
   and rate-limit posture. Read-only and side-effect free: safe on startup and
   in CI.
-- `list_domains(...)` and `fetch_domain_coverage(previous=None)` return the
-  covered hosts, with `ETag` revalidation and host normalization.
+- `get_domain(url_or_host)` returns one store's coverage snapshot
+  (`GET /v1/domains/{host}`): every catalog serving the host, with product
+  counts, populated facets and a price histogram. A URL is normalized to its
+  host first. An uncovered host raises `OctogenNotFoundError` with
+  `detail == "domain_not_covered"`. There is no list of covered hosts.
+
 - `search_products(...)` searches every active catalog by default, or only the
   catalogs in `catalogs` (1–500 keys) when it is provided. The query field is
   `q`, understood by default; `understand`, `facets`, `exclude_facets`, the
@@ -101,13 +71,26 @@ if that stops being true — see
   Results come back as `items` + `next_cursor`, each item carrying
   `product_url`, plus `effective_query` with `debug=True`.
 - `more_like_this_products(...)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys).
+  or UUID, or to a set of 1–20 product UUIDs passed as `sources`, optionally
+  restricted to `catalogs` (1–100 keys). `facets`,
+  `exclude_facets` and the price and brand-quality bounds work as on search.
+  `relax` defaults to `True` on the server: a short page 1 is retried with
+  Platform's generated facets dropped, never yours, and reported in
+  `effective_query.relaxation` with `debug=True`. `facets` replaced `include_facets` in 0.8.0.
 - `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
   resolves a product URL from the index or on demand. `resolution_mode` and
   `on_demand_cache_policy` default to `auto` and `prefer_cache`; omitting
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
+- `list_taxonomy_categories(parent=...)`, `list_taxonomy_attributes(category)`
+  and `list_taxonomy_attribute_values(handle)` discover categories, their
+  attributes and the attributes' value handles, paged with `offset`/`limit`.
+  A category's `facets` and an attribute's `facet_name` plus value `handle` go
+  back into `search_products` unchanged.
+- `count_product_facets(...)` counts the products `search_products` would
+  filter to — by `categories`, `attributes` and `facet_names` — under the same
+  `q`, facets, bounds and `catalogs`.
 
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
@@ -141,6 +124,20 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         urls=["https://warrenlotas.com/products/black-hoodie"],
     )
     print(result.url_count, [r.code for r in result.rejected])
+```
+
+```python
+async with OctogenClient() as client:
+    children = await client.list_taxonomy_categories(
+        parent="Apparel & Accessories > Clothing"
+    )
+    dresses = next(c for c in children.categories if c.name == "Dresses")
+    counts = await client.count_product_facets(
+        q="red",
+        categories=[{"key": dresses.id, "facets": dresses.facets}],
+        attributes=["neckline"],
+    )
+    print(counts.categories[0].count, counts.attributes[0].values[:3])
 ```
 
 ### Search controls
@@ -183,6 +180,44 @@ Contradictions the API would refuse — `relax` or `understand=False` without a
 `catalogs=[key]`; `text_search_query=` → use `q` with `understand=False` and
 your filters in `facets` and `exclude_facets`. See the
 [CHANGELOG](./CHANGELOG.md#050--2026-10-14) for the migration.
+
+### Prebuilt requests, timeouts, and errors
+
+Every operation with a request body also takes `request=`, a prebuilt request
+model sent as is. A subclass's extra fields go out too, which bridges a field
+the API accepts before this SDK declares it. Passing `request=` together with
+the keyword form is a `TypeError`.
+
+```python
+class MySearchRequest(ProgrammaticProductSearchRequest):
+    new_control: bool | None = None
+
+page = await client.search_products(
+    request=MySearchRequest(q="linen dress", new_control=True),
+    timeout=2.5,  # this call only; also works with an injected http_client
+)
+```
+
+Every operation takes `timeout` (seconds or an `httpx.Timeout`). The SDK never
+retries, so map failures by type and retry what is safe for your call:
+
+| Error | When | Fields |
+| --- | --- | --- |
+| `OctogenRateLimitError` | `429` | `retry_after` (seconds or `None`) |
+| `OctogenInsufficientCreditError` | `402` | `detail` has `top_up_url` |
+| `OctogenServerError` | `5xx` | `retry_after` on a back-pressure `503` |
+| `OctogenTimeoutError` | `httpx` timeout, or `504` (`OctogenGatewayTimeoutError`) | — |
+| `OctogenConnectionError` | connection refused or reset | — |
+
+`lookup_product_markdown(url)` returns the product as LLM-ready Markdown
+(`format: "markdown"`, `Accept: text/markdown`) in a
+`ProductMarkdownLookupResult`, with `request_id`, `product_uuid`, `catalog`,
+`matched_via` and `normalized_url` from the response's identity headers.
+
+Every `OctogenAPIError` carries `status_code`, `detail`, and `request_id` (the
+response's `x-request-id`). `OctogenTimeoutError` subclasses
+`OctogenConnectionError`; a `504` is both an `OctogenTimeoutError` and an
+`OctogenServerError`.
 
 ## Coverage URL lists CLI
 
@@ -361,6 +396,12 @@ OCTOGEN_PLATFORM_API_KEY=... uv run --project sdks/python python examples/python
 by `npm run codegen` (at the repository root) and committed, so a contract
 change arrives as a reviewable diff. **Response** models are re-exported from it
 under the contract's own names.
+
+Response models are forward compatible, generated or hand-written: they keep
+unknown fields (`extra="allow"`, read them from `model_extra` or
+`model_dump(by_alias=True)`), and their enums are open (`Literal[...] | str`),
+so a value the server adds after this release parses instead of failing the
+response. Request models keep closed enums and `extra="forbid"`.
 
 **Request** models stay hand-written in `models.py`, for two reasons: rules the
 contract cannot express (`extra="forbid"` catches a misspelled key, but not

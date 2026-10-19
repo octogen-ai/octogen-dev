@@ -5,8 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { resolveKey } from "../src/auth.js";
-import { cachePath } from "../src/coverage.js";
-import { DOMAINS_BODY, ME_BODY, runCli, TEST_KEY, TEST_SECRET } from "./harness.js";
+import { ME_BODY, runCli, TEST_KEY, TEST_SECRET } from "./harness.js";
 
 const other = `octo_live_${"a".repeat(32)}_${TEST_SECRET}`;
 
@@ -86,7 +85,6 @@ describe("StoreRouter configuration compatibility", () => {
     expect(result.requests).toHaveLength(0);
     expect(result.json()["message"]).toContain("STOREROUTER_API_KEY");
   });
-
   it.each([
     [[], {}, "https://api.storerouter.ai/v1"],
     [
@@ -108,7 +106,7 @@ describe("StoreRouter configuration compatibility", () => {
       "https://flag.example/v1",
     ],
   ])(
-    "uses the same base URL for requests, status, and coverage",
+    "uses the same base URL for requests, status, and search",
     async (flags, env, base) => {
       const status = await runCli({
         argv: ["status", ...flags],
@@ -117,58 +115,14 @@ describe("StoreRouter configuration compatibility", () => {
       });
       expect(status.requests[0]?.url).toBe(`${base}/me`);
       expect((status.json()["api"] as Record<string, unknown>)["baseUrl"]).toBe(base);
-      const domains = await runCli({
-        argv: ["domains", ...flags],
+      const search = await runCli({
+        argv: ["search", "dress", ...flags],
         env,
-        routes: { "GET /domains": { body: DOMAINS_BODY } },
+        routes: { "POST /products/search": { body: { items: [] } } },
       });
-      expect(domains.requests[0]?.url).toBe(`${base}/domains`);
+      expect(search.requests[0]?.url).toBe(`${base}/products/search`);
     },
   );
-
-  it.each(["", " ", "\t"])("ignores a blank StoreRouter cache directory", (value) => {
-    const options = { baseUrl: "https://api.storerouter.ai/v1", keyPrefix: undefined };
-    expect(
-      cachePath({
-        ...options,
-        env: { STOREROUTER_CACHE_DIR: value, OCTOGEN_CACHE_DIR: "/legacy" },
-      }),
-    ).toBe(cachePath({ ...options, env: { OCTOGEN_CACHE_DIR: "/legacy" } }));
-    expect(
-      cachePath({
-        ...options,
-        env: { STOREROUTER_CACHE_DIR: value, XDG_CACHE_HOME: "/xdg" },
-      }),
-    ).toContain("/xdg/octogen/domains/");
-  });
-
-  it("preserves the default cache root and credential/base URL isolation", () => {
-    const options = { baseUrl: "https://api.storerouter.ai/v1", keyPrefix: undefined };
-    const legacy = cachePath({ ...options, env: { OCTOGEN_CACHE_DIR: "/legacy" } });
-    expect(
-      cachePath({
-        ...options,
-        env: { STOREROUTER_CACHE_DIR: "/new", OCTOGEN_CACHE_DIR: "/legacy" },
-      }),
-    ).toBe(legacy.replace("/legacy/", "/new/"));
-    expect(cachePath({ ...options, env: { XDG_CACHE_HOME: "/xdg" } })).toContain(
-      "/xdg/octogen/domains/",
-    );
-    expect(
-      cachePath({
-        ...options,
-        baseUrl: "https://api.octogen.ai/v1",
-        env: { OCTOGEN_CACHE_DIR: "/legacy" },
-      }),
-    ).not.toBe(legacy);
-    expect(
-      cachePath({
-        ...options,
-        keyPrefix: "another",
-        env: { OCTOGEN_CACHE_DIR: "/legacy" },
-      }),
-    ).not.toBe(legacy);
-  });
 });
 
 describe("parse is exactly lookup", () => {

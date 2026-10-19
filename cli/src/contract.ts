@@ -45,6 +45,8 @@ export interface Binding {
   multiple?: boolean;
   codec?: "singleton" | "facets" | "custom";
   placeholder?: string;
+  /** A boolean that also takes `--no-<flag>`, for a `true` default worth turning off. */
+  negatable?: boolean;
 }
 export type Bindings = Readonly<Record<string, Binding>>;
 
@@ -127,6 +129,7 @@ export function contractFlags(
       kind,
       describe: detail,
       ...(binding.multiple === true ? { multiple: true } : {}),
+      ...(binding.negatable === true && kind === "boolean" ? { negatable: true } : {}),
       ...(binding.placeholder !== undefined
         ? { placeholder: binding.placeholder }
         : schema.enum === undefined

@@ -48,7 +48,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     );
   }
 
-  const include = parseFacets(args.strings("facet"), "--facet");
+  const facets = parseFacets(args.strings("facet"), "--facet");
   const exclude = parseFacets(args.strings("exclude-facet"), "--exclude-facet");
   const params = contractRequest<MoreLikeThisProductsParams>(
     "moreLikeThisProducts",
@@ -56,7 +56,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     args,
     {
       source: sourceFor(target),
-      ...(include.length === 0 ? {} : { include_facets: include }),
+      ...(facets.length === 0 ? {} : { facets }),
       ...(exclude.length === 0 ? {} : { exclude_facets: exclude }),
     },
   );
@@ -81,15 +81,21 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     });
   }
 
+  // This command always sends `source`, so the API always echoes it; only a
+  // `sources` request gets `sources` back instead.
+  const source = response.source ?? null;
   writer.emit({
     command: context.command,
     data: {
-      source: {
-        uuid: response.source.uuid,
-        catalog: response.source.catalogKey,
-        productUrl: response.source.productUrl,
-        title: response.source.title ?? null,
-      },
+      source:
+        source === null
+          ? null
+          : {
+              uuid: source.uuid,
+              catalog: source.catalogKey,
+              productUrl: source.productUrl,
+              title: source.title ?? null,
+            },
       count: response.items.length,
       nextCursor: response.nextCursor ?? null,
       items: response.items.map((item) => ({
@@ -105,7 +111,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
     human: () =>
       [
         `${String(response.items.length)} similar to ${
-          response.source.title ?? response.source.productUrl
+          source?.title ?? source?.productUrl ?? target
         }`,
         ...response.items.map(
           (item) =>
@@ -145,10 +151,15 @@ export const similarCommand = {
     "demand. Exit 6 covers both 'the source is not indexed' and 'nothing was",
     "similar enough'; the `code` field separates them.",
     "",
+    "Relaxation is on by default: a short first page is retried with the",
+    "server's own generated facets dropped, never your --facet or price bounds.",
+    "--no-relax turns it off.",
+    "",
     "Requires an API key.",
   ],
   operations: ["moreLikeThisProducts"] as const,
   run: runSimilar,
   summary: "Find products similar to one you already have",
-  usage: "similar <url|uuid> [--catalog <key>] [--facet k=v]… [--limit <n>]",
+  usage:
+    "similar <url|uuid> [--catalog <key>] [--facet k=v]… [--no-relax] [--limit <n>]",
 } satisfies CommandSpec;

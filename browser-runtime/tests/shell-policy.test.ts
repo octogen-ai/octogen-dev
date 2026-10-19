@@ -218,6 +218,66 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
       expect(result.code).not.toBe(0);
     }
   });
+  it("store runs one normalized single-host GET through the policy", async () => {
+    const result = await shell(
+      "storerouter store https://WWW.Example.com/products/linen-dress --json | jq -c '{host, covered, catalog: .catalogs[0].catalog}'",
+    );
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      host: "example.com",
+      covered: true,
+      catalog: "example",
+    });
+    expect(result.calls).toBe(1);
+  });
+  it("raw api cannot list domains or smuggle a host through store's route", async () => {
+    for (const line of [
+      "storerouter api GET /domains --no-retry",
+      "storerouter api GET /domains/ --no-retry",
+      "storerouter api GET /domains/example.com/extra --no-retry",
+      "storerouter api GET /domains/WWW.example.com --no-retry",
+      "storerouter api DELETE /domains/example.com --no-retry",
+    ]) {
+      const result = await shell(line);
+      expect(result.calls, line).toBe(0);
+      expect(result.code, line).not.toBe(0);
+    }
+  });
+  it("allows getDomain for exactly one normalized host, GET only, no query or body", () => {
+    expect(
+      checkDemoRequest({
+        url: "https://api.storerouter.ai/v1/domains/thereformation.com",
+        method: "GET",
+        headers: {},
+      }),
+    ).toBe("getDomain");
+    for (const request of [
+      { url: "https://api.storerouter.ai/v1/domains", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/a.com/b.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/a.com,b.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/*", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/%2A", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/%2e%2e", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/example.com%2Fx", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/Example.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/www.example.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/example.com:443", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/localhost", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/example.com?all=1", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/domains/example.com", method: "POST" },
+      { url: "https://evil.example/v1/domains/example.com", method: "GET" },
+      {
+        url: "https://api.storerouter.ai/v1/domains/example.com",
+        method: "GET",
+        body: "{}",
+      },
+    ])
+      expect(
+        () => checkDemoRequest({ ...request, headers: {} }),
+        `${request.method} ${request.url}`,
+      ).toThrow();
+  });
   it("drops browser credentials at host seam", async () => {
     let seen: TransportRequest | undefined;
     const transport = withDemoPolicy((request, signal) => {
@@ -226,8 +286,9 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     });
     await transport(
       {
-        url: "https://api.storerouter.ai/v1/domains",
-        method: "GET",
+        url: "https://api.storerouter.ai/v1/products/search",
+        method: "POST",
+        body: JSON.stringify({ q: "dress" }),
         headers: {
           Authorization: "Bearer fixture-secret",
           "User-Agent": "test",
@@ -241,9 +302,12 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
   });
   it("denies query smuggling, unsafe bodies and other verbs", () => {
     for (const request of [
-      { url: "https://api.storerouter.ai/v1/domains?destination=evil", method: "GET" },
-      { url: "https://evil.example/v1/domains", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains", method: "POST" },
+      {
+        url: "https://api.storerouter.ai/v1/products/search?destination=evil",
+        method: "GET",
+      },
+      { url: "https://evil.example/v1/products/search", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/products/search", method: "POST" },
       {
         url: "https://api.storerouter.ai/v1/products/search",
         method: "POST",

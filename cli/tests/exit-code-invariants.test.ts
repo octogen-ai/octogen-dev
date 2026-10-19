@@ -80,11 +80,11 @@ describe("exit 6 has exactly one constructor", () => {
       .filter((file) => file.startsWith("commands/"))
       .filter((file) => readFileSync(join(SRC, file), "utf8").includes("noResult("));
     expect(callers.sort()).toEqual([
-      "commands/domains.ts",
       "commands/lookup.ts",
       "commands/resolve.ts",
       "commands/search.ts",
       "commands/similar.ts",
+      "commands/store.ts",
     ]);
   });
 

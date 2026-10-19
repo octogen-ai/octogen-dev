@@ -165,10 +165,12 @@ describe("OctogenClient", () => {
       brandQualityMin: 3,
       brandQualityMax: 6,
       similarToBrands: ["Warren Lotas"],
+      fallbackCategory: ["apparel & accessories", "clothing"],
       catalogs: ["warrenlotas"],
       limit: 25,
       cursor: "cursor-1",
       relax: true,
+      diversity: true,
       debug: true,
     });
 
@@ -183,12 +185,49 @@ describe("OctogenClient", () => {
       brand_quality_min: 3,
       brand_quality_max: 6,
       similar_to_brands: ["Warren Lotas"],
+      fallback_category: ["apparel & accessories", "clothing"],
       catalogs: ["warrenlotas"],
       limit: 25,
       cursor: "cursor-1",
       relax: true,
+      diversity: true,
       debug: true,
     });
+  });
+
+  it("reads the card fields on search list items", async () => {
+    const { fetchMock } = createFetchMock({
+      items: [
+        {
+          uuid: "dress",
+          productUrl: "https://acme.example/dress",
+          currency: "USD",
+          inStock: false,
+          colors: ["Red", "Navy"],
+          sizes: ["S", "M"],
+          gender: "female",
+          categoryPath: ["apparel & accessories", "clothing"],
+          catalogDisplayName: "Acme",
+        },
+      ],
+      nextCursor: null,
+      requestId: "r-1",
+      effectiveQuery: { text: "dress", understood: true, facets: [] },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.searchProducts({ q: "dress" });
+
+    const [item] = page.items;
+    expect(item?.currency).toBe("USD");
+    expect(item?.inStock).toBe(false);
+    expect(item?.colors).toEqual(["Red", "Navy"]);
+    expect(item?.sizes).toEqual(["S", "M"]);
+    expect(item?.gender).toBe("female");
+    expect(item?.categoryPath).toEqual(["apparel & accessories", "clothing"]);
+    expect(item?.catalogDisplayName).toBe("Acme");
+    // Present without debug on current servers.
+    expect(page.effectiveQuery?.text).toBe("dress");
   });
 
   it("sends understand: false for a literal match", async () => {
@@ -209,7 +248,7 @@ describe("OctogenClient", () => {
     });
   });
 
-  it("refuses the removed catalog, diversity and textSearchQuery fields", async () => {
+  it("refuses the removed catalog and textSearchQuery fields", async () => {
     const { calls, fetchMock } = createFetchMock();
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
     const removed = [
@@ -217,7 +256,6 @@ describe("OctogenClient", () => {
         { catalog: "acme", q: "dress" },
         "searchProducts takes catalogs: [key], not catalog",
       ],
-      [{ diversity: true, q: "dress" }, "no longer takes diversity"],
       [{ textSearchQuery: { text: "dress" } }, "pass q with understand: false"],
     ] as const;
 
@@ -233,6 +271,20 @@ describe("OctogenClient", () => {
   });
 
   it.each([
+    [{ fallbackCategory: ["clothing"] }, "fallbackCategory requires an understood q"],
+    [
+      { q: "dress", understand: false, fallbackCategory: ["clothing"] },
+      "fallbackCategory requires an understood q",
+    ],
+    [{ q: "dress", fallbackCategory: [] }, "between 1 and 4 category names"],
+    [
+      { q: "dress", fallbackCategory: ["a", "b", "c", "d", "e"] },
+      "between 1 and 4 category names",
+    ],
+    [
+      { q: "dress", fallbackCategory: ["apparel & accessories", " "] },
+      "non-empty category names",
+    ],
     [{ understand: false }, "understand: false requires q"],
     [{ q: "   ", understand: false }, "understand: false requires q"],
     [{ relax: true }, "relax requires an understood q"],
@@ -429,9 +481,14 @@ describe("OctogenClient", () => {
       catalogs: ["acme", "globex"],
       debug: true,
       excludeFacets: [{ name: FacetName.COLOR_FAMILY, values: ["Black"] }],
-      includeFacets: [{ name: FacetName.GENDER, values: ["female"] }],
+      facets: [{ name: FacetName.GENDER, values: ["female"] }],
+      priceMin: 50,
+      priceMax: 300,
+      brandQualityMin: 3,
+      brandQualityMax: 6,
       limit: 3,
       pricePreference: PricePreference.HIGHER,
+      relax: false,
       source: { url: "https://example.com/products/linen-dress" },
     });
 
@@ -442,15 +499,109 @@ describe("OctogenClient", () => {
       catalogs: ["acme", "globex"],
       debug: true,
       exclude_facets: [{ name: "color_family", values: ["Black"] }],
-      include_facets: [{ name: "gender", values: ["female"] }],
+      facets: [{ name: "gender", values: ["female"] }],
+      price_min: 50,
+      price_max: 300,
+      brand_quality_min: 3,
+      brand_quality_max: 6,
       limit: 3,
       price_preference: "higher",
+      relax: false,
       source: { url: "https://example.com/products/linen-dress" },
     });
-    expect(page.source.catalogKey).toBe("acme");
+    expect(page.source?.catalogKey).toBe("acme");
+    expect(page.sources).toBeUndefined();
     expect(page.items[0]?.catalogKey).toBe("acme");
     expect(page.items[0]?.displayMatchScore).toBe(92);
     expect(page.effectiveQuery?.priceMin).toBe(128);
+  });
+
+  it("leaves more-like-this relax to the server and never sends include_facets", async () => {
+    const source = {
+      catalogKey: "acme",
+      productUrl: "https://example.com/p1",
+      uuid: "p1",
+    };
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      nextCursor: null,
+      source,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.moreLikeThisProducts({ source: { uuid: "p1" } });
+    await client.moreLikeThisProducts({ relax: true, source: { uuid: "p1" } });
+
+    const [first, second] = calls.map((call) => requestBodyJson(call));
+    expect(first).toEqual({
+      debug: false,
+      limit: 12,
+      price_preference: "any",
+      source: { uuid: "p1" },
+    });
+    expect(second).toMatchObject({ relax: true });
+    for (const body of [first, second]) {
+      expect(body).not.toHaveProperty("include_facets");
+    }
+  });
+
+  it("parses more-like-this relaxation in search's shape", async () => {
+    const { fetchMock } = createFetchMock({
+      effectiveQuery: {
+        brandQualityMin: 3,
+        limit: 12,
+        relaxation: {
+          declinedRounds: 0,
+          droppedFacets: [
+            { name: "color_family", source: "generated", values: ["Blue"] },
+          ],
+          rounds: 1,
+        },
+        text: "linen dress",
+      },
+      items: [],
+      nextCursor: null,
+      source: { catalogKey: "acme", productUrl: "https://example.com/p1", uuid: "p1" },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({ source: { uuid: "p1" } });
+
+    expect(page.effectiveQuery?.brandQualityMin).toBe(3);
+    expect(page.effectiveQuery?.relaxation?.rounds).toBe(1);
+    expect(page.effectiveQuery?.relaxation?.droppedFacets?.[0]?.name).toBe(
+      "color_family",
+    );
+  });
+
+  it("rejects more-like-this contradictions and include_facets before a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    const source = { uuid: "p1" };
+
+    await expect(
+      client.moreLikeThisProducts({
+        facets: [
+          { name: FacetName.GENDER, values: ["female"] },
+          { name: FacetName.GENDER, values: ["male"] },
+        ],
+        source,
+      }),
+    ).rejects.toThrow('facets lists facet "gender" more than once');
+    await expect(
+      client.moreLikeThisProducts({ priceMax: 100, priceMin: 200, source }),
+    ).rejects.toThrow("priceMin must not exceed priceMax");
+    await expect(
+      client.moreLikeThisProducts({ brandQualityMin: 7, source }),
+    ).rejects.toThrow("brandQualityMin must be a number");
+    await expect(
+      client.moreLikeThisProducts({
+        // A JavaScript caller still on the 0.5.0 name.
+        ...({ includeFacets: [{ name: "gender", values: ["female"] }] } as object),
+        source,
+      }),
+    ).rejects.toThrow("moreLikeThisProducts takes facets, not includeFacets");
+    expect(calls).toHaveLength(0);
   });
 
   it("rejects invalid more-like-this sources before making a request", async () => {
@@ -465,6 +616,65 @@ describe("OctogenClient", () => {
     await expect(client.moreLikeThisProducts({ source: { url: "" } })).rejects.toThrow(
       "source.url is required",
     );
+    expect(calls).toHaveLength(0);
+  });
+
+  it("sends more-like-this sources and parses them in request order", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      nextCursor: null,
+      requestId: "req-1",
+      sources: [
+        {
+          catalogKey: "acme",
+          productUrl: "https://example.com/p1",
+          title: "Linen Dress",
+          uuid: "p1",
+        },
+        { catalogKey: "globex", productUrl: "https://example.com/p2", uuid: "p2" },
+      ],
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({ limit: 5, sources: ["p1", "p2"] });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      debug: false,
+      limit: 5,
+      price_preference: "any",
+      sources: ["p1", "p2"],
+    });
+    expect(page.source).toBeUndefined();
+    expect(page.sources?.map((source) => source.uuid)).toEqual(["p1", "p2"]);
+    expect(page.sources?.[1]?.catalogKey).toBe("globex");
+  });
+
+  it("rejects invalid more-like-this sources lists before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.moreLikeThisProducts({})).rejects.toThrow("source is required");
+    await expect(
+      client.moreLikeThisProducts({ source: { uuid: "p1" }, sources: ["p2"] }),
+    ).rejects.toThrow("Exactly one of source or sources is required");
+    await expect(client.moreLikeThisProducts({ sources: [] })).rejects.toThrow(
+      "between 1 and 20",
+    );
+    await expect(
+      client.moreLikeThisProducts({
+        sources: Array.from({ length: 21 }, (_, i) => `p${String(i)}`),
+      }),
+    ).rejects.toThrow("between 1 and 20");
+    await expect(
+      client.moreLikeThisProducts({ sources: ["p1", "p1"] }),
+    ).rejects.toThrow("more than once");
+    await expect(client.moreLikeThisProducts({ sources: [""] })).rejects.toThrow(
+      "non-empty product UUIDs",
+    );
+    const bare = { sources: "p1" } as unknown as Parameters<
+      OctogenClient["moreLikeThisProducts"]
+    >[0];
+    await expect(client.moreLikeThisProducts(bare)).rejects.toThrow("between 1 and 20");
     expect(calls).toHaveLength(0);
   });
 
@@ -895,6 +1105,63 @@ describe("OctogenClient coverage URL lists", () => {
   });
 });
 
+describe("OctogenClient getDomain", () => {
+  const COVERAGE_JSON = {
+    host: "thereformation.com",
+    catalogs: [
+      {
+        catalog: "reformation",
+        catalogDisplayName: "Reformation",
+        computedAt: "2026-10-19T00:00:00Z",
+        productCount: 1200,
+        fields: [],
+        price: null,
+      },
+    ],
+  };
+
+  it("normalizes a URL to its host and GETs that one host", async () => {
+    const { calls, fetchMock } = createFetchMock(COVERAGE_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const coverage = await client.getDomain(
+      "https://WWW.TheReformation.com:443/products/x?color=red",
+    );
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/domains/thereformation.com`);
+    expect(call.init?.method).toBe("GET");
+    expect(call.init?.body).toBeUndefined();
+    expect(coverage.catalogs[0]?.productCount).toBe(1200);
+  });
+
+  it("refuses input with no readable host before any request", async () => {
+    const { calls, fetchMock } = createFetchMock(COVERAGE_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    for (const input of ["", "   ", "not a host/with a path"]) {
+      await expect(client.getDomain(input)).rejects.toThrow(TypeError);
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it("surfaces 404 domain_not_covered as a not-found error", async () => {
+    const { fetchMock } = createFetchMock(
+      { detail: "domain_not_covered" },
+      { status: 404 },
+    );
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.getDomain("example.com")).rejects.toMatchObject({
+      detail: "domain_not_covered",
+      statusCode: 404,
+    });
+    await expect(client.getDomain("example.com")).rejects.toBeInstanceOf(
+      OctogenNotFoundError,
+    );
+  });
+});
+
 describe("the keyless metered trial", () => {
   it("refuses to build a keyless client unless asked", () => {
     // Off by default: a client with no key is only useful against three routes,
@@ -912,7 +1179,7 @@ describe("the keyless metered trial", () => {
     const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
     expect(client.isKeyless).toBe(true);
 
-    await client.listDomains();
+    await client.searchProducts({ q: "dress" });
 
     const headers = lastCall(calls).init?.headers as Record<string, string>;
     expect(headers).not.toHaveProperty("Authorization");
@@ -925,7 +1192,7 @@ describe("the keyless metered trial", () => {
     const client = new OctogenClient({ allowKeyless: true, fetch: fetchMock });
     expect(client.isKeyless).toBe(false);
 
-    await client.listDomains();
+    await client.searchProducts({ q: "dress" });
 
     expect(lastCall(calls).init?.headers).toMatchObject({
       Authorization: "Bearer octo_test_key",
@@ -934,7 +1201,6 @@ describe("the keyless metered trial", () => {
 
   it("names the three eligible operations, so a caller can ask before spending", () => {
     expect([...KEYLESS_TRIAL_OPERATIONS].sort()).toEqual([
-      "listDomains",
       "lookupProduct",
       "searchProducts",
     ]);

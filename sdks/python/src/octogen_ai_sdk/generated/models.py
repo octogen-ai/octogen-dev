@@ -15,6 +15,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 class AttributeValue(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     handle: str = Field(..., title="Handle")
@@ -23,6 +24,7 @@ class AttributeValue(BaseModel):
 
 class AudienceView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     age_groups: list[str] | None = Field([], alias="ageGroups", title="Agegroups")
@@ -31,6 +33,7 @@ class AudienceView(BaseModel):
 
 class BrandView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     description: str | None = Field(None, title="Description")
@@ -41,6 +44,7 @@ class BrandView(BaseModel):
 
 class BreadcrumbView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -49,6 +53,7 @@ class BreadcrumbView(BaseModel):
 
 class CanonicalBrandEnrichment(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_accessibility_index: str | None = Field(
@@ -97,6 +102,7 @@ class CanonicalBrandEnrichment(BaseModel):
 
 class CategoryView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -105,6 +111,7 @@ class CategoryView(BaseModel):
 
 class ColorView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     hex_code: str | None = Field(None, alias="hexCode", title="Hexcode")
@@ -114,6 +121,7 @@ class ColorView(BaseModel):
 
 class CoverageAcceptedUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     normalized_url: str = Field(..., alias="normalizedUrl", title="Normalizedurl")
@@ -122,6 +130,7 @@ class CoverageAcceptedUrl(BaseModel):
 
 class CoverageContainsResult(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     added_at: AwareDatetime | None = Field(..., alias="addedAt", title="Addedat")
@@ -132,15 +141,17 @@ class CoverageContainsResult(BaseModel):
 
 class CoverageRejectedUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    code: Literal["invalid_url"] = Field(..., title="Code")
+    code: str = Field(..., title="Code")
     message: str = Field(..., title="Message")
     url: str = Field(..., title="Url")
 
 
 class CoverageUrlListBigQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     exchange_id: str = Field(..., alias="exchangeId", title="Exchangeid")
@@ -170,6 +181,7 @@ class CoverageUrlListCreateRequest(BaseModel):
 
 class CoverageUrlListUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     added_at: AwareDatetime = Field(..., alias="addedAt", title="Addedat")
@@ -179,6 +191,7 @@ class CoverageUrlListUrl(BaseModel):
 
 class CoverageUrlListUrlsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     items: list[CoverageUrlListUrl] = Field(..., title="Items")
@@ -187,6 +200,7 @@ class CoverageUrlListUrlsResponse(BaseModel):
 
 class CoverageUrlMutationResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     accepted: list[CoverageAcceptedUrl] = Field(..., title="Accepted")
@@ -207,23 +221,19 @@ class CoverageUrlsRequest(BaseModel):
     )
 
 
-class DomainEntry(BaseModel):
+class DomainFieldValue(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    catalog: str = Field(
-        ..., description="Catalog key covering the host.", title="Catalog"
+    count: int = Field(
+        ..., description="Approximate number of products with the value.", title="Count"
     )
-    catalog_display_name: str = Field(
+    label: str = Field(..., description="Human-readable value label.", title="Label")
+    value: str = Field(
         ...,
-        alias="catalogDisplayName",
-        description="Human-readable display name for the catalog.",
-        title="Catalogdisplayname",
-    )
-    host: str = Field(
-        ...,
-        description="Normalized host covered by a catalog (e.g. `allbirds.com`, `www.allbirds.com`). Match a page's host against this set before calling `/products/lookup`.",
-        title="Host",
+        description="Canonical search value: pass it with the field `name` as a `/v1/products/search` facet.",
+        title="Value",
     )
 
 
@@ -245,6 +255,7 @@ class Facet(BaseModel):
 
 class IdentifiersView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     gtin: str | None = Field(None, title="Gtin")
@@ -254,19 +265,9 @@ class IdentifiersView(BaseModel):
     product_id: str | None = Field(None, alias="productId", title="Productid")
 
 
-class ListDomainsResponse(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-    domains: list[DomainEntry] = Field(
-        ...,
-        description="Every covered host, one entry per `(host, catalog)` pair.",
-        title="Domains",
-    )
-
-
 class MeKey(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     id: str = Field(
@@ -286,6 +287,7 @@ class MeKey(BaseModel):
 
 class MeOrganization(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     id: str = Field(..., description="Octogen organization id (a UUID).", title="Id")
@@ -293,7 +295,7 @@ class MeOrganization(BaseModel):
         ..., description="Human-readable organization name.", title="Name"
     )
     slug: str = Field(..., description="URL-safe organization slug.", title="Slug")
-    type: Literal["merchant", "catalog_partner"] = Field(
+    type: Literal["merchant", "catalog_partner"] | str = Field(
         ...,
         description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.",
         title="Type",
@@ -303,12 +305,14 @@ class MeOrganization(BaseModel):
 class MeQuotas(BaseModel):
     pass
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
 
 
 class MeRateLimit(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     limit: int = Field(
@@ -327,6 +331,7 @@ class MeRateLimit(BaseModel):
 
 class MeResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     key: MeKey | None = Field(
@@ -335,7 +340,7 @@ class MeResponse(BaseModel):
     organization: MeOrganization | None = Field(
         None, description="The credential's organization; `null` for a super admin."
     )
-    principal: Literal["api_key", "super_admin"] = Field(
+    principal: Literal["api_key", "super_admin"] | str = Field(
         ...,
         description="Which credential kind authenticated this request.",
         title="Principal",
@@ -353,6 +358,7 @@ class MeResponse(BaseModel):
 
 class MerchantProductImageMetadataView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     cdn_url: str | None = Field(
@@ -388,6 +394,7 @@ class MerchantProductImageMetadataView(BaseModel):
 
 class MerchantVariantView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     color: ColorView | None = None
@@ -398,8 +405,43 @@ class MerchantVariantView(BaseModel):
     sku: str | None = Field(None, title="Sku")
 
 
+class PriceBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., description="Products priced in this range.", title="Count")
+    max: float = Field(..., description="Exclusive upper edge.", title="Max")
+    min: float = Field(..., description="Inclusive lower edge.", title="Min")
+
+
+class PriceDistribution(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    above: int = Field(
+        ..., description="Priced products at or above the last bucket.", title="Above"
+    )
+    below: int = Field(
+        ..., description="Priced products below the first bucket.", title="Below"
+    )
+    buckets: list[PriceBucket] = Field(
+        ...,
+        description="Equal-width, contiguous buckets, lowest first.",
+        title="Buckets",
+    )
+    median: float = Field(
+        ..., description="Approximate median current price.", title="Median"
+    )
+    populated: int = Field(
+        ..., description="Products with a current price above zero.", title="Populated"
+    )
+
+
 class ProductDetailsView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     dimensions: str | None = Field(None, title="Dimensions")
@@ -410,20 +452,140 @@ class ProductDetailsView(BaseModel):
 
 class ProductResolutionMetadata(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    completeness: Literal["complete", "partial"] = Field(..., title="Completeness")
-    method: Literal[
-        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
-    ] = Field(..., title="Method")
+    completeness: Literal["complete", "partial"] | str = Field(
+        ..., title="Completeness"
+    )
+    method: (
+        Literal[
+            "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+        ]
+        | str
+    ) = Field(..., title="Method")
     missing_fields: list[str] | None = Field(
         None, alias="missingFields", title="Missingfields"
     )
     rendered: bool | None = Field(None, title="Rendered")
 
 
+class ProgrammaticCategoryCount(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., title="Count")
+    key: str = Field(
+        ..., description="The `key` you sent for the category.", title="Key"
+    )
+
+
+class ProgrammaticFacetCountCategory(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    facets: list[Facet] = Field(
+        ...,
+        description="Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.",
+        title="Facets",
+    )
+    key: str = Field(
+        ...,
+        description="Your identifier for this category; its count carries it back.",
+        title="Key",
+    )
+
+
+class ProgrammaticFacetCountsRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    attributes: list[str] | None = Field(
+        None,
+        description="Attribute handles, such as `neckline`, whose values to count. Find a category's handles with `GET /taxonomy/attributes`. A value's count ignores your own facet on that attribute, so every value shows what selecting it would return.",
+        title="Attributes",
+    )
+    brand_quality_max: float | None = Field(None, title="Brand Quality Max")
+    brand_quality_min: float | None = Field(None, title="Brand Quality Min")
+    catalogs: list[str] | None = Field(
+        None,
+        description="Catalog keys to count in. Omit to count every catalog your key can access. Keys your key cannot access count nothing.",
+        title="Catalogs",
+    )
+    categories: list[ProgrammaticFacetCountCategory] | None = Field(
+        None,
+        description="Categories to count. Each count is the products matching the filters above and the category's own facets.",
+        title="Categories",
+    )
+    exclude_facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must not match, as on search.",
+        title="Exclude Facets",
+    )
+    facet_names: list[Literal["color_family", "category_path.depth_0"]] | None = Field(
+        None,
+        description="Facets whose values to count, ignoring your own facet of that name like `attributes`. `category_path.depth_0` counts top-level categories.",
+        title="Facet Names",
+    )
+    facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must match, as on search. A facet you send replaces any understood facet of the same name. Each name at most once.",
+        title="Facets",
+    )
+    fallback_category: list[str] | None = Field(
+        None,
+        description="Category path to filter to when understanding finds no category in `q`, as on search. Requires `q`.",
+        title="Fallback Category",
+    )
+    omit_generated_facets: list[str] | None = Field(
+        None,
+        description="Understood facets to drop, as on search. Requires `q`.",
+        title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(None, title="Price Max")
+    price_min: float | None = Field(None, title="Price Min")
+    q: str | None = Field(
+        None,
+        description="Free-text query, understood as search understands it. The category, gender, colour, brand, price and attribute filters understood from it apply to the counts; the text itself does not narrow them. Blank is the same as omitted.",
+        title="Q",
+    )
+    value_limit: int | None = Field(
+        100,
+        description="Most values returned per attribute and per facet, by count.",
+        title="Value Limit",
+    )
+
+
+class ProgrammaticFacetValueCount(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., title="Count")
+    value: str = Field(
+        ..., description="A value to send back in that facet's `values`.", title="Value"
+    )
+
+
+class ProgrammaticFacetValueCounts(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    name: str = Field(..., description="The facet name you sent.", title="Name")
+    values: list[ProgrammaticFacetValueCount] = Field(
+        ...,
+        description="Values with at least one product, most products first.",
+        title="Values",
+    )
+
+
 class ProgrammaticMoreLikeThisEffectiveFacet(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -450,6 +612,7 @@ class ProgrammaticMoreLikeThisImageSource(BaseModel):
 
 class ProgrammaticMoreLikeThisMatchedProduct(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalog_key: str | None = Field(None, alias="catalogKey", title="Catalogkey")
@@ -479,6 +642,7 @@ class ProgrammaticMoreLikeThisSource(BaseModel):
 
 class ProgrammaticMoreLikeThisSourceImageResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     hash: str = Field(
@@ -488,6 +652,7 @@ class ProgrammaticMoreLikeThisSourceImageResponse(BaseModel):
 
 class ProgrammaticMoreLikeThisSourceResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalog_key: str = Field(..., alias="catalogKey", title="Catalogkey")
@@ -533,10 +698,11 @@ class ProgrammaticProductLookupRequest(BaseModel):
 
 class ProgrammaticProductSearchEffectiveFacet(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
-    source: Literal["caller", "generated"] | None = Field(
+    source: Literal["caller", "generated"] | str | None = Field(
         None,
         description="`caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.",
         title="Source",
@@ -546,6 +712,7 @@ class ProgrammaticProductSearchEffectiveFacet(BaseModel):
 
 class ProgrammaticProductSearchRelaxation(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     declined_rounds: int | None = Field(
@@ -589,13 +756,18 @@ class ProgrammaticProductSearchRequest(BaseModel):
     )
     cursor: str | None = Field(
         None,
-        description="`nextCursor` from the previous page, passed back verbatim with the same request body.",
+        description="`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
         title="Cursor",
     )
     debug: bool | None = Field(
         False,
-        description="Include `effectiveQuery`: the text, filters and bounds that actually ran, with each facet's origin. It is a report, not a request fragment: understood facets of one name can AND together, which a request cannot express.",
+        description="Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
         title="Debug",
+    )
+    diversity: bool | None = Field(
+        False,
+        description="Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+        title="Diversity",
     )
     exclude_facets: list[Facet] | None = Field(
         None,
@@ -606,6 +778,11 @@ class ProgrammaticProductSearchRequest(BaseModel):
         None,
         description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
         title="Facets",
+    )
+    fallback_category: list[str] | None = Field(
+        None,
+        description='Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.',
+        title="Fallback Category",
     )
     limit: int | None = Field(
         50, description="Maximum results per page.", title="Limit"
@@ -666,6 +843,7 @@ class ProgrammaticResolveFromHtmlRequest(BaseModel):
 
 class PromotionView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     code: str | None = Field(None, title="Code")
@@ -675,6 +853,7 @@ class PromotionView(BaseModel):
 
 class RatingView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     average: float | None = Field(None, title="Average")
@@ -683,6 +862,7 @@ class RatingView(BaseModel):
 
 class ReviewView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     author: str | None = Field(None, title="Author")
@@ -693,8 +873,131 @@ class ReviewView(BaseModel):
     rating: float | None = Field(None, title="Rating")
 
 
+class TaxonomyAttribute(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    description: str | None = Field(None, title="Description")
+    facet_name: str | None = Field(
+        ...,
+        alias="facetName",
+        description="The search facet name for this attribute; send its value handles under this name in `facets`. Null when the attribute is not filterable.",
+        title="Facetname",
+    )
+    handle: str = Field(
+        ...,
+        description="Canonical attribute handle, such as `neckline`.",
+        title="Handle",
+    )
+    matching: str | None = Field(
+        ...,
+        description="How a facet on this attribute matches; null when not filterable.",
+        title="Matching",
+    )
+    name: str = Field(
+        ..., description="Display name, such as `Neckline`.", title="Name"
+    )
+    value_count: int = Field(
+        ...,
+        alias="valueCount",
+        description="Number of canonical values.",
+        title="Valuecount",
+    )
+
+
+class TaxonomyAttributeValue(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    handle: str = Field(
+        ...,
+        description="Canonical value handle, such as `neckline__halter`; send it unchanged in the attribute facet's `values`.",
+        title="Handle",
+    )
+    name: str = Field(..., description="Display label, such as `Halter`.", title="Name")
+
+
+class TaxonomyAttributeValuePage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    attribute: TaxonomyAttribute
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of values across all pages.", title="Total"
+    )
+    values: list[TaxonomyAttributeValue] = Field(..., title="Values")
+
+
+class TaxonomyCategory(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    child_count: int = Field(
+        ...,
+        alias="childCount",
+        description="Number of direct child categories.",
+        title="Childcount",
+    )
+    depth: int = Field(..., description="0 for a root category.", title="Depth")
+    facets: list[Facet] | None = Field(
+        ...,
+        description="Search `facets` that select this category, one `category_path.depth_N` facet per level; send them unchanged to `POST /products/search`. Null for a category too deep to filter on.",
+        title="Facets",
+    )
+    id: str = Field(..., description="Canonical category UUID.", title="Id")
+    name: str = Field(..., description="Display name, such as `Dresses`.", title="Name")
+    path: str = Field(
+        ...,
+        description="Fully qualified name, root first and ` > ` separated, such as `Apparel & Accessories > Clothing > Dresses`.",
+        title="Path",
+    )
+
+
+class TaxonomyCategoryPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    categories: list[TaxonomyCategory] = Field(..., title="Categories")
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    parent: TaxonomyCategory | None = Field(
+        ..., description="The requested parent category; null when listing roots."
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of children across all pages.", title="Total"
+    )
+
+
 class ValidationError(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     ctx: dict[str, Any] | None = Field(None, title="Context")
@@ -706,6 +1009,7 @@ class ValidationError(BaseModel):
 
 class VideoView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str | None = Field(None, title="Name")
@@ -715,6 +1019,7 @@ class VideoView(BaseModel):
 
 class Attribute(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     handle: str = Field(..., title="Handle")
@@ -724,6 +1029,7 @@ class Attribute(BaseModel):
 
 class CanonicalBrand(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_enrichment: CanonicalBrandEnrichment | None = Field(
@@ -741,6 +1047,7 @@ class CanonicalBrand(BaseModel):
 
 class CoverageContainsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     results: list[CoverageContainsResult] = Field(..., title="Results")
@@ -748,12 +1055,13 @@ class CoverageContainsResponse(BaseModel):
 
 class CoverageUrlList(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     big_query: CoverageUrlListBigQuery | None = Field(..., alias="bigQuery")
     created_at: AwareDatetime = Field(..., alias="createdAt", title="Createdat")
     name: str = Field(..., title="Name")
-    status: Literal["provisioning", "active", "delete_pending"] = Field(
+    status: Literal["provisioning", "active", "delete_pending"] | str = Field(
         ..., title="Status"
     )
     updated_at: AwareDatetime = Field(..., alias="updatedAt", title="Updatedat")
@@ -763,14 +1071,55 @@ class CoverageUrlList(BaseModel):
 
 class CoverageUrlListListResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     items: list[CoverageUrlList] = Field(..., title="Items")
     next_cursor: str | None = Field(..., alias="nextCursor", title="Nextcursor")
 
 
+class DomainField(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    coverage: float = Field(
+        ...,
+        description="`populated / productCount`, rounded to 3 decimals.",
+        title="Coverage",
+    )
+    display_name: str = Field(
+        ...,
+        alias="displayName",
+        description="Human-readable facet name.",
+        title="Displayname",
+    )
+    distinct: int = Field(
+        ..., description="Approximate number of distinct values.", title="Distinct"
+    )
+    name: str = Field(..., description="Public search facet name.", title="Name")
+    populated: int = Field(
+        ..., description="Products with at least one value.", title="Populated"
+    )
+    source: Literal["product", "enrichment", "brands"] | str = Field(
+        ...,
+        description="`product` for merchant data, `enrichment` for Octogen classification and attributes, `brands` for brand facts.",
+        title="Source",
+    )
+    top_values: list[DomainFieldValue] = Field(
+        ...,
+        alias="topValues",
+        description="Up to 10 most common values, most common first.",
+        title="Topvalues",
+    )
+    truncated: bool = Field(
+        ..., description="Whether values beyond `topValues` exist.", title="Truncated"
+    )
+
+
 class HTTPValidationError(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     detail: list[ValidationError] | None = Field(None, title="Detail")
@@ -778,14 +1127,37 @@ class HTTPValidationError(BaseModel):
 
 class MerchantProductListItem(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand: BrandView | None = None
+    catalog_display_name: str | None = Field(
+        None,
+        alias="catalogDisplayName",
+        description="Display name of the catalog that supplied it.",
+        title="Catalogdisplayname",
+    )
     catalog_key: str | None = Field(
         None,
         alias="catalogKey",
         description="Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.",
         title="Catalogkey",
+    )
+    category_path: list[str] | None = Field(
+        None,
+        alias="categoryPath",
+        description="Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.",
+        title="Categorypath",
+    )
+    colors: list[str] | None = Field(
+        None,
+        description="Product-family color labels; the linked variant may differ.",
+        title="Colors",
+    )
+    currency: str | None = Field(
+        None,
+        description="ISO 4217 currency of the prices; null when unknown or mixed.",
+        title="Currency",
     )
     current_price: float | None = Field(
         None, alias="currentPrice", title="Currentprice"
@@ -796,6 +1168,9 @@ class MerchantProductListItem(BaseModel):
         description="User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.",
         title="Displaymatchscore",
     )
+    gender: Literal["male", "female", "unisex"] | str | None = Field(
+        None, description="Target gender; null when unknown or when several are listed."
+    )
     image_url: str | None = Field(
         None,
         alias="imageUrl",
@@ -803,6 +1178,12 @@ class MerchantProductListItem(BaseModel):
         title="Imageurl",
     )
     images: list[MerchantProductImageMetadataView] | None = Field([], title="Images")
+    in_stock: bool | None = Field(
+        None,
+        alias="inStock",
+        description="Product-family availability; null when unknown. Does not establish stock for a specific color or size.",
+        title="Instock",
+    )
     is_active: bool | None = Field(True, alias="isActive", title="Isactive")
     original_price: float | None = Field(
         None, alias="originalPrice", title="Originalprice"
@@ -820,6 +1201,9 @@ class MerchantProductListItem(BaseModel):
         description="Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
         title="Rawscore",
     )
+    sizes: list[str] | None = Field(
+        None, description="Product-family size labels.", title="Sizes"
+    )
     title: str | None = Field(None, title="Title")
     updated_at: AwareDatetime | None = Field(None, alias="updatedAt", title="Updatedat")
     uuid: str = Field(..., title="Uuid")
@@ -827,10 +1211,11 @@ class MerchantProductListItem(BaseModel):
 
 class ProductEnrichment(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    age_groups: list[Literal["infant", "toddler", "kids", "adult"]] | None = Field(
-        ..., description="Target age groups for the product.", title="Age Groups"
+    age_groups: list[Literal["infant", "toddler", "kids", "adult"] | str] | None = (
+        Field(..., description="Target age groups for the product.", title="Age Groups")
     )
     attribute_handles: dict[str, list[str]] | None = Field(
         None,
@@ -1014,6 +1399,7 @@ class ProductEnrichment(BaseModel):
                 "yellow",
                 "yellowgreen",
             ]
+            | str
         ]
         | None
     ) = Field(
@@ -1037,6 +1423,7 @@ class ProductEnrichment(BaseModel):
                 "Black",
                 "Multicolor",
             ]
+            | str
         ]
         | None
     ) = Field(
@@ -1054,7 +1441,7 @@ class ProductEnrichment(BaseModel):
         description="Fully qualified taxonomy path for the resolved category.",
         title="Fully Qualified Name",
     )
-    gender: Literal["male", "female", "unisex"] | None = Field(
+    gender: Literal["male", "female", "unisex"] | str | None = Field(
         ..., description="The target gender of the product."
     )
     image_with_single_product: bool | None = Field(
@@ -1090,9 +1477,37 @@ class ProductEnrichment(BaseModel):
     )
 
 
+class ProgrammaticAttributeCounts(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    facet_name: str = Field(
+        ...,
+        alias="facetName",
+        description="The search facet name for its values.",
+        title="Facetname",
+    )
+    handle: str = Field(
+        ..., description="The attribute handle you sent.", title="Handle"
+    )
+    values: list[ProgrammaticFacetValueCount] = Field(
+        ...,
+        description="Values with at least one product, most products first.",
+        title="Values",
+    )
+
+
 class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None, alias="brandQualityMax", title="Brandqualitymax"
+    )
+    brand_quality_min: float | None = Field(
+        None, alias="brandQualityMin", title="Brandqualitymin"
     )
     catalogs: list[str] | None = Field(None, title="Catalogs")
     degraded_to_text_fallback: bool | None = Field(
@@ -1122,15 +1537,7 @@ class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
     reconciled_facets: list[str] | None = Field(
         None, alias="reconciledFacets", title="Reconciledfacets"
     )
-    relaxation_declined_rounds: int | None = Field(
-        None, alias="relaxationDeclinedRounds", title="Relaxationdeclinedrounds"
-    )
-    relaxation_dropped_facets: list[ProgrammaticMoreLikeThisEffectiveFacet] | None = (
-        Field(None, alias="relaxationDroppedFacets", title="Relaxationdroppedfacets")
-    )
-    relaxation_rounds: int | None = Field(
-        None, alias="relaxationRounds", title="Relaxationrounds"
-    )
+    relaxation: ProgrammaticProductSearchRelaxation | None = None
     retrieval_embedding_columns: list[str] | None = Field(
         None, alias="retrievalEmbeddingColumns", title="Retrievalembeddingcolumns"
     )
@@ -1141,6 +1548,16 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None,
+        description="Inclusive maximum brand quality score, 1 to 6.",
+        title="Brand Quality Max",
+    )
+    brand_quality_min: float | None = Field(
+        None,
+        description="Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional).",
+        title="Brand Quality Min",
     )
     catalogs: list[str] | None = Field(
         None,
@@ -1157,19 +1574,29 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     )
     exclude_facets: list[Facet] | None = Field(
         None,
-        description="Exclusion facets to apply to the similar-products search.",
+        description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
         title="Exclude Facets",
     )
-    include_facets: list[Facet] | None = Field(
+    facets: list[Facet] | None = Field(
         None,
-        description="Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.",
-        title="Include Facets",
+        description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces every generated facet of the same name (a `color` or `color_family` facet replaces generated facets on both colour axes); values are never unioned, and the other generated facets stay. Never relaxed. Each name at most once. Replaces `include_facets`, which is rejected.",
+        title="Facets",
     )
     limit: int | None = Field(12, title="Limit")
     omit_generated_facets: list[str] | None = Field(
         None,
-        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name `facets` entry replaces it instead). Unknown names are ignored; caller `facets` and `exclude_facets` are never affected.",
         title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(
+        None,
+        description="Inclusive maximum price. Combined with the `price_preference` bound by keeping the lower one.",
+        title="Price Max",
+    )
+    price_min: float | None = Field(
+        None,
+        description="Inclusive minimum price. Combined with the `price_preference` bound by keeping the higher one.",
+        title="Price Min",
     )
     price_preference: Literal["lower", "any", "higher"] | None = Field(
         "any",
@@ -1188,6 +1615,11 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
         description="Embedding columns used to rescore and rank retrieved candidates. When omitted, ranking uses the base embedding.",
         title="Ranking Embedding Columns",
     )
+    relax: bool | None = Field(
+        True,
+        description="Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, and for `sources`, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.",
+        title="Relax",
+    )
     retrieval_embedding_columns: (
         list[
             Literal[
@@ -1200,11 +1632,20 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
         description="Embedding columns used to retrieve candidate products. Overrides the server-selected default (style/tags embeddings when the source product has styles or tags, otherwise the base embedding).",
         title="Retrieval Embedding Columns",
     )
-    source: ProgrammaticMoreLikeThisSource
+    source: ProgrammaticMoreLikeThisSource | None = Field(
+        None,
+        description="The product or image to find similar products for. Send exactly one of `source` and `sources`.",
+    )
+    sources: list[str] | None = Field(
+        None,
+        description="Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.",
+        title="Sources",
+    )
 
 
 class ProgrammaticMoreLikeThisResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
@@ -1227,10 +1668,16 @@ class ProgrammaticMoreLikeThisResponse(BaseModel):
     source_image: ProgrammaticMoreLikeThisSourceImageResponse | None = Field(
         None, alias="sourceImage"
     )
+    sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = Field(
+        None,
+        description="The resolved `sources`, in request order. Present only when the request sent `sources`.",
+        title="Sources",
+    )
 
 
 class ProgrammaticProductSearchEffectiveQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_quality_max: float | None = Field(
@@ -1268,10 +1715,13 @@ class ProgrammaticProductSearchEffectiveQuery(BaseModel):
 
 class ProgrammaticProductSearchPage(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    effective_query: ProgrammaticProductSearchEffectiveQuery | None = Field(
-        None, alias="effectiveQuery", description="Present with `debug: true`."
+    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
+        ...,
+        alias="effectiveQuery",
+        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response.",
     )
     items: list[MerchantProductListItem] | None = Field([], title="Items")
     next_cursor: str | None = Field(
@@ -1288,8 +1738,80 @@ class ProgrammaticProductSearchPage(BaseModel):
     )
 
 
+class TaxonomyAttributePage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    attributes: list[TaxonomyAttribute] = Field(..., title="Attributes")
+    category: TaxonomyCategory
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of attributes across all pages.", title="Total"
+    )
+
+
+class DomainCatalogCoverage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog: str = Field(..., description="Catalog key.", title="Catalog")
+    catalog_display_name: str = Field(
+        ...,
+        alias="catalogDisplayName",
+        description="Human-readable display name for the catalog.",
+        title="Catalogdisplayname",
+    )
+    computed_at: str = Field(
+        ...,
+        alias="computedAt",
+        description="When the snapshot was computed (UTC ISO 8601).",
+        title="Computedat",
+    )
+    fields: list[DomainField] = Field(
+        ...,
+        description="Populated public facets, ordered by `source` then coverage.",
+        title="Fields",
+    )
+    price: PriceDistribution | None = Field(
+        None, description="Current-price histogram; null when nothing is priced."
+    )
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Indexed product groups in the catalog.",
+        title="Productcount",
+    )
+
+
+class DomainCoverageResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalogs: list[DomainCatalogCoverage] = Field(
+        ...,
+        description="One snapshot per catalog serving the host, sorted by catalog.",
+        title="Catalogs",
+    )
+    host: str = Field(..., description="The normalized host.", title="Host")
+
+
 class MerchantProductView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     audience: AudienceView | None = None
@@ -1357,11 +1879,39 @@ class MerchantProductView(BaseModel):
     videos: list[VideoView] | None = Field([], title="Videos")
 
 
-class ProgrammaticProductLookupResponse(BaseModel):
+class ProgrammaticFacetCountsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    attributes: list[ProgrammaticAttributeCounts] = Field(
+        ...,
+        description="One entry per requested attribute, in request order.",
+        title="Attributes",
+    )
+    categories: list[ProgrammaticCategoryCount] = Field(
+        ...,
+        description="One count per requested category, in request order.",
+        title="Categories",
+    )
+    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
+        ...,
+        alias="effectiveQuery",
+        description="The filters and bounds the counts applied, with each facet's origin, as search reports them.",
+    )
+    facets: list[ProgrammaticFacetValueCounts] = Field(
+        ...,
+        description="One entry per requested facet name, in request order.",
+        title="Facets",
+    )
+
+
+class ProgrammaticProductLookupResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         None, alias="cacheStatus", title="Cachestatus"
     )
     canonical_url: str | None = Field(
@@ -1406,7 +1956,9 @@ class ProgrammaticProductLookupResponse(BaseModel):
         description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
         title="Resolvedurl",
     )
-    source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
+    source: Literal["indexed", "on_demand", "client_html"] | str = Field(
+        ..., title="Source"
+    )
     source_base_url: str | None = Field(
         None, alias="sourceBaseUrl", title="Sourcebaseurl"
     )
@@ -1419,9 +1971,10 @@ class ProgrammaticProductLookupResponse(BaseModel):
 
 class MerchantProductUrlLookupResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         None, alias="cacheStatus", title="Cachestatus"
     )
     canonical_url: str | None = Field(
@@ -1461,7 +2014,9 @@ class MerchantProductUrlLookupResponse(BaseModel):
         description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
         title="Resolvedurl",
     )
-    source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
+    source: Literal["indexed", "on_demand", "client_html"] | str = Field(
+        ..., title="Source"
+    )
     source_base_url: str | None = Field(
         None, alias="sourceBaseUrl", title="Sourcebaseurl"
     )

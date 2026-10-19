@@ -1,7 +1,7 @@
 /**
  * Keyless behaviour (D9), now that the metered trial is live.
  *
- * `GET /v1/domains`, `POST /v1/products/lookup`, and `POST /v1/products/search`
+ * `POST /v1/products/lookup`, and `POST /v1/products/search`
  * answer with no credential at all, capped at 30 requests per IP per day, with
  * complete untruncated payloads. Everything else on `/v1` refuses.
  *
@@ -16,7 +16,9 @@
 import { describe, expect, it } from "vitest";
 
 import { ExitCode } from "../src/exit.js";
-import { DOMAINS_BODY, runCli } from "./harness.js";
+import { runCli } from "./harness.js";
+
+const SEARCH_BODY = { items: [{ title: "Dress", uuid: "u" }] };
 
 const EXHAUSTED = {
   body: {
@@ -24,11 +26,7 @@ const EXHAUSTED = {
     getApiKey: "https://platform.octogen.ai/agent-onboarding/SKILL.md",
     isCoverageAnswer: false,
     keylessTrial: {
-      endpoints: [
-        "GET /v1/domains",
-        "POST /v1/products/lookup",
-        "POST /v1/products/search",
-      ],
+      endpoints: ["POST /v1/products/lookup", "POST /v1/products/search"],
       limit: 30,
       scope: "per client IP address",
       window: "24h",
@@ -40,9 +38,8 @@ const EXHAUSTED = {
 };
 
 describe("the keyless trial", () => {
-  it("runs domains, lookup, and search with no credential", async () => {
+  it("runs lookup and search with no credential", async () => {
     const cases: { argv: string[]; route: string; body: unknown }[] = [
-      { argv: ["domains"], body: DOMAINS_BODY, route: "GET /domains" },
       {
         argv: ["lookup", "https://lagence.com/products/x"],
         body: { product: { title: "A dress", uuid: "u" }, source: "indexed" },
@@ -68,13 +65,13 @@ describe("the keyless trial", () => {
 
   it("states the allowance up front, so an agent can budget", async () => {
     const result = await runCli({
-      argv: ["domains"],
-      routes: { "GET /domains": { body: DOMAINS_BODY } },
+      argv: ["search", "dress"],
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
     });
     expect(result.stderr).toMatch(/30\s+requests per IP per day/);
-    expect(result.stderr).toMatch(/domains, lookup and search/);
+    expect(result.stderr).toMatch(/lookup and search/);
     // A diagnostic, not output: stdout stays the one parseable object.
-    expect(result.json()["hostCount"]).toBe(4);
+    expect(result.json()["items"]).toHaveLength(1);
   });
 
   it("does not refuse a key-required command locally", async () => {
@@ -99,8 +96,8 @@ describe("the keyless trial", () => {
     // Mechanism 1 of three. An agent branching on exit codes cannot confuse a
     // throttle with an empty answer, whatever the message says.
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x"],
-      routes: { "GET /domains": EXHAUSTED },
+      argv: ["search", "dress"],
+      routes: { "POST /products/search": EXHAUSTED },
     });
     expect(result.exitCode).toBe(ExitCode.Throttled);
     expect(result.exitCode).not.toBe(ExitCode.NoResult);
@@ -110,8 +107,8 @@ describe("the keyless trial", () => {
     // Mechanism 2. `coverage` is on every error body from a coverage-adjacent
     // command, so it never has to be inferred from its own absence.
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x"],
-      routes: { "GET /domains": EXHAUSTED },
+      argv: ["lookup", "https://www.macys.com/x"],
+      routes: { "POST /products/lookup": EXHAUSTED },
     });
     const body = result.json();
     expect(body["coverage"]).toBe("unknown");
@@ -126,8 +123,8 @@ describe("the keyless trial", () => {
     // Mechanism 3, because an exit code alone does not survive a summary an
     // agent writes for its human.
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x"],
-      routes: { "GET /domains": EXHAUSTED },
+      argv: ["search", "dress"],
+      routes: { "POST /products/search": EXHAUSTED },
     });
     const message = String(result.json()["message"]);
     expect(message).toMatch(/Keyless trial exhausted: 30 requests per IP per day/);
@@ -143,8 +140,8 @@ describe("the keyless trial", () => {
     // The allowance refills over hours. Retrying would spend wall-clock to be
     // refused again.
     const result = await runCli({
-      argv: ["domains"],
-      routes: { "GET /domains": EXHAUSTED },
+      argv: ["search", "dress"],
+      routes: { "POST /products/search": EXHAUSTED },
     });
     expect(result.requests).toHaveLength(1);
   });
@@ -156,8 +153,8 @@ describe("the keyless trial", () => {
       status: 429,
     };
     const result = await runCli({
-      argv: ["domains"],
-      routes: { "GET /domains": [busy, { body: DOMAINS_BODY }] },
+      argv: ["search", "dress"],
+      routes: { "POST /products/search": [busy, { body: SEARCH_BODY }] },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.requests).toHaveLength(2);
@@ -165,9 +162,9 @@ describe("the keyless trial", () => {
 
   it("closes the trial rather than opening it when metering is down", async () => {
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x", "--no-retry"],
+      argv: ["lookup", "https://www.macys.com/x", "--no-retry"],
       routes: {
-        "GET /domains": {
+        "POST /products/lookup": {
           body: { code: "keyless_trial_unavailable", message: "cannot meter" },
           status: 503,
         },
