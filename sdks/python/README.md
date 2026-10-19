@@ -108,6 +108,14 @@ if that stops being true — see
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
+- `list_taxonomy_categories(parent=...)`, `list_taxonomy_attributes(category)`
+  and `list_taxonomy_attribute_values(handle)` discover categories, their
+  attributes and the attributes' value handles, paged with `offset`/`limit`.
+  A category's `facets` and an attribute's `facet_name` plus value `handle` go
+  back into `search_products` unchanged.
+- `count_product_facets(...)` counts the products `search_products` would
+  filter to — by `categories`, `attributes` and `facet_names` — under the same
+  `q`, facets, bounds and `catalogs`.
 
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
@@ -141,6 +149,20 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
         urls=["https://warrenlotas.com/products/black-hoodie"],
     )
     print(result.url_count, [r.code for r in result.rejected])
+```
+
+```python
+async with OctogenClient() as client:
+    children = await client.list_taxonomy_categories(
+        parent="Apparel & Accessories > Clothing"
+    )
+    dresses = next(c for c in children.categories if c.name == "Dresses")
+    counts = await client.count_product_facets(
+        q="red",
+        categories=[{"key": dresses.id, "facets": dresses.facets}],
+        attributes=["neckline"],
+    )
+    print(counts.categories[0].count, counts.attributes[0].values[:3])
 ```
 
 ### Search controls

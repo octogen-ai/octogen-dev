@@ -47,6 +47,15 @@ const URL_LISTS: string =
   "dry-run-by-default behind `--apply`. Reachable here via `storerouter api`.";
 
 /**
+ * Taxonomy discovery and facet counts serve filter panels and agent tools that
+ * call the SDKs; no command needs them yet. A command is a CLI design decision
+ * (flags for nested category facets, paging output), not a coverage chore.
+ */
+const CATALOG_DISCOVERY: string =
+  "Taxonomy discovery and facet counts are SDK surfaces for filter UIs and " +
+  "agent tools; no dedicated command yet. Reachable here via `storerouter api`.";
+
+/**
  * Published operations with no command, and why.
  *
  * A reason is required, and it has to be a real one: this is the record of a
@@ -63,9 +72,13 @@ const URL_LISTS: string =
 export const EXCLUDED_OPERATIONS = {
   addUrlListUrls: URL_LISTS,
   checkUrlListUrls: URL_LISTS,
+  countProductFacets: CATALOG_DISCOVERY,
   createUrlList: URL_LISTS,
   deleteUrlList: URL_LISTS,
   getUrlList: URL_LISTS,
+  listTaxonomyAttributeValues: CATALOG_DISCOVERY,
+  listTaxonomyAttributes: CATALOG_DISCOVERY,
+  listTaxonomyCategories: CATALOG_DISCOVERY,
   listUrlListUrls: URL_LISTS,
   listUrlLists: URL_LISTS,
   parseProductAlias:

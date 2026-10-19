@@ -34,22 +34,26 @@ immediately on the next request.
 
 ## Endpoints
 
-The published contract carries **18 operations across 14 paths**. They use the
+The published contract carries **19 operations across 16 paths**. They use the
 same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `listDomains`, `resolveProductFromHtml`,
-and the eight
+SDK — `getMe`, `listDomains`, `resolveProductFromHtml`, the
+[taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
-| Operation                          | What it is for                                                        |
-| ---------------------------------- | --------------------------------------------------------------------- |
-| `GET /domains`                     | Every covered host. Check this before `lookup` — see the note below.  |
-| `GET /me`                          | Your organization, key id and provenance, quotas, rate-limit posture. |
-| `POST /products/resolve-from-html` | Resolve a product from HTML you already have. No index, no fetch.     |
+| Operation                                  | What it is for                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `GET /domains`                             | Every covered host. Check this before `lookup` — see the note below.                  |
+| `GET /me`                                  | Your organization, key id and provenance, quotas, rate-limit posture.                 |
+| `POST /products/resolve-from-html`         | Resolve a product from HTML you already have. No index, no fetch.                     |
+| `GET /taxonomy/categories`                 | Root categories, or one category's children, with the facets that select each.        |
+| `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |
+| `GET /taxonomy/attributes/{handle}/values` | An attribute's canonical value handles, such as `neckline__halter`.                   |
+| `POST /products/facet-counts`              | Product counts by category, attribute value and colour family under search's filters. |
 
 > **`GET /domains` returns hosts normalized by the server** — lowercased, with a
 > leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
@@ -337,6 +341,60 @@ With `"debug": true`, the response adds `effectiveQuery` containing only the
 server-derived fields intended for public inspection: `text`,
 `retrievalEmbeddingColumns`, `rankingEmbeddingColumns`, `facets`,
 `exclusionFacets`, `priceMin`, `priceMax`, and `limit`.
+
+### Taxonomy and facet counts
+
+The taxonomy routes answer "which attributes do dresses have, and what values?"
+in the names `facets` accepts, so a value you discover goes straight back into
+search. They return canonical definitions, not inventory: a listed value may
+match no product. Page with `offset` and `limit` (categories 1–50, default 25;
+attributes and values 1–100, default 50) and continue with `nextOffset`.
+
+```bash
+# Children of a category, by path (a UUID or section handle such as `apparel` also works)
+curl -sS -G https://api.storerouter.ai/v1/taxonomy/categories \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  --data-urlencode "parent=Apparel & Accessories > Clothing"
+
+# Its attributes, then one attribute's values
+curl -sS -G https://api.storerouter.ai/v1/taxonomy/attributes \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  --data-urlencode "category=Apparel & Accessories > Clothing > Dresses"
+curl -sS https://api.storerouter.ai/v1/taxonomy/attributes/neckline/values \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY"
+```
+
+Each category carries `facets`, one `category_path.depth_N` facet per level,
+that select it. Each attribute carries `facetName` (`null` when it cannot be
+filtered on); filter with `{"name": facetName, "values": [value.handle]}`.
+
+`POST /products/facet-counts` takes search's filters — `q`, `facets`,
+`exclude_facets`, `omit_generated_facets`, `fallback_category`, the price and
+brand-quality bounds, and `catalogs` — and counts what search would filter to.
+`q` is understood as on search and only its understood filters narrow the
+counts. Say what to count with `categories` (`{key, facets}` entries, up to
+100), `attributes` (handles, up to 50) and `facet_names` (`color_family`, the
+default, and `category_path.depth_0`); `value_limit` caps the values returned
+per attribute and facet. A value's count ignores your own facet on that
+attribute, so it shows what selecting it would return.
+
+```bash
+curl -sS https://api.storerouter.ai/v1/products/facet-counts \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "q": "red dresses",
+    "categories": [
+      {"key": "dresses", "facets": [{"name": "category_path.depth_2", "values": ["dresses"]}]}
+    ],
+    "attributes": ["neckline"]
+  }'
+```
+
+The response has `categories` (`{key, count}` in request order), `attributes`
+(`{handle, facetName, values: [{value, count}]}`), `facets` (`{name, values}`)
+and `effectiveQuery`, the filters the counts applied in search's shape. Invalid
+facet names and unknown attribute handles are a `422`, as on search.
 
 ## Error model
 

@@ -2680,6 +2680,358 @@
         "title": "ProductResolverCachePolicyV1",
         "type": "string"
       },
+      "ProgrammaticAttributeCounts": {
+        "properties": {
+          "facetName": {
+            "description": "The search facet name for its values.",
+            "title": "Facetname",
+            "type": "string"
+          },
+          "handle": {
+            "description": "The attribute handle you sent.",
+            "title": "Handle",
+            "type": "string"
+          },
+          "values": {
+            "description": "Values with at least one product, most products first.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticFacetValueCount"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "facetName",
+          "handle",
+          "values"
+        ],
+        "title": "ProgrammaticAttributeCounts",
+        "type": "object"
+      },
+      "ProgrammaticCategoryCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "key": {
+            "description": "The `key` you sent for the category.",
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "key"
+        ],
+        "title": "ProgrammaticCategoryCount",
+        "type": "object"
+      },
+      "ProgrammaticFacetCountCategory": {
+        "additionalProperties": false,
+        "description": "One category to count, named by the facets that select it.",
+        "properties": {
+          "facets": {
+            "description": "Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Facets",
+            "type": "array"
+          },
+          "key": {
+            "description": "Your identifier for this category; its count carries it back.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "facets",
+          "key"
+        ],
+        "title": "ProgrammaticFacetCountCategory",
+        "type": "object"
+      },
+      "ProgrammaticFacetCountsRequest": {
+        "additionalProperties": false,
+        "description": "Count the products a search would filter to, by category and value.\n\nThe filter fields mean exactly what they mean on `POST /products/search`.\nThe rest say what to count.",
+        "properties": {
+          "attributes": {
+            "description": "Attribute handles, such as `neckline`, whose values to count. Find a category's handles with `GET /taxonomy/attributes`. A value's count ignores your own facet on that attribute, so every value shows what selecting it would return.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Attributes",
+            "type": "array"
+          },
+          "brand_quality_max": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Quality Max"
+          },
+          "brand_quality_min": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Quality Min"
+          },
+          "catalogs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog keys to count in. Omit to count every catalog your key can access. Keys your key cannot access count nothing.",
+            "title": "Catalogs"
+          },
+          "categories": {
+            "description": "Categories to count. Each count is the products matching the filters above and the category's own facets.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticFacetCountCategory"
+            },
+            "maxItems": 100,
+            "title": "Categories",
+            "type": "array"
+          },
+          "exclude_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Facet"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters a product must not match, as on search.",
+            "title": "Exclude Facets"
+          },
+          "facet_names": {
+            "description": "Facets whose values to count, ignoring your own facet of that name like `attributes`. `category_path.depth_0` counts top-level categories.",
+            "items": {
+              "enum": [
+                "color_family",
+                "category_path.depth_0"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Facet Names",
+            "type": "array"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Facet"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters a product must match, as on search. A facet you send replaces any understood facet of the same name. Each name at most once.",
+            "title": "Facets"
+          },
+          "fallback_category": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Category path to filter to when understanding finds no category in `q`, as on search. Requires `q`.",
+            "title": "Fallback Category"
+          },
+          "omit_generated_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Understood facets to drop, as on search. Requires `q`.",
+            "title": "Omit Generated Facets"
+          },
+          "price_max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Max"
+          },
+          "price_min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Min"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text query, understood as search understands it. The category, gender, colour, brand, price and attribute filters understood from it apply to the counts; the text itself does not narrow them. Blank is the same as omitted.",
+            "title": "Q"
+          },
+          "value_limit": {
+            "default": 100,
+            "description": "Most values returned per attribute and per facet, by count.",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Value Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ProgrammaticFacetCountsRequest",
+        "type": "object"
+      },
+      "ProgrammaticFacetCountsResponse": {
+        "description": "Product counts under one set of search filters.",
+        "properties": {
+          "attributes": {
+            "description": "One entry per requested attribute, in request order.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticAttributeCounts"
+            },
+            "title": "Attributes",
+            "type": "array"
+          },
+          "categories": {
+            "description": "One count per requested category, in request order.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticCategoryCount"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "effectiveQuery": {
+            "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveQuery",
+            "description": "The filters and bounds the counts applied, with each facet's origin, as search reports them."
+          },
+          "facets": {
+            "description": "One entry per requested facet name, in request order.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticFacetValueCounts"
+            },
+            "title": "Facets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attributes",
+          "categories",
+          "effectiveQuery",
+          "facets"
+        ],
+        "title": "ProgrammaticFacetCountsResponse",
+        "type": "object"
+      },
+      "ProgrammaticFacetValueCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "value": {
+            "description": "A value to send back in that facet's `values`.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "value"
+        ],
+        "title": "ProgrammaticFacetValueCount",
+        "type": "object"
+      },
+      "ProgrammaticFacetValueCounts": {
+        "properties": {
+          "name": {
+            "description": "The facet name you sent.",
+            "title": "Name",
+            "type": "string"
+          },
+          "values": {
+            "description": "Values with at least one product, most products first.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticFacetValueCount"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "ProgrammaticFacetValueCounts",
+        "type": "object"
+      },
       "ProgrammaticMoreLikeThisEffectiveFacet": {
         "properties": {
           "name": {
@@ -4098,6 +4450,292 @@
           }
         },
         "title": "ReviewView",
+        "type": "object"
+      },
+      "TaxonomyAttribute": {
+        "description": "One taxonomy attribute definition.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "facetName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The search facet name for this attribute; send its value handles under this name in `facets`. Null when the attribute is not filterable.",
+            "title": "Facetname"
+          },
+          "handle": {
+            "description": "Canonical attribute handle, such as `neckline`.",
+            "title": "Handle",
+            "type": "string"
+          },
+          "matching": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How a facet on this attribute matches; null when not filterable.",
+            "title": "Matching"
+          },
+          "name": {
+            "description": "Display name, such as `Neckline`.",
+            "title": "Name",
+            "type": "string"
+          },
+          "valueCount": {
+            "description": "Number of canonical values.",
+            "title": "Valuecount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "facetName",
+          "handle",
+          "matching",
+          "name",
+          "valueCount"
+        ],
+        "title": "TaxonomyAttribute",
+        "type": "object"
+      },
+      "TaxonomyAttributePage": {
+        "description": "One page of the attributes a category carries.",
+        "properties": {
+          "attributes": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyAttribute"
+            },
+            "title": "Attributes",
+            "type": "array"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TaxonomyCategory"
+          },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offset of the next page; repeat the request with it. Null on the last page.",
+            "title": "Nextoffset"
+          },
+          "taxonomyVersion": {
+            "description": "Canonical taxonomy version name.",
+            "title": "Taxonomyversion",
+            "type": "string"
+          },
+          "total": {
+            "description": "Number of attributes across all pages.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attributes",
+          "category",
+          "nextOffset",
+          "taxonomyVersion",
+          "total"
+        ],
+        "title": "TaxonomyAttributePage",
+        "type": "object"
+      },
+      "TaxonomyAttributeValue": {
+        "description": "One canonical attribute value.",
+        "properties": {
+          "handle": {
+            "description": "Canonical value handle, such as `neckline__halter`; send it unchanged in the attribute facet's `values`.",
+            "title": "Handle",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display label, such as `Halter`.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "handle",
+          "name"
+        ],
+        "title": "TaxonomyAttributeValue",
+        "type": "object"
+      },
+      "TaxonomyAttributeValuePage": {
+        "description": "One page of an attribute's canonical values.",
+        "properties": {
+          "attribute": {
+            "$ref": "#/components/schemas/TaxonomyAttribute"
+          },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offset of the next page; repeat the request with it. Null on the last page.",
+            "title": "Nextoffset"
+          },
+          "taxonomyVersion": {
+            "description": "Canonical taxonomy version name.",
+            "title": "Taxonomyversion",
+            "type": "string"
+          },
+          "total": {
+            "description": "Number of values across all pages.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyAttributeValue"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attribute",
+          "nextOffset",
+          "taxonomyVersion",
+          "total",
+          "values"
+        ],
+        "title": "TaxonomyAttributeValuePage",
+        "type": "object"
+      },
+      "TaxonomyCategory": {
+        "description": "One canonical taxonomy category.",
+        "properties": {
+          "childCount": {
+            "description": "Number of direct child categories.",
+            "title": "Childcount",
+            "type": "integer"
+          },
+          "depth": {
+            "description": "0 for a root category.",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Facet"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Search `facets` that select this category, one `category_path.depth_N` facet per level; send them unchanged to `POST /products/search`. Null for a category too deep to filter on.",
+            "title": "Facets"
+          },
+          "id": {
+            "description": "Canonical category UUID.",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name, such as `Dresses`.",
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "description": "Fully qualified name, root first and ` > ` separated, such as `Apparel & Accessories > Clothing > Dresses`.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "childCount",
+          "depth",
+          "facets",
+          "id",
+          "name",
+          "path"
+        ],
+        "title": "TaxonomyCategory",
+        "type": "object"
+      },
+      "TaxonomyCategoryPage": {
+        "description": "One page of a category's children, or of the root categories.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offset of the next page; repeat the request with it. Null on the last page.",
+            "title": "Nextoffset"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaxonomyCategory"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The requested parent category; null when listing roots."
+          },
+          "taxonomyVersion": {
+            "description": "Canonical taxonomy version name.",
+            "title": "Taxonomyversion",
+            "type": "string"
+          },
+          "total": {
+            "description": "Number of children across all pages.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "categories",
+          "nextOffset",
+          "parent",
+          "taxonomyVersion",
+          "total"
+        ],
+        "title": "TaxonomyCategoryPage",
         "type": "object"
       },
       "ValidationError": {
@@ -5605,6 +6243,111 @@
         ]
       }
     },
+    "/products/facet-counts": {
+      "post": {
+        "description": "Count the products `POST /products/search` would filter to.\n\nCounts span every catalog your key can access unless `catalogs` narrows\nthem, and apply the same filters, bounds and understood facets as a\nsearch with the same fields.",
+        "operationId": "countProductFacets",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgrammaticFacetCountsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgrammaticFacetCountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "summary": "Forbidden API key",
+                    "value": {
+                      "detail": "api_key_forbidden"
+                    }
+                  },
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but not allowed to access this resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validationError": {
+                    "summary": "Invalid request body",
+                    "value": {
+                      "detail": [
+                        {
+                          "input": {},
+                          "loc": [
+                            "body",
+                            "url"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Request validation failed."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Count products by category and filter value",
+        "tags": [
+          "platform-catalog-api"
+        ]
+      }
+    },
     "/products/lookup": {
       "post": {
         "description": "Resolve a product by URL: index first, then configured-catalog JIT or shallow resolution. One 45-second deadline bounds all tiers; no background indexing is dispatched. `POST /products/parse` is an exact alias. The response defaults to the structured JSON envelope; set `format` to `md` or `markdown` for the Python-rendered Markdown representation used by Cosimo.",
@@ -6611,6 +7354,435 @@
         "summary": "Search products",
         "tags": [
           "platform-catalog-api"
+        ]
+      }
+    },
+    "/taxonomy/attributes": {
+      "get": {
+        "description": "The attribute definitions a category carries, such as `neckline` for dresses. Read an attribute's values from `GET /taxonomy/attributes/{handle}/values`.",
+        "operationId": "listTaxonomyAttributes",
+        "parameters": [
+          {
+            "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+            "in": "query",
+            "name": "category",
+            "required": true,
+            "schema": {
+              "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+              "minLength": 1,
+              "title": "Category",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyAttributePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notFound": {
+                    "summary": "Unknown category.",
+                    "value": {
+                      "detail": "taxonomy_category_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Unknown category."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "List a category's attributes",
+        "tags": [
+          "platform-catalog-api",
+          "platform-taxonomy-api"
+        ]
+      }
+    },
+    "/taxonomy/attributes/{handle}/values": {
+      "get": {
+        "description": "Canonical values of one attribute. Filter search with `{\"name\": attribute.facetName, \"values\": [value.handle]}`.",
+        "operationId": "listTaxonomyAttributeValues",
+        "parameters": [
+          {
+            "description": "Attribute handle from `GET /taxonomy/attributes`.",
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "description": "Attribute handle from `GET /taxonomy/attributes`.",
+              "title": "Handle",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyAttributeValuePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notFound": {
+                    "summary": "Unknown attribute handle.",
+                    "value": {
+                      "detail": "taxonomy_attribute_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Unknown attribute handle."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "List an attribute's values",
+        "tags": [
+          "platform-catalog-api",
+          "platform-taxonomy-api"
+        ]
+      }
+    },
+    "/taxonomy/categories": {
+      "get": {
+        "description": "Without `parent`, the root categories; with it, that category's direct children. Each category carries the search `facets` that select it. Definitions only: a category listed here may hold no products.",
+        "operationId": "listTaxonomyCategories",
+        "parameters": [
+          {
+            "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+            "in": "query",
+            "name": "parent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case).",
+              "title": "Parent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyCategoryPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "notFound": {
+                    "summary": "Unknown parent category.",
+                    "value": {
+                      "detail": "taxonomy_category_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Unknown parent category."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "List taxonomy categories",
+        "tags": [
+          "platform-catalog-api",
+          "platform-taxonomy-api"
         ]
       }
     }

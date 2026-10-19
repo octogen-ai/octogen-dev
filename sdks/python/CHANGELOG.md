@@ -1,5 +1,20 @@
 # Changelog — `octogen-ai-sdk`
 
+## Unreleased
+
+- Add `list_taxonomy_categories`, `list_taxonomy_attributes` and
+  `list_taxonomy_attribute_values` for `GET /v1/taxonomy/...`: categories with
+  the `facets` that select them, a category's attributes with their
+  `facet_name`, and value handles such as `neckline__halter`, paged with
+  `offset`/`limit`.
+- Add `count_product_facets` for `POST /v1/products/facet-counts`: counts by
+  `categories`, `attributes` and `facet_names` under search's filters, with
+  `ProgrammaticFacetCountsRequest` mirroring the server's `422` rules locally.
+- Facet arguments (`facets`, `exclude_facets`, `include_facets`) also accept a
+  facet a response returned, so a `TaxonomyCategory`'s `facets` go straight
+  into `search_products` or `count_product_facets`.
+- Regenerate the contract mirror with the four new operations.
+
 ## 0.6.0 — 2026-10-18
 
 - **Breaking:** remove customer Voyage methods and types. Voyage is admin-only;

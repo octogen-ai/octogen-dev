@@ -31,11 +31,17 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "checkUrlListUrls": Operation(
         "POST", "/coverage/url-lists/{urlListId}/urls/contains"
     ),
+    "countProductFacets": Operation("POST", "/products/facet-counts"),
     "createUrlList": Operation("POST", "/coverage/url-lists"),
     "deleteUrlList": Operation("DELETE", "/coverage/url-lists/{urlListId}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
     "listDomains": Operation("GET", "/domains"),
+    "listTaxonomyAttributeValues": Operation(
+        "GET", "/taxonomy/attributes/{handle}/values"
+    ),
+    "listTaxonomyAttributes": Operation("GET", "/taxonomy/attributes"),
+    "listTaxonomyCategories": Operation("GET", "/taxonomy/categories"),
     "listUrlListUrls": Operation("GET", "/coverage/url-lists/{urlListId}/urls"),
     "listUrlLists": Operation("GET", "/coverage/url-lists"),
     "lookupProduct": Operation("POST", "/products/lookup"),
