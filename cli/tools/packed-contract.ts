@@ -128,6 +128,16 @@ const cases = [
     response: { product: {}, source: "html" },
     exit: 0,
   },
+  {
+    // A GET with a path parameter: `body` is the parameter set, read back off
+    // the path, since a GET carries no request body.
+    operation: "getDomain",
+    argv: ["store", "https://www.TheReformation.com/products/x"],
+    path: "/domains/thereformation.com",
+    body: { host: "thereformation.com" },
+    response: { host: "thereformation.com", catalogs: [] },
+    exit: 0,
+  },
 ];
 for (const item of cases) {
   const requests: unknown[] = [];
@@ -145,19 +155,24 @@ for (const item of cases) {
       /* Diagnostics are not part of this stdout assertion. */
     },
     fetch: (input, init) => {
-      assert.equal(
-        new URL(
-          typeof input === "string"
-            ? input
-            : input instanceof URL
-              ? input.href
-              : input.url,
-        ).pathname,
-        `/v1${item.path}`,
-      );
-      assert.equal(init?.method, "POST");
-      assert.equal(typeof init.body, "string");
-      const body: unknown = JSON.parse(init.body as string);
+      const pathname = new URL(
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url,
+      ).pathname;
+      assert.equal(pathname, `/v1${item.path}`);
+      let body: unknown;
+      if (item.operation === "getDomain") {
+        assert.equal(init?.method, "GET");
+        assert.equal(init.body, undefined);
+        body = { host: decodeURIComponent(pathname.split("/").at(-1) ?? "") };
+      } else {
+        assert.equal(init?.method, "POST");
+        assert.equal(typeof init.body, "string");
+        body = JSON.parse(init.body as string);
+      }
       requests.push(body);
       validate(requestSchema(item.operation), body, item.operation);
       return Promise.resolve(

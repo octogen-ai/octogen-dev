@@ -14,6 +14,13 @@ fail against it on every version that has them.
 - `isHostCovered` and `normalizeHost` stay, for host sets you supply yourself.
 - Regenerate the public contract mirror without the `listDomains` operation and
   its schemas.
+- Add `getDomain(urlOrHost)` for `GET /v1/domains/{host}`: one covered store's
+  coverage snapshot (catalogs, product counts, populated facets, price
+  histogram). It normalizes a URL to its host first, and an uncovered host is
+  `OctogenNotFoundError` with `detail` `domain_not_covered`. It asks about one
+  host; nothing lists hosts. Adds the `DomainCoverageResponse`,
+  `DomainCatalogCoverage`, `DomainField`, `DomainFieldValue`,
+  `PriceDistribution` and `PriceBucket` types.
 
 ## 0.6.0 — 2026-10-19
 

@@ -15,6 +15,13 @@
   yourself.
 - Regenerate the contract mirror without the `listDomains` operation and its
   schemas.
+- Add `get_domain(url_or_host)` for `GET /v1/domains/{host}`: one covered
+  store's coverage snapshot (catalogs, product counts, populated facets, price
+  histogram). It normalizes a URL to its host first, and an uncovered host
+  raises `OctogenNotFoundError` with `detail == "domain_not_covered"`. It asks
+  about one host; nothing lists hosts. Adds the `DomainCoverageResponse`,
+  `DomainCatalogCoverage`, `DomainField`, `DomainFieldValue`,
+  `PriceDistribution` and `PriceBucket` models.
 
 ## 0.8.0 — 2026-10-19
 

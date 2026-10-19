@@ -1045,6 +1045,63 @@ describe("OctogenClient coverage URL lists", () => {
   });
 });
 
+describe("OctogenClient getDomain", () => {
+  const COVERAGE_JSON = {
+    host: "thereformation.com",
+    catalogs: [
+      {
+        catalog: "reformation",
+        catalogDisplayName: "Reformation",
+        computedAt: "2026-10-19T00:00:00Z",
+        productCount: 1200,
+        fields: [],
+        price: null,
+      },
+    ],
+  };
+
+  it("normalizes a URL to its host and GETs that one host", async () => {
+    const { calls, fetchMock } = createFetchMock(COVERAGE_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const coverage = await client.getDomain(
+      "https://WWW.TheReformation.com:443/products/x?color=red",
+    );
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/domains/thereformation.com`);
+    expect(call.init?.method).toBe("GET");
+    expect(call.init?.body).toBeUndefined();
+    expect(coverage.catalogs[0]?.productCount).toBe(1200);
+  });
+
+  it("refuses input with no readable host before any request", async () => {
+    const { calls, fetchMock } = createFetchMock(COVERAGE_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    for (const input of ["", "   ", "not a host/with a path"]) {
+      await expect(client.getDomain(input)).rejects.toThrow(TypeError);
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it("surfaces 404 domain_not_covered as a not-found error", async () => {
+    const { fetchMock } = createFetchMock(
+      { detail: "domain_not_covered" },
+      { status: 404 },
+    );
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.getDomain("example.com")).rejects.toMatchObject({
+      detail: "domain_not_covered",
+      statusCode: 404,
+    });
+    await expect(client.getDomain("example.com")).rejects.toBeInstanceOf(
+      OctogenNotFoundError,
+    );
+  });
+});
+
 describe("the keyless metered trial", () => {
   it("refuses to build a keyless client unless asked", () => {
     // Off by default: a client with no key is only useful against three routes,

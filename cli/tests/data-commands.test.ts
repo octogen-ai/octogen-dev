@@ -520,6 +520,200 @@ it("does not recognize the removed refresh command or issue a request", async ()
   expect(result.requests).toEqual([]);
 });
 
+/** `GET /v1/domains/{host}`, trimmed from the live route (2026-10-19). */
+const STORE_BODY = {
+  host: "thereformation.com",
+  catalogs: [
+    {
+      catalog: "reformation",
+      catalogDisplayName: "Reformation",
+      computedAt: "2026-10-19T04:12:00Z",
+      productCount: 12345,
+      fields: [
+        {
+          name: "color",
+          displayName: "Color",
+          source: "product",
+          populated: 12000,
+          coverage: 0.972,
+          distinct: 41,
+          truncated: true,
+          topValues: [
+            { value: "black", label: "Black", count: 3100 },
+            { value: "white", label: "White", count: 1400 },
+            { value: "blue", label: "Blue", count: 900 },
+            { value: "red", label: "Red", count: 700 },
+          ],
+        },
+      ],
+      price: {
+        populated: 12100,
+        median: 248,
+        below: 12,
+        above: 300,
+        buckets: [
+          { min: 50, max: 150, count: 2000 },
+          { min: 150, max: 450, count: 9800 },
+        ],
+      },
+    },
+  ],
+};
+
+describe("storerouter store", () => {
+  it("GETs one normalized host, with no body and no query", async () => {
+    const result = await runCli({
+      argv: ["store", "https://WWW.TheReformation.com:443/products/x?color=red"],
+      env: KEYED,
+      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests).toHaveLength(1);
+    const request = result.requests[0];
+    expect(request?.method).toBe("GET");
+    expect(request?.url).toBe(
+      "https://api.storerouter.ai/v1/domains/thereformation.com",
+    );
+    expect(request?.body).toBeUndefined();
+  });
+
+  it("emits the host, covered: true and every catalog's full snapshot", async () => {
+    const result = await runCli({
+      argv: ["store", "thereformation.com", "--json"],
+      env: KEYED,
+      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+    });
+    const body = result.json();
+    expect(body["ok"]).toBe(true);
+    expect(body["command"]).toBe("store");
+    expect(body["host"]).toBe("thereformation.com");
+    expect(body["covered"]).toBe(true);
+    expect(body["coverage"]).toBe("covered");
+    expect(body["catalogs"]).toEqual(STORE_BODY.catalogs);
+  });
+
+  it("prints a human summary on a terminal", async () => {
+    const result = await runCli({
+      argv: ["store", "thereformation.com"],
+      env: KEYED,
+      isTty: true,
+      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.stdout).toBe(
+      [
+        "thereformation.com is covered by 1 catalog",
+        "",
+        "Reformation (reformation)",
+        "  products   12,345",
+        "  price      median 248, 50–450 (12,100 priced)",
+        "  computed   2026-10-19T04:12:00Z",
+        "  fields     1 populated (product 1)",
+        "    color   97%  Black, White, Blue, …",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("shows six fields per source on a terminal; --json keeps them all", async () => {
+    const field = (source: string, index: number) => ({
+      name: `${source}_${String(index)}`,
+      displayName: `${source} ${String(index)}`,
+      source,
+      populated: 10,
+      coverage: 0.5,
+      distinct: 1,
+      truncated: false,
+      topValues: [{ value: "v", label: "V", count: 10 }],
+    });
+    const fields = [
+      ...Array.from({ length: 3 }, (_, index) => field("product", index)),
+      ...Array.from({ length: 10 }, (_, index) => field("enrichment", index)),
+    ];
+    const catalogs = [{ ...STORE_BODY.catalogs[0], fields }];
+    const routes = {
+      "GET /domains/thereformation.com": {
+        body: { host: "thereformation.com", catalogs },
+      },
+    };
+    const human = await runCli({
+      argv: ["store", "thereformation.com"],
+      env: KEYED,
+      isTty: true,
+      routes,
+    });
+    expect(human.stdout).toContain(
+      "  fields     13 populated (product 3, enrichment 10)",
+    );
+    expect(human.stdout).toContain("enrichment_5");
+    expect(human.stdout).not.toContain("enrichment_6");
+    expect(human.stdout).toContain("    … 4 more fields (--json for all)");
+    const json = await runCli({
+      argv: ["store", "thereformation.com"],
+      env: KEYED,
+      routes,
+    });
+    expect(json.json()["catalogs"]).toEqual(catalogs);
+  });
+
+  it("exits 6 with covered: false on 404 domain_not_covered", async () => {
+    const result = await runCli({
+      argv: ["store", "example.com"],
+      env: KEYED,
+      routes: {
+        "GET /domains/example.com": {
+          body: { detail: "domain_not_covered" },
+          status: 404,
+        },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    const body = result.json();
+    expect(body["ok"]).toBe(false);
+    expect(body["code"]).toBe("domain_not_covered");
+    expect(body["coverage"]).toBe("not_covered");
+    expect(body["covered"]).toBe(false);
+    expect(body["host"]).toBe("example.com");
+    expect(body["message"]).toBe(
+      "example.com is not covered: no StoreRouter catalog serves it.",
+    );
+  });
+
+  it("does not read any other 404 as 'not covered'", async () => {
+    const result = await runCli({
+      argv: ["store", "example.com"],
+      env: KEYED,
+      routes: {
+        "GET /domains/example.com": { body: { detail: "Not Found" }, status: 404 },
+      },
+    });
+    expect(result.exitCode).not.toBe(ExitCode.NoResult);
+    expect(result.json()["coverage"]).toBe("unknown");
+  });
+
+  it.each([
+    [["store"], "missing_argument"],
+    [["store", "a.example", "b.example"], "too_many_arguments"],
+    [["store", "not a host/with a path"], "invalid_host"],
+  ])("refuses %j before any request", async (argv, code) => {
+    const result = await runCli({ argv, env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe(code);
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it("has no list mode", async () => {
+    for (const argv of [
+      ["store", "--list"],
+      ["store", "--all"],
+    ]) {
+      const result = await runCli({ argv, env: KEYED });
+      expect(result.exitCode).toBe(ExitCode.Usage);
+      expect(result.requests).toHaveLength(0);
+    }
+  });
+});
+
 describe("retired commands", () => {
   it.each([
     ["voyage", "example.com"],

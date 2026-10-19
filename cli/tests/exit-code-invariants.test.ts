@@ -84,6 +84,7 @@ describe("exit 6 has exactly one constructor", () => {
       "commands/resolve.ts",
       "commands/search.ts",
       "commands/similar.ts",
+      "commands/store.ts",
     ]);
   });
 

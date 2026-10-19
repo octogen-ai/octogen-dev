@@ -7,6 +7,11 @@
   on 0.4.0 and older. Run `lookup` directly; a miss no longer points at
   `domains --check`. `status` still checks credentials with `GET /v1/me`.
 - Keyless trial messages name only `lookup` and `search`.
+- Add `storerouter store <host|url>`: one covered store's coverage snapshot
+  from `GET /v1/domains/{host}` (catalogs, product counts, populated fields,
+  price histogram), as a summary or `--json`. A URL is normalized to its host.
+  `404 domain_not_covered` exits `6` with `covered: false`. It takes one host;
+  there is no list mode and no host cache.
 - Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
 
 ## 0.4.0 — 2026-10-19 (`next`)

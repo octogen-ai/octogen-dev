@@ -694,6 +694,26 @@ export interface CoverageUrlListUrlsPage {
   nextCursor?: string | null;
 }
 
+// ── One store's coverage (/v1/domains/{host}) ───────────────────────────────
+
+/** Every catalog serving one host; `host` is the normalized host asked about. */
+export type DomainCoverageResponse = components["schemas"]["DomainCoverageResponse"];
+
+/** One catalog's snapshot: product count, populated facets, price histogram. */
+export type DomainCatalogCoverage = components["schemas"]["DomainCatalogCoverage"];
+
+/** A public search facet populated for at least one of the catalog's products. */
+export type DomainField = components["schemas"]["DomainField"];
+
+/** One of a field's most common values; send `value` as that facet's value. */
+export type DomainFieldValue = components["schemas"]["DomainFieldValue"];
+
+/** Current-price histogram of a catalog's priced products. */
+export type PriceDistribution = components["schemas"]["PriceDistribution"];
+
+/** One histogram bar: products priced in `[min, max)`. */
+export type PriceBucket = components["schemas"]["PriceBucket"];
+
 // ── Caller identity (/v1/me) ────────────────────────────────────────────────
 
 export type MeResponse = components["schemas"]["MeResponse"];

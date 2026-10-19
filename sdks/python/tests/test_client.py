@@ -1211,3 +1211,76 @@ SEARCH_DEBUG_PAGE: dict[str, Any] = {
         },
     },
 }
+
+
+DOMAIN_COVERAGE_JSON = {
+    "host": "thereformation.com",
+    "catalogs": [
+        {
+            "catalog": "reformation",
+            "catalogDisplayName": "Reformation",
+            "computedAt": "2026-10-19T00:00:00Z",
+            "productCount": 1200,
+            "fields": [
+                {
+                    "name": "color",
+                    "displayName": "Color",
+                    "source": "product",
+                    "populated": 1100,
+                    "coverage": 0.917,
+                    "distinct": 40,
+                    "truncated": True,
+                    "topValues": [{"value": "black", "label": "Black", "count": 300}],
+                }
+            ],
+            "price": {
+                "populated": 1150,
+                "median": 218.0,
+                "below": 5,
+                "above": 40,
+                "buckets": [{"min": 50.0, "max": 100.0, "count": 80}],
+            },
+        }
+    ],
+}
+
+
+@respx.mock
+async def test_get_domain_normalizes_a_url_to_one_host() -> None:
+    route = respx.get(f"{BASE_URL}/domains/thereformation.com").mock(
+        return_value=httpx.Response(200, json=DOMAIN_COVERAGE_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        coverage = await client.get_domain(
+            "https://WWW.TheReformation.com:443/products/x?color=red"
+        )
+
+    assert route.called
+    assert coverage.host == "thereformation.com"
+    catalog = coverage.catalogs[0]
+    assert catalog.product_count == 1200
+    assert catalog.fields[0].top_values[0].value == "black"
+    assert catalog.price is not None
+    assert catalog.price.buckets[0].count == 80
+
+
+@pytest.mark.parametrize("value", ["", "   ", "not a host/with a path"])
+async def test_get_domain_rejects_input_with_no_host(value: str) -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match="no host"):
+            await client.get_domain(value)
+
+
+@respx.mock
+async def test_get_domain_not_covered_is_a_not_found_error() -> None:
+    respx.get(f"{BASE_URL}/domains/example.com").mock(
+        return_value=httpx.Response(404, json={"detail": "domain_not_covered"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenNotFoundError) as exc_info:
+            await client.get_domain("example.com")
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "domain_not_covered"

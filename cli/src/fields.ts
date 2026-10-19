@@ -133,6 +133,12 @@ export const RESOLVE_FIELDS = {
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
+// ── GET /domains/{host} ─────────────────────────────────────────────────────
+
+export const STORE_FIELDS = {
+  host: { flag: "<host|url> (positional)" },
+} satisfies FieldMap<{ host: string }>;
+
 /**
  * Every field map, including operations with no request fields.
  */
@@ -144,4 +150,5 @@ export const FIELD_MAPS: Readonly<
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   getMe: {},
+  getDomain: STORE_FIELDS,
 });

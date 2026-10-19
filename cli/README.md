@@ -124,6 +124,24 @@ storerouter search dress --facet color=red,blue --price-max 300 --catalog macys
 storerouter similar https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
 ```
 
+### `storerouter store <host|url>`
+
+```bash
+storerouter store thereformation.com
+storerouter store https://www.thereformation.com/products/some-dress --json
+```
+
+One store's coverage snapshot from `GET /v1/domains/{host}`: every catalog
+serving the host, with its product count, populated search fields and their
+most common values, and a price histogram. A URL is reduced to its host the way
+the API normalizes hosts (lowercased, port and leading `www.` dropped). `--json`
+emits `host`, `covered`, `coverage` and `catalogs`, the full per-catalog
+snapshots.
+
+Exit `6` with `covered: false` means the server answered `404
+domain_not_covered`: no catalog serves that host. It asks about one host at a
+time; there is no list of covered hosts.
+
 ### `storerouter resolve --html <file|->`
 
 ```bash

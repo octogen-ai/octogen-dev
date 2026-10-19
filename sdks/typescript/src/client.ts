@@ -7,6 +7,7 @@ import {
   OctogenNotFoundError,
   OctogenValidationError,
 } from "./errors.js";
+import { normalizeHost } from "./hosts.js";
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
@@ -17,6 +18,7 @@ import type {
   CoverageUrlListPage,
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
+  DomainCoverageResponse,
   ListTaxonomyCategoriesParams,
   MeResponse,
   MoreLikeThisProductsParams,
@@ -195,6 +197,26 @@ export class OctogenClient {
   async getMe(): Promise<MeResponse> {
     const data = await this.json("getMe");
     return data as MeResponse;
+  }
+
+  /**
+   * One covered store's coverage snapshot (`GET /v1/domains/{host}`): every
+   * catalog serving the host, with product counts, populated facets and a
+   * price histogram.
+   *
+   * Takes a bare host or a URL and normalizes it the way the server does
+   * (lowercased, port and leading `www.` dropped), so
+   * `https://www.Reformation.com/p/x` asks about `reformation.com`. A host no
+   * catalog claims is a `404` with `detail.code` `domain_not_covered`. There is
+   * deliberately no way to list hosts: ask about the one you have.
+   */
+  async getDomain(urlOrHost: string): Promise<DomainCoverageResponse> {
+    const host = normalizeHost(urlOrHost);
+    if (host === undefined) {
+      throw new TypeError(`getDomain: no host in ${JSON.stringify(urlOrHost)}`);
+    }
+    const data = await this.json("getDomain", { pathParams: { host } });
+    return data as DomainCoverageResponse;
   }
 
   /**

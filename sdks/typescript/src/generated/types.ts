@@ -138,6 +138,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/domains/{host}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a covered domain's coverage snapshot
+         * @description Coverage snapshot of every catalog serving one covered host.
+         *
+         *     ``host`` is a bare host (not a URL), lowercased with a leading ``www.`` removed.
+         *     Unbilled; snapshots are computed from Elasticsearch aggregations and
+         *     cached per catalog for about a day.
+         */
+        get: operations["getDomain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -699,6 +723,126 @@ export interface components {
             urls: string[];
         };
         /**
+         * DomainCatalogCoverage
+         * @description A catalog serving the host, with its coverage snapshot.
+         */
+        DomainCatalogCoverage: {
+            /**
+             * Catalog
+             * @description Catalog key.
+             */
+            catalog: string;
+            /**
+             * Catalogdisplayname
+             * @description Human-readable display name for the catalog.
+             */
+            catalogDisplayName: string;
+            /**
+             * Computedat
+             * @description When the snapshot was computed (UTC ISO 8601).
+             */
+            computedAt: string;
+            /**
+             * Fields
+             * @description Populated public facets, ordered by `source` then coverage.
+             */
+            fields: components["schemas"]["DomainField"][];
+            /** @description Current-price histogram; null when nothing is priced. */
+            price?: components["schemas"]["PriceDistribution"] | null;
+            /**
+             * Productcount
+             * @description Indexed product groups in the catalog.
+             */
+            productCount: number;
+        };
+        /**
+         * DomainCoverageResponse
+         * @description Coverage snapshots for every catalog serving one host.
+         *
+         *     Counts are approximate (Elasticsearch aggregations) and refreshed about
+         *     daily.
+         */
+        DomainCoverageResponse: {
+            /**
+             * Catalogs
+             * @description One snapshot per catalog serving the host, sorted by catalog.
+             */
+            catalogs: components["schemas"]["DomainCatalogCoverage"][];
+            /**
+             * Host
+             * @description The normalized host.
+             */
+            host: string;
+        };
+        /**
+         * DomainField
+         * @description A public search facet populated for at least one product.
+         */
+        DomainField: {
+            /**
+             * Coverage
+             * @description `populated / productCount`, rounded to 3 decimals.
+             */
+            coverage: number;
+            /**
+             * Displayname
+             * @description Human-readable facet name.
+             */
+            displayName: string;
+            /**
+             * Distinct
+             * @description Approximate number of distinct values.
+             */
+            distinct: number;
+            /**
+             * Name
+             * @description Public search facet name.
+             */
+            name: string;
+            /**
+             * Populated
+             * @description Products with at least one value.
+             */
+            populated: number;
+            /**
+             * Source
+             * @description `product` for merchant data, `enrichment` for Octogen classification and attributes, `brands` for brand facts.
+             * @enum {string}
+             */
+            source: "product" | "enrichment" | "brands";
+            /**
+             * Topvalues
+             * @description Up to 10 most common values, most common first.
+             */
+            topValues: components["schemas"]["DomainFieldValue"][];
+            /**
+             * Truncated
+             * @description Whether values beyond `topValues` exist.
+             */
+            truncated: boolean;
+        };
+        /**
+         * DomainFieldValue
+         * @description One of a field's most common values among the catalog's products.
+         */
+        DomainFieldValue: {
+            /**
+             * Count
+             * @description Approximate number of products with the value.
+             */
+            count: number;
+            /**
+             * Label
+             * @description Human-readable value label.
+             */
+            label: string;
+            /**
+             * Value
+             * @description Canonical search value: pass it with the field `name` as a `/v1/products/search` facet.
+             */
+            value: string;
+        };
+        /**
          * EmbeddingColumn
          * @enum {string}
          */
@@ -1169,6 +1313,62 @@ export interface components {
             quotas?: components["schemas"]["MeQuotas"] | null;
             /** @description Current rate-limit posture; `null` when the limiter is off. */
             rateLimit?: components["schemas"]["MeRateLimit"] | null;
+        };
+        /**
+         * PriceBucket
+         * @description One histogram bar: products whose current price is in ``[min, max)``.
+         */
+        PriceBucket: {
+            /**
+             * Count
+             * @description Products priced in this range.
+             */
+            count: number;
+            /**
+             * Max
+             * @description Exclusive upper edge.
+             */
+            max: number;
+            /**
+             * Min
+             * @description Inclusive lower edge.
+             */
+            min: number;
+        };
+        /**
+         * PriceDistribution
+         * @description Current-price histogram of a catalog's priced products.
+         *
+         *     Prices are in the catalog's listing currency (usually USD). Buckets span
+         *     roughly the 1st to 95th percentile so a long tail cannot flatten the
+         *     chart; products outside that span are counted in ``below``/``above``.
+         */
+        PriceDistribution: {
+            /**
+             * Above
+             * @description Priced products at or above the last bucket.
+             */
+            above: number;
+            /**
+             * Below
+             * @description Priced products below the first bucket.
+             */
+            below: number;
+            /**
+             * Buckets
+             * @description Equal-width, contiguous buckets, lowest first.
+             */
+            buckets: components["schemas"]["PriceBucket"][];
+            /**
+             * Median
+             * @description Approximate median current price.
+             */
+            median: number;
+            /**
+             * Populated
+             * @description Products with a current price above zero.
+             */
+            populated: number;
         };
         /** ProductDetailsView */
         ProductDetailsView: {
@@ -2852,6 +3052,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    getDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainCoverageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
