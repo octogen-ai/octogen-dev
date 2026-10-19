@@ -89,9 +89,13 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   is `q`, understood by default; `understand`, `facets`, `excludeFacets`, the
   price and brand-quality bounds, `relax`, and `debug` refine it (see below).
   Results come back as `items` + `nextCursor`, each item carrying `productUrl`,
-  plus `effectiveQuery` with `debug: true`.
+  plus `effectiveQuery`, the search that ran.
 - `moreLikeThisProducts(params)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys).
+  or UUID, optionally restricted to `catalogs` (1–100 keys). `facets`,
+  `excludeFacets` and the price and brand-quality bounds work as on search.
+  `relax` defaults to `true` on the server: a short page 1 is retried with
+  Platform's generated facets dropped, never yours, and reported in
+  `effectiveQuery.relaxation` with `debug: true`. `facets` replaced `includeFacets` in 0.6.0.
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. `matchMode`, `resolutionMode`, and `onDemandCachePolicy` are optional;
   the request field is `url`.

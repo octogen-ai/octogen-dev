@@ -743,6 +743,34 @@ export const PUBLIC_CONTRACT = {
         "additionalProperties": false,
         "description": "Programmatic More Like This request.",
         "properties": {
+          "brand_quality_max": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inclusive maximum brand quality score, 1 to 6.",
+            "title": "Brand Quality Max"
+          },
+          "brand_quality_min": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional).",
+            "title": "Brand Quality Min"
+          },
           "catalogs": {
             "anyOf": [
               {
@@ -805,16 +833,17 @@ export const PUBLIC_CONTRACT = {
                   "title": "Facet",
                   "type": "object"
                 },
+                "maxItems": 50,
                 "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Exclusion facets to apply to the similar-products search.",
+            "description": "Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
             "title": "Exclude Facets"
           },
-          "include_facets": {
+          "facets": {
             "anyOf": [
               {
                 "items": {
@@ -841,14 +870,15 @@ export const PUBLIC_CONTRACT = {
                   "title": "Facet",
                   "type": "object"
                 },
+                "maxItems": 50,
                 "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.",
-            "title": "Include Facets"
+            "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces every generated facet of the same name (a `color` or `color_family` facet replaces generated facets on both colour axes); values are never unioned, and the other generated facets stay. Never relaxed. Each name at most once. Replaces `include_facets`, which is rejected.",
+            "title": "Facets"
           },
           "limit": {
             "default": 12,
@@ -869,8 +899,34 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+            "description": "Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name `facets` entry replaces it instead). Unknown names are ignored; caller `facets` and `exclude_facets` are never affected.",
             "title": "Omit Generated Facets"
+          },
+          "price_max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inclusive maximum price. Combined with the `price_preference` bound by keeping the lower one.",
+            "title": "Price Max"
+          },
+          "price_min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Inclusive minimum price. Combined with the `price_preference` bound by keeping the higher one.",
+            "title": "Price Min"
           },
           "price_preference": {
             "default": "any",
@@ -905,6 +961,12 @@ export const PUBLIC_CONTRACT = {
             ],
             "description": "Embedding columns used to rescore and rank retrieved candidates. When omitted, ranking uses the base embedding.",
             "title": "Ranking Embedding Columns"
+          },
+          "relax": {
+            "default": true,
+            "description": "Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.",
+            "title": "Relax",
+            "type": "boolean"
           },
           "retrieval_embedding_columns": {
             "anyOf": [
@@ -1423,6 +1485,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "93a286ab1147233730b185e284ca349254fb50954e380ebab2fde2534d5d2b67",
+  "sha256": "17d92f18650312f99d82aafb4bead509405160e6843bad8b560402fb07037a84",
   "version": "1.0.0"
 } as const;

@@ -101,7 +101,11 @@ if that stops being true — see
   Results come back as `items` + `next_cursor`, each item carrying
   `product_url`, plus `effective_query` with `debug=True`.
 - `more_like_this_products(...)` finds products similar to a source product URL
-  or UUID, optionally restricted to `catalogs` (1–100 keys).
+  or UUID, optionally restricted to `catalogs` (1–100 keys). `facets`,
+  `exclude_facets` and the price and brand-quality bounds work as on search.
+  `relax` defaults to `True` on the server: a short page 1 is retried with
+  Platform's generated facets dropped, never yours, and reported in
+  `effective_query.relaxation` with `debug=True`. `facets` replaced `include_facets` in 0.8.0.
 - `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
   resolves a product URL from the index or on demand. `resolution_mode` and
   `on_demand_cache_policy` default to `auto` and `prefer_cache`; omitting

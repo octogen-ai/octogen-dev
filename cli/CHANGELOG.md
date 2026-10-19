@@ -7,6 +7,13 @@
 - Preserve numeric, string, array, and nested-path validation errors through
   nullable schemas. Genuine unions report all type-compatible alternatives.
 - **Breaking:** remove customer Voyage commands; Voyage is admin-only.
+- `similar --facet` sends `facets` instead of `include_facets`, which the API
+  now refuses with a `422`. 0.3.0 and older break on `similar --facet` once
+  that API change deploys, so upgrade first.
+- `similar` sends `relax`, `true` by default as the contract says: a short
+  first page is retried with the server's own generated facets dropped, never
+  your `--facet` or price bounds. `--no-relax` turns it off.
+- `similar` takes `--price-min` and `--price-max`, as `search` does.
 - Pin SDK 0.6.0. Publish that SDK before releasing this CLI.
 
 ## 0.3.0 — 2026-10-16 (`next`)

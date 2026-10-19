@@ -2,6 +2,31 @@
 
 ## 0.6.0 (unreleased)
 
+More-like-this takes the same caller controls as search, and this release
+catches the SDK up with the `/v1` additions the Python SDK already ships.
+**Breaking:** `includeFacets` is gone. The API now refuses `include_facets`
+with a `422` that names `facets`, so 0.5.0 breaks on any call that passes it.
+Upgrade before that API change deploys.
+
+- `moreLikeThisProducts` takes `facets` (sent as `facets`) in place of
+  `includeFacets`. A facet you send replaces the generated facet of the same
+  name and is never relaxed. Passing `includeFacets` from JavaScript throws
+  `TypeError` instead of sending a request the API refuses.
+- `moreLikeThisProducts` takes `relax`. It is omitted unless set, and the
+  server defaults it to `true`: a short page 1 is retried with Platform's own
+  generated facets dropped, never the facets or bounds you sent. For a `url`
+  or `uuid` source, page 1 is short when it has fewer than `min(5, limit)`
+  results and no `nextCursor`. An image source relaxes only an empty page.
+  Search keeps its default of `false`. The rule is the same on both routes:
+  what you send is never dropped, but the server may drop its own inferences.
+- `moreLikeThisProducts` takes `priceMin`/`priceMax` and
+  `brandQualityMin`/`brandQualityMax`, with search's semantics. A minimum
+  above its maximum, an out-of-range bound, or a facet name sent twice in
+  `facets` or `excludeFacets` throws `TypeError` before any request.
+- `MoreLikeThisEffectiveQuery` (returned with `debug: true`) reports
+  `relaxation` in search's shape
+  (`rounds`, `declinedRounds`, `droppedFacets`) and the applied
+  `brandQualityMin`/`brandQualityMax`.
 - Add `listTaxonomyCategories`, `listTaxonomyAttributes` and
   `listTaxonomyAttributeValues` for `GET /v1/taxonomy/...`, and
   `countProductFacets` for `POST /v1/products/facet-counts`, which counts by

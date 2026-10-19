@@ -1556,6 +1556,10 @@ export interface components {
         };
         /** ProgrammaticMoreLikeThisEffectiveQuery */
         ProgrammaticMoreLikeThisEffectiveQuery: {
+            /** Brandqualitymax */
+            brandQualityMax?: number | null;
+            /** Brandqualitymin */
+            brandQualityMin?: number | null;
             /** Catalogs */
             catalogs?: string[] | null;
             /** Degradedtotextfallback */
@@ -1581,12 +1585,7 @@ export interface components {
             rankingEmbeddingColumns?: string[] | null;
             /** Reconciledfacets */
             reconciledFacets?: string[] | null;
-            /** Relaxationdeclinedrounds */
-            relaxationDeclinedRounds?: number | null;
-            /** Relaxationdroppedfacets */
-            relaxationDroppedFacets?: components["schemas"]["ProgrammaticMoreLikeThisEffectiveFacet"][] | null;
-            /** Relaxationrounds */
-            relaxationRounds?: number | null;
+            relaxation?: components["schemas"]["ProgrammaticProductSearchRelaxation"] | null;
             /** Retrievalembeddingcolumns */
             retrievalEmbeddingColumns?: string[] | null;
             /** Text */
@@ -1627,6 +1626,16 @@ export interface components {
          */
         ProgrammaticMoreLikeThisRequest: {
             /**
+             * Brand Quality Max
+             * @description Inclusive maximum brand quality score, 1 to 6.
+             */
+            brand_quality_max?: number | null;
+            /**
+             * Brand Quality Min
+             * @description Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional).
+             */
+            brand_quality_min?: number | null;
+            /**
              * Catalogs
              * @description Optional catalog allowlist for the similar-products retrieval (breaking replacement for the former single-valued `catalog`). Restricts RESULTS to these catalogs only; source resolution is deliberately unrestricted so the source product may live outside the allowlist. Keys are not validated against the caller's grants — a key outside the caller's resolved scope simply matches nothing. When omitted, retrieval spans every catalog the caller's scope permits.
              */
@@ -1644,14 +1653,14 @@ export interface components {
             debug: boolean;
             /**
              * Exclude Facets
-             * @description Exclusion facets to apply to the similar-products search.
+             * @description Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.
              */
             exclude_facets?: components["schemas"]["Facet"][] | null;
             /**
-             * Include Facets
-             * @description Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.
+             * Facets
+             * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces every generated facet of the same name (a `color` or `color_family` facet replaces generated facets on both colour axes); values are never unioned, and the other generated facets stay. Never relaxed. Each name at most once. Replaces `include_facets`, which is rejected.
              */
-            include_facets?: components["schemas"]["Facet"][] | null;
+            facets?: components["schemas"]["Facet"][] | null;
             /**
              * Limit
              * @default 12
@@ -1659,9 +1668,19 @@ export interface components {
             limit: number;
             /**
              * Omit Generated Facets
-             * @description Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.
+             * @description Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name `facets` entry replaces it instead). Unknown names are ignored; caller `facets` and `exclude_facets` are never affected.
              */
             omit_generated_facets?: string[] | null;
+            /**
+             * Price Max
+             * @description Inclusive maximum price. Combined with the `price_preference` bound by keeping the lower one.
+             */
+            price_max?: number | null;
+            /**
+             * Price Min
+             * @description Inclusive minimum price. Combined with the `price_preference` bound by keeping the higher one.
+             */
+            price_min?: number | null;
             /**
              * Price Preference
              * @description Relative price preference compared with the source product.
@@ -1674,6 +1693,12 @@ export interface components {
              * @description Embedding columns used to rescore and rank retrieved candidates. When omitted, ranking uses the base embedding.
              */
             ranking_embedding_columns?: components["schemas"]["EmbeddingColumn"][] | null;
+            /**
+             * Relax
+             * @description Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.
+             * @default true
+             */
+            relax: boolean;
             /**
              * Retrieval Embedding Columns
              * @description Embedding columns used to retrieve candidate products. Overrides the server-selected default (style/tags embeddings when the source product has styles or tags, otherwise the base embedding).

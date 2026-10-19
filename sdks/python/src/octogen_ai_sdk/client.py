@@ -111,7 +111,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.7.0"
+        return "0.8.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -657,9 +657,14 @@ class OctogenClient:
         source_url: str | None = None,
         source_uuid: str | None = None,
         catalogs: Sequence[str] | None = None,
-        include_facets: Sequence[FacetInput] | None = None,
+        facets: Sequence[FacetInput] | None = None,
         exclude_facets: Sequence[FacetInput] | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
+        brand_quality_min: float | None = None,
+        brand_quality_max: float | None = None,
         price_preference: PricePreference | str | None = None,
+        relax: bool | None = None,
         cursor: str | None = None,
         limit: int | None = None,
         debug: bool | None = None,
@@ -673,6 +678,19 @@ class OctogenClient:
         ``price_preference`` defaults to ``any``, ``limit`` to 12, and
         ``debug`` to ``False``.
 
+        ``facets``, ``exclude_facets`` and the price and brand-quality bounds
+        work as on :meth:`search_products`. A facet you send replaces the
+        generated facet of the same name. ``facets`` replaces the removed
+        ``include_facets``.
+
+        ``relax`` is omitted unless set, and the server defaults it to
+        ``True``: a short page 1 is retried with Platform's generated facets
+        dropped, never the facets or bounds you sent. For a URL or UUID source,
+        "short" means fewer than ``min(5, limit)`` results and no
+        ``next_cursor``; an image source relaxes only an empty page. With
+        ``debug=True``, what ran is reported in ``effective_query.relaxation``.
+        A relaxed page's cursor is refused with ``relax=False``.
+
         Pass ``request`` instead of the keywords to send a prebuilt
         :class:`ProgrammaticMoreLikeThisRequest` (or a subclass) as is.
         """
@@ -682,9 +700,14 @@ class OctogenClient:
                 source_url=source_url,
                 source_uuid=source_uuid,
                 catalogs=catalogs,
-                include_facets=include_facets,
+                facets=facets,
                 exclude_facets=exclude_facets,
+                price_min=price_min,
+                price_max=price_max,
+                brand_quality_min=brand_quality_min,
+                brand_quality_max=brand_quality_max,
                 price_preference=price_preference,
+                relax=relax,
                 cursor=cursor,
                 limit=limit,
                 debug=debug,
@@ -701,13 +724,18 @@ class OctogenClient:
                 catalogs=_catalog_list(catalogs),
                 cursor=cursor,
                 limit=12 if limit is None else limit,
-                include_facets=_facet_list(include_facets),
+                facets=_facet_list(facets),
                 exclude_facets=_facet_list(exclude_facets),
+                price_min=price_min,
+                price_max=price_max,
+                brand_quality_min=brand_quality_min,
+                brand_quality_max=brand_quality_max,
                 price_preference=PricePreference(
                     PricePreference.ANY
                     if price_preference is None
                     else price_preference
                 ),
+                relax=relax,
                 debug=bool(debug),
             )
         data = await self._json(

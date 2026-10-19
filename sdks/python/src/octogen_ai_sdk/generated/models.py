@@ -1447,6 +1447,12 @@ class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
+    brand_quality_max: float | None = Field(
+        None, alias="brandQualityMax", title="Brandqualitymax"
+    )
+    brand_quality_min: float | None = Field(
+        None, alias="brandQualityMin", title="Brandqualitymin"
+    )
     catalogs: list[str] | None = Field(None, title="Catalogs")
     degraded_to_text_fallback: bool | None = Field(
         None, alias="degradedToTextFallback", title="Degradedtotextfallback"
@@ -1475,15 +1481,7 @@ class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
     reconciled_facets: list[str] | None = Field(
         None, alias="reconciledFacets", title="Reconciledfacets"
     )
-    relaxation_declined_rounds: int | None = Field(
-        None, alias="relaxationDeclinedRounds", title="Relaxationdeclinedrounds"
-    )
-    relaxation_dropped_facets: list[ProgrammaticMoreLikeThisEffectiveFacet] | None = (
-        Field(None, alias="relaxationDroppedFacets", title="Relaxationdroppedfacets")
-    )
-    relaxation_rounds: int | None = Field(
-        None, alias="relaxationRounds", title="Relaxationrounds"
-    )
+    relaxation: ProgrammaticProductSearchRelaxation | None = None
     retrieval_embedding_columns: list[str] | None = Field(
         None, alias="retrievalEmbeddingColumns", title="Retrievalembeddingcolumns"
     )
@@ -1494,6 +1492,16 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None,
+        description="Inclusive maximum brand quality score, 1 to 6.",
+        title="Brand Quality Max",
+    )
+    brand_quality_min: float | None = Field(
+        None,
+        description="Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional).",
+        title="Brand Quality Min",
     )
     catalogs: list[str] | None = Field(
         None,
@@ -1510,19 +1518,29 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     )
     exclude_facets: list[Facet] | None = Field(
         None,
-        description="Exclusion facets to apply to the similar-products search.",
+        description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
         title="Exclude Facets",
     )
-    include_facets: list[Facet] | None = Field(
+    facets: list[Facet] | None = Field(
         None,
-        description="Caller include facets, merged with the server-generated ones by name: a caller facet replaces every generated facet of the same name (a caller `color` or `color_family` replaces generated facets on both colour axes), values are never unioned, and the other generated facets stay. Caller facets never relax.",
-        title="Include Facets",
+        description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces every generated facet of the same name (a `color` or `color_family` facet replaces generated facets on both colour axes); values are never unioned, and the other generated facets stay. Never relaxed. Each name at most once. Replaces `include_facets`, which is rejected.",
+        title="Facets",
     )
     limit: int | None = Field(12, title="Limit")
     omit_generated_facets: list[str] | None = Field(
         None,
-        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name include_facets entry replaces it instead). Unknown names are ignored; caller include_facets and exclude_facets are never affected.",
+        description="Names of SERVER-GENERATED facets to omit before search and relaxation — the correction knob for a generated filter the caller can see is wrong in effectiveQuery and has no value of their own to put in its place (a same-name `facets` entry replaces it instead). Unknown names are ignored; caller `facets` and `exclude_facets` are never affected.",
         title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(
+        None,
+        description="Inclusive maximum price. Combined with the `price_preference` bound by keeping the lower one.",
+        title="Price Max",
+    )
+    price_min: float | None = Field(
+        None,
+        description="Inclusive minimum price. Combined with the `price_preference` bound by keeping the higher one.",
+        title="Price Min",
     )
     price_preference: Literal["lower", "any", "higher"] | None = Field(
         "any",
@@ -1540,6 +1558,11 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
         None,
         description="Embedding columns used to rescore and rank retrieved candidates. When omitted, ranking uses the base embedding.",
         title="Ranking Embedding Columns",
+    )
+    relax: bool | None = Field(
+        True,
+        description="Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`.",
+        title="Relax",
     )
     retrieval_embedding_columns: (
         list[

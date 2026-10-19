@@ -1072,10 +1072,21 @@ function toMoreLikeThisPayload(
     assertCatalogs(params.catalogs, 100);
   }
 
+  // `facets` replaced `include_facets`, which the API now refuses with a 422.
+  if ("includeFacets" in params || "include_facets" in params) {
+    throw new TypeError(
+      "moreLikeThisProducts takes facets, not includeFacets; the API no longer accepts include_facets",
+    );
+  }
+
   const limit = params.limit ?? 12;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("limit must be an integer between 1 and 100");
   }
+  assertFacetList(params.facets, "facets");
+  assertFacetList(params.excludeFacets, "excludeFacets");
+  assertBounds(params.priceMin, params.priceMax, "price", 0, undefined);
+  assertBounds(params.brandQualityMin, params.brandQualityMax, "brandQuality", 1, 6);
 
   const payload: ProgrammaticMoreLikeThisRequest = {
     debug: params.debug ?? false,
@@ -1090,11 +1101,26 @@ function toMoreLikeThisPayload(
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;
   }
-  if (params.includeFacets !== undefined) {
-    payload.include_facets = params.includeFacets;
+  if (params.facets !== undefined) {
+    payload.facets = params.facets;
   }
   if (params.excludeFacets !== undefined) {
     payload.exclude_facets = params.excludeFacets;
+  }
+  if (params.priceMin !== undefined) {
+    payload.price_min = params.priceMin;
+  }
+  if (params.priceMax !== undefined) {
+    payload.price_max = params.priceMax;
+  }
+  if (params.brandQualityMin !== undefined) {
+    payload.brand_quality_min = params.brandQualityMin;
+  }
+  if (params.brandQualityMax !== undefined) {
+    payload.brand_quality_max = params.brandQualityMax;
+  }
+  if (params.relax !== undefined) {
+    payload.relax = params.relax;
   }
 
   return payload;

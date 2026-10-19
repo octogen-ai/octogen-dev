@@ -273,9 +273,32 @@ export interface MoreLikeThisProductsParams {
   catalogs?: readonly string[];
   cursor?: string;
   limit?: number;
-  includeFacets?: Facet[];
+  /**
+   * Filters a product must match, as on search. A facet you send replaces the
+   * generated facet of the same name and is never relaxed. Sent as `facets`;
+   * replaces the removed `includeFacets`, which the API refuses.
+   */
+  facets?: Facet[];
+  /** Filters a product must not match, as on search. */
   excludeFacets?: Facet[];
+  /** Inclusive price bounds, as on search. Never relaxed. */
+  priceMin?: number;
+  priceMax?: number;
+  /** Inclusive brand-quality bounds, 1 (very poor) to 6 (exceptional). */
+  brandQualityMin?: number;
+  brandQualityMax?: number;
   pricePreference?: PricePreference;
+  /**
+   * Retry a short page 1 with Platform's generated facets dropped, never the
+   * facets or bounds you sent. Omitted unless set; the server defaults it to
+   * `true` (search defaults to `false`, because there the generated facets
+   * come from your `q`). For a `url` or `uuid` source, page 1 is short when it
+   * has fewer than `min(5, limit)` results and no `nextCursor`; an image
+   * source relaxes only an empty page. With `debug: true`, reported in
+   * `effectiveQuery.relaxation`. A relaxed page's cursor is refused with
+   * `relax: false`.
+   */
+  relax?: boolean;
   debug?: boolean;
 }
 
@@ -284,9 +307,14 @@ export interface ProgrammaticMoreLikeThisRequest {
   catalogs?: string[];
   cursor?: string;
   limit: number;
-  include_facets?: Facet[];
+  facets?: Facet[];
   exclude_facets?: Facet[];
+  price_min?: number;
+  price_max?: number;
+  brand_quality_min?: number;
+  brand_quality_max?: number;
   price_preference: PricePreference;
+  relax?: boolean;
   debug: boolean;
 }
 
@@ -310,6 +338,10 @@ export interface MoreLikeThisEffectiveQuery {
   exclusionFacets?: MoreLikeThisEffectiveFacet[] | null;
   priceMin?: number | null;
   priceMax?: number | null;
+  brandQualityMin?: number | null;
+  brandQualityMax?: number | null;
+  /** What relaxation did, in search's shape (`rounds` is 0 when page 1 needed none). Absent with `relax: false`. */
+  relaxation?: ProgrammaticProductSearchRelaxation | null;
   limit: number;
 }
 
