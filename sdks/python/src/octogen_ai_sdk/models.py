@@ -606,11 +606,16 @@ class MerchantProductView(MerchantProductListItem):
     enrichment: ProductEnrichment | None = None
 
 
+# Response enums are open — `Literal[...] | str` — so a value the server adds
+# after this SDK was released parses instead of failing the whole response.
 class ProductResolutionMetadata(_ResponseModel):
-    completeness: Literal["complete", "partial"]
-    method: Literal[
-        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
-    ]
+    completeness: Literal["complete", "partial"] | str
+    method: (
+        Literal[
+            "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+        ]
+        | str
+    )
     rendered: bool | None = None
     missing_fields: list[str] | None = Field(
         default_factory=list, alias="missingFields"
@@ -619,7 +624,7 @@ class ProductResolutionMetadata(_ResponseModel):
 
 class MerchantProductUrlLookupResponse(_ResponseModel):
     request_id: str | None = Field(default=None, alias="requestId")
-    source: Literal["indexed", "on_demand", "client_html"]
+    source: Literal["indexed", "on_demand", "client_html"] | str
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
@@ -629,11 +634,35 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     normalized_url: str | None = Field(default=None, alias="normalizedUrl")
     canonical_url: str | None = Field(default=None, alias="canonicalUrl")
     resolution: ProductResolutionMetadata | None = None
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         default=None,
         alias="cacheStatus",
     )
+    #: Which index probe resolved the URL (``exact``, ``loose``,
+    #: ``learned_alias:<rule_id>``, …). Informational; values may be extended.
+    #: ``None`` for on-demand results.
+    matched_via: str | None = Field(default=None, alias="matchedVia")
     warnings: list[str] | None = Field(default_factory=list)
+
+
+class ProductMarkdownLookupResult(_ResponseModel):
+    """A product rendered as Markdown, with the identity headers that name it.
+
+    Returned by :meth:`OctogenClient.lookup_product_markdown`. Each header
+    field is ``None`` when the response omits it.
+    """
+
+    markdown: str
+    #: ``x-request-id``
+    request_id: str | None = None
+    #: ``x-octogen-product-uuid``
+    product_uuid: str | None = None
+    #: ``x-octogen-catalog``: the catalog key the product came from.
+    catalog: str | None = None
+    #: ``x-octogen-matched-via``: as ``MerchantProductUrlLookupResponse.matched_via``.
+    matched_via: str | None = None
+    #: ``x-octogen-normalized-url``
+    normalized_url: str | None = None
 
 
 class ValidationErrorModel(_ResponseModel):
@@ -680,7 +709,7 @@ class CoverageUrlList(_ResponseModel):
 
     url_list_id: str = Field(alias="urlListId")
     name: str
-    status: Literal["provisioning", "active", "delete_pending"]
+    status: Literal["provisioning", "active", "delete_pending"] | str
     url_count: int = Field(alias="urlCount")
     big_query: CoverageUrlListBigQuery | None = Field(default=None, alias="bigQuery")
     created_at: datetime = Field(alias="createdAt")

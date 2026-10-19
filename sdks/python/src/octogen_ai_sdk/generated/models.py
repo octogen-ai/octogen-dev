@@ -15,6 +15,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 class AttributeValue(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     handle: str = Field(..., title="Handle")
@@ -23,6 +24,7 @@ class AttributeValue(BaseModel):
 
 class AudienceView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     age_groups: list[str] | None = Field([], alias="ageGroups", title="Agegroups")
@@ -31,6 +33,7 @@ class AudienceView(BaseModel):
 
 class BrandView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     description: str | None = Field(None, title="Description")
@@ -41,6 +44,7 @@ class BrandView(BaseModel):
 
 class BreadcrumbView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -49,6 +53,7 @@ class BreadcrumbView(BaseModel):
 
 class CanonicalBrandEnrichment(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_accessibility_index: str | None = Field(
@@ -97,6 +102,7 @@ class CanonicalBrandEnrichment(BaseModel):
 
 class CategoryView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -105,6 +111,7 @@ class CategoryView(BaseModel):
 
 class ColorView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     hex_code: str | None = Field(None, alias="hexCode", title="Hexcode")
@@ -114,6 +121,7 @@ class ColorView(BaseModel):
 
 class CoverageAcceptedUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     normalized_url: str = Field(..., alias="normalizedUrl", title="Normalizedurl")
@@ -122,6 +130,7 @@ class CoverageAcceptedUrl(BaseModel):
 
 class CoverageContainsResult(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     added_at: AwareDatetime | None = Field(..., alias="addedAt", title="Addedat")
@@ -132,15 +141,17 @@ class CoverageContainsResult(BaseModel):
 
 class CoverageRejectedUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    code: Literal["invalid_url"] = Field(..., title="Code")
+    code: str = Field(..., title="Code")
     message: str = Field(..., title="Message")
     url: str = Field(..., title="Url")
 
 
 class CoverageUrlListBigQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     exchange_id: str = Field(..., alias="exchangeId", title="Exchangeid")
@@ -170,6 +181,7 @@ class CoverageUrlListCreateRequest(BaseModel):
 
 class CoverageUrlListUrl(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     added_at: AwareDatetime = Field(..., alias="addedAt", title="Addedat")
@@ -179,6 +191,7 @@ class CoverageUrlListUrl(BaseModel):
 
 class CoverageUrlListUrlsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     items: list[CoverageUrlListUrl] = Field(..., title="Items")
@@ -187,6 +200,7 @@ class CoverageUrlListUrlsResponse(BaseModel):
 
 class CoverageUrlMutationResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     accepted: list[CoverageAcceptedUrl] = Field(..., title="Accepted")
@@ -209,6 +223,7 @@ class CoverageUrlsRequest(BaseModel):
 
 class DomainEntry(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalog: str = Field(
@@ -245,6 +260,7 @@ class Facet(BaseModel):
 
 class IdentifiersView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     gtin: str | None = Field(None, title="Gtin")
@@ -256,6 +272,7 @@ class IdentifiersView(BaseModel):
 
 class ListDomainsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     domains: list[DomainEntry] = Field(
@@ -267,6 +284,7 @@ class ListDomainsResponse(BaseModel):
 
 class MeKey(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     id: str = Field(
@@ -286,6 +304,7 @@ class MeKey(BaseModel):
 
 class MeOrganization(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     id: str = Field(..., description="Octogen organization id (a UUID).", title="Id")
@@ -293,7 +312,7 @@ class MeOrganization(BaseModel):
         ..., description="Human-readable organization name.", title="Name"
     )
     slug: str = Field(..., description="URL-safe organization slug.", title="Slug")
-    type: Literal["merchant", "catalog_partner"] = Field(
+    type: Literal["merchant", "catalog_partner"] | str = Field(
         ...,
         description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.",
         title="Type",
@@ -303,12 +322,14 @@ class MeOrganization(BaseModel):
 class MeQuotas(BaseModel):
     pass
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
 
 
 class MeRateLimit(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     limit: int = Field(
@@ -327,6 +348,7 @@ class MeRateLimit(BaseModel):
 
 class MeResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     key: MeKey | None = Field(
@@ -335,7 +357,7 @@ class MeResponse(BaseModel):
     organization: MeOrganization | None = Field(
         None, description="The credential's organization; `null` for a super admin."
     )
-    principal: Literal["api_key", "super_admin"] = Field(
+    principal: Literal["api_key", "super_admin"] | str = Field(
         ...,
         description="Which credential kind authenticated this request.",
         title="Principal",
@@ -353,6 +375,7 @@ class MeResponse(BaseModel):
 
 class MerchantProductImageMetadataView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     cdn_url: str | None = Field(
@@ -388,6 +411,7 @@ class MerchantProductImageMetadataView(BaseModel):
 
 class MerchantVariantView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     color: ColorView | None = None
@@ -400,6 +424,7 @@ class MerchantVariantView(BaseModel):
 
 class ProductDetailsView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     dimensions: str | None = Field(None, title="Dimensions")
@@ -410,12 +435,18 @@ class ProductDetailsView(BaseModel):
 
 class ProductResolutionMetadata(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    completeness: Literal["complete", "partial"] = Field(..., title="Completeness")
-    method: Literal[
-        "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
-    ] = Field(..., title="Method")
+    completeness: Literal["complete", "partial"] | str = Field(
+        ..., title="Completeness"
+    )
+    method: (
+        Literal[
+            "json_ld", "open_graph", "html_meta", "resolved_url", "catalog_extractor"
+        ]
+        | str
+    ) = Field(..., title="Method")
     missing_fields: list[str] | None = Field(
         None, alias="missingFields", title="Missingfields"
     )
@@ -424,6 +455,7 @@ class ProductResolutionMetadata(BaseModel):
 
 class ProgrammaticMoreLikeThisEffectiveFacet(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
@@ -450,6 +482,7 @@ class ProgrammaticMoreLikeThisImageSource(BaseModel):
 
 class ProgrammaticMoreLikeThisMatchedProduct(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalog_key: str | None = Field(None, alias="catalogKey", title="Catalogkey")
@@ -479,6 +512,7 @@ class ProgrammaticMoreLikeThisSource(BaseModel):
 
 class ProgrammaticMoreLikeThisSourceImageResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     hash: str = Field(
@@ -488,6 +522,7 @@ class ProgrammaticMoreLikeThisSourceImageResponse(BaseModel):
 
 class ProgrammaticMoreLikeThisSourceResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalog_key: str = Field(..., alias="catalogKey", title="Catalogkey")
@@ -533,10 +568,11 @@ class ProgrammaticProductLookupRequest(BaseModel):
 
 class ProgrammaticProductSearchEffectiveFacet(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
-    source: Literal["caller", "generated"] | None = Field(
+    source: Literal["caller", "generated"] | str | None = Field(
         None,
         description="`caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.",
         title="Source",
@@ -546,6 +582,7 @@ class ProgrammaticProductSearchEffectiveFacet(BaseModel):
 
 class ProgrammaticProductSearchRelaxation(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     declined_rounds: int | None = Field(
@@ -676,6 +713,7 @@ class ProgrammaticResolveFromHtmlRequest(BaseModel):
 
 class PromotionView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     code: str | None = Field(None, title="Code")
@@ -685,6 +723,7 @@ class PromotionView(BaseModel):
 
 class RatingView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     average: float | None = Field(None, title="Average")
@@ -693,6 +732,7 @@ class RatingView(BaseModel):
 
 class ReviewView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     author: str | None = Field(None, title="Author")
@@ -705,6 +745,7 @@ class ReviewView(BaseModel):
 
 class ValidationError(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     ctx: dict[str, Any] | None = Field(None, title="Context")
@@ -716,6 +757,7 @@ class ValidationError(BaseModel):
 
 class VideoView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     name: str | None = Field(None, title="Name")
@@ -725,6 +767,7 @@ class VideoView(BaseModel):
 
 class Attribute(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     handle: str = Field(..., title="Handle")
@@ -734,6 +777,7 @@ class Attribute(BaseModel):
 
 class CanonicalBrand(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_enrichment: CanonicalBrandEnrichment | None = Field(
@@ -751,6 +795,7 @@ class CanonicalBrand(BaseModel):
 
 class CoverageContainsResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     results: list[CoverageContainsResult] = Field(..., title="Results")
@@ -758,12 +803,13 @@ class CoverageContainsResponse(BaseModel):
 
 class CoverageUrlList(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     big_query: CoverageUrlListBigQuery | None = Field(..., alias="bigQuery")
     created_at: AwareDatetime = Field(..., alias="createdAt", title="Createdat")
     name: str = Field(..., title="Name")
-    status: Literal["provisioning", "active", "delete_pending"] = Field(
+    status: Literal["provisioning", "active", "delete_pending"] | str = Field(
         ..., title="Status"
     )
     updated_at: AwareDatetime = Field(..., alias="updatedAt", title="Updatedat")
@@ -773,6 +819,7 @@ class CoverageUrlList(BaseModel):
 
 class CoverageUrlListListResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     items: list[CoverageUrlList] = Field(..., title="Items")
@@ -781,6 +828,7 @@ class CoverageUrlListListResponse(BaseModel):
 
 class HTTPValidationError(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     detail: list[ValidationError] | None = Field(None, title="Detail")
@@ -788,6 +836,7 @@ class HTTPValidationError(BaseModel):
 
 class MerchantProductListItem(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand: BrandView | None = None
@@ -828,7 +877,7 @@ class MerchantProductListItem(BaseModel):
         description="User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.",
         title="Displaymatchscore",
     )
-    gender: Literal["male", "female", "unisex"] | None = Field(
+    gender: Literal["male", "female", "unisex"] | str | None = Field(
         None, description="Target gender; null when unknown or when several are listed."
     )
     image_url: str | None = Field(
@@ -871,10 +920,11 @@ class MerchantProductListItem(BaseModel):
 
 class ProductEnrichment(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    age_groups: list[Literal["infant", "toddler", "kids", "adult"]] | None = Field(
-        ..., description="Target age groups for the product.", title="Age Groups"
+    age_groups: list[Literal["infant", "toddler", "kids", "adult"] | str] | None = (
+        Field(..., description="Target age groups for the product.", title="Age Groups")
     )
     attribute_handles: dict[str, list[str]] | None = Field(
         None,
@@ -1058,6 +1108,7 @@ class ProductEnrichment(BaseModel):
                 "yellow",
                 "yellowgreen",
             ]
+            | str
         ]
         | None
     ) = Field(
@@ -1081,6 +1132,7 @@ class ProductEnrichment(BaseModel):
                 "Black",
                 "Multicolor",
             ]
+            | str
         ]
         | None
     ) = Field(
@@ -1098,7 +1150,7 @@ class ProductEnrichment(BaseModel):
         description="Fully qualified taxonomy path for the resolved category.",
         title="Fully Qualified Name",
     )
-    gender: Literal["male", "female", "unisex"] | None = Field(
+    gender: Literal["male", "female", "unisex"] | str | None = Field(
         ..., description="The target gender of the product."
     )
     image_with_single_product: bool | None = Field(
@@ -1136,6 +1188,7 @@ class ProductEnrichment(BaseModel):
 
 class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     catalogs: list[str] | None = Field(None, title="Catalogs")
@@ -1249,6 +1302,7 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
 
 class ProgrammaticMoreLikeThisResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
@@ -1275,6 +1329,7 @@ class ProgrammaticMoreLikeThisResponse(BaseModel):
 
 class ProgrammaticProductSearchEffectiveQuery(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     brand_quality_max: float | None = Field(
@@ -1312,6 +1367,7 @@ class ProgrammaticProductSearchEffectiveQuery(BaseModel):
 
 class ProgrammaticProductSearchPage(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
@@ -1336,6 +1392,7 @@ class ProgrammaticProductSearchPage(BaseModel):
 
 class MerchantProductView(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
     audience: AudienceView | None = None
@@ -1405,9 +1462,10 @@ class MerchantProductView(BaseModel):
 
 class ProgrammaticProductLookupResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         None, alias="cacheStatus", title="Cachestatus"
     )
     canonical_url: str | None = Field(
@@ -1452,7 +1510,9 @@ class ProgrammaticProductLookupResponse(BaseModel):
         description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
         title="Resolvedurl",
     )
-    source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
+    source: Literal["indexed", "on_demand", "client_html"] | str = Field(
+        ..., title="Source"
+    )
     source_base_url: str | None = Field(
         None, alias="sourceBaseUrl", title="Sourcebaseurl"
     )
@@ -1465,9 +1525,10 @@ class ProgrammaticProductLookupResponse(BaseModel):
 
 class MerchantProductUrlLookupResponse(BaseModel):
     model_config = ConfigDict(
+        extra="allow",
         populate_by_name=True,
     )
-    cache_status: Literal["hit", "miss", "refresh"] | None = Field(
+    cache_status: Literal["hit", "miss", "refresh"] | str | None = Field(
         None, alias="cacheStatus", title="Cachestatus"
     )
     canonical_url: str | None = Field(
@@ -1507,7 +1568,9 @@ class MerchantProductUrlLookupResponse(BaseModel):
         description="Final fetched URL for shallow resolution; crawler-accepted URL for catalog extraction. Populated for on-demand results only.",
         title="Resolvedurl",
     )
-    source: Literal["indexed", "on_demand", "client_html"] = Field(..., title="Source")
+    source: Literal["indexed", "on_demand", "client_html"] | str = Field(
+        ..., title="Source"
+    )
     source_base_url: str | None = Field(
         None, alias="sourceBaseUrl", title="Sourcebaseurl"
     )

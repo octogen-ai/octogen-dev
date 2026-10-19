@@ -1,6 +1,6 @@
 # Changelog — `octogen-ai-sdk`
 
-## 0.6.0 (unreleased)
+## 0.6.0 — 2026-10-18
 
 - **Breaking:** remove customer Voyage methods and types. Voyage is admin-only;
   customer applications must stop calling these retired endpoints.
@@ -50,6 +50,25 @@
 - Every `OctogenAPIError` carries `request_id` (from `x-request-id`) and
   `retry_after` (whole seconds from `Retry-After`, delta-seconds or HTTP-date;
   `None` when absent), so callers need not read `.response`.
+- Response models are forward compatible. Enums are open (`Literal[...] | str`),
+  so a value the server adds later parses instead of failing the response:
+  `MerchantProductUrlLookupResponse.source` and `cache_status`,
+  `ProductResolutionMetadata.completeness` and `method`, `CoverageUrlList.status`,
+  the effective facet's `source`, and every enum in the generated response
+  mirror. The generated response models (`ProgrammaticProductSearchEffective*`,
+  `ProgrammaticProductSearchRelaxation`, `Me*`, `DomainEntry`,
+  `ListDomainsResponse`, …) keep unknown fields (`extra="allow"`), matching the
+  hand-written ones. Codegen applies both to every schema reachable only from a
+  response; request models keep closed enums and `extra="forbid"`. Code that
+  matched these fields exhaustively should add a fallback branch.
+- `lookup_product_markdown()` returns the product as Markdown
+  (`format: "markdown"`, `Accept: text/markdown`) in a
+  `ProductMarkdownLookupResult`, with the `x-request-id`,
+  `x-octogen-product-uuid`, `x-octogen-catalog`, `x-octogen-matched-via` and
+  `x-octogen-normalized-url` headers as fields. It takes the same arguments as
+  `lookup_product`, including `request=` and `timeout`.
+- `MerchantProductUrlLookupResponse.matched_via` (wire `matchedVia`): which
+  index probe resolved the URL. Informational; `None` for on-demand results.
 
 ## 0.5.0 — 2026-10-14
 
