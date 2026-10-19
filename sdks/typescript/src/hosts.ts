@@ -1,13 +1,7 @@
 /**
  * Host normalization, shared by the covered-domain helpers.
  *
- * `GET /v1/domains` returns hosts already normalized by the server —
- * lowercased, with a leading `www.` stripped — so it reports `macys.com` and
- * never `www.macys.com`. Product URLs in the wild overwhelmingly *do* carry
- * `www.`, so comparing a raw URL host against that list reports a covered
- * merchant as uncovered: a silent false negative, not an error. Every
- * comparison in this SDK therefore runs both sides through
- * {@link normalizeHost} first.
+ * Normalize both sides when comparing a URL against a caller-provided host set.
  */
 
 /**
@@ -45,18 +39,12 @@ export function normalizeHost(value: string | null | undefined): string | undefi
  * Is `urlOrHost` covered by `hosts`?
  *
  * Both sides are normalized, so this answers correctly for a `www.` URL
- * against the apex-only list the server returns.
+ * against an apex-only host list.
  *
- * `hosts` accepts either host strings or the `DomainEntry` objects
- * `GET /v1/domains` returns, because passing `response.domains` straight in is
- * the obvious first call and a helper whose entire purpose is preventing a
- * silent false negative must not answer `false` to it. Anything that is
- * neither is a `TypeError`: this function returns a boolean an agent uses to
- * decide whether to ever ask about a merchant again, so a shape it does not
+ * `hosts` accepts host strings or objects with a string `host`. Anything that
+ * is neither is a `TypeError`: this function returns a boolean an agent uses
+ * to decide whether to ever ask about a merchant again, so a shape it does not
  * understand has to be loud.
- *
- * Prefer {@link DomainCoverage} when you hold a whole snapshot — it indexes
- * the set once instead of rescanning it per call.
  */
 export function isHostCovered(
   urlOrHost: string | null | undefined,
@@ -74,7 +62,7 @@ export function isHostCovered(
   return false;
 }
 
-/** Anything carrying a `host`, which is what `GET /v1/domains` returns. */
+/** Anything carrying a `host`. */
 export interface HostLike {
   host: string;
 }
@@ -94,7 +82,7 @@ function hostOf(candidate: unknown): string {
   }
   throw new TypeError(
     "isHostCovered: every element of `hosts` must be a host string or an " +
-      "object with a string `host` (a DomainEntry). Received: " +
+      "object with a string `host`. Received: " +
       describe(candidate),
   );
 }

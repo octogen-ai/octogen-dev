@@ -36,15 +36,16 @@ it("cancels old runs, aborts host requests, suppresses stale events/files, and d
       });
     },
   });
-  const first = runtime.run("storerouter domains");
+  const first = runtime.run("storerouter search dress");
   const rejected = expect(first).rejects.toMatchObject({ name: "AbortError" });
   workers[0]?.emit({
     type: "request",
     runId: "run-1",
     id: 1,
     request: {
-      url: "https://api.storerouter.ai/v1/domains",
-      method: "GET",
+      url: "https://api.storerouter.ai/v1/products/search",
+      method: "POST",
+      body: JSON.stringify({ q: "dress" }),
       headers: {},
     },
   });

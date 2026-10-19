@@ -18,7 +18,6 @@ from typing import Any, Self, TypeVar
 import httpx
 from pydantic import BaseModel
 
-from octogen_ai_sdk.domains import DomainCoverage
 from octogen_ai_sdk.errors import (
     MissingAPIKeyError,
     OctogenAPIError,
@@ -41,11 +40,8 @@ from octogen_ai_sdk.models import (
     CoverageUrlListUrlsPage,
     CoverageUrlMutationResponse,
     CoverageUrlsRequest,
-    DomainEntry,
     Facet,
     FacetCountName,
-    ListDomainsResponse,
-    ListDomainsResult,
     MerchantProductUrlLookupResponse,
     MeResponse,
     PricePreference,
@@ -111,7 +107,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.8.0"
+        return "0.9.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -312,71 +308,6 @@ class OctogenClient:
         """
         data = await self._json("getMe", timeout=timeout)
         return MeResponse.model_validate(data)
-
-    async def list_domains(
-        self,
-        *,
-        if_none_match: str | None = None,
-        timeout: Timeout | None = None,
-    ) -> ListDomainsResult:
-        """The covered-host set, with ``ETag`` revalidation.
-
-        Prefer :meth:`fetch_domain_coverage`, which handles the ``304`` and
-        returns a matcher that normalizes hosts. Use this when you manage the
-        cache yourself.
-        """
-        headers = {"If-None-Match": if_none_match} if if_none_match else None
-        response = await self._request("listDomains", headers=headers, timeout=timeout)
-        etag = response.headers.get("etag")
-        max_age = _parse_max_age(response.headers.get("cache-control"))
-
-        if response.status_code == 304:
-            return ListDomainsResult(
-                not_modified=True,
-                domains=None,
-                etag=etag,
-                max_age_seconds=max_age,
-            )
-        page = ListDomainsResponse.model_validate(_decode_json(response))
-        return ListDomainsResult(
-            not_modified=False,
-            domains=list(page.domains),
-            etag=etag,
-            max_age_seconds=max_age,
-        )
-
-    async def fetch_domain_coverage(
-        self,
-        previous: DomainCoverage | None = None,
-        *,
-        timeout: Timeout | None = None,
-    ) -> DomainCoverage:
-        """Fetch — or revalidate — the covered-domain snapshot.
-
-        Pass the previous snapshot and this sends ``If-None-Match``; on a
-        ``304`` it returns that same snapshot untouched, which is what the
-        endpoint's ``max-age=300`` and strong ``ETag`` are for::
-
-            coverage = await client.fetch_domain_coverage()
-            url = "https://www.macys.com/shop/product/x"
-            if coverage.is_host_covered(url):
-                await client.lookup_product(url)
-
-            # Later — one cheap revalidation, no re-download while unchanged:
-            coverage = await client.fetch_domain_coverage(coverage)
-        """
-        result = await self.list_domains(
-            if_none_match=previous.etag if previous is not None else None,
-            timeout=timeout,
-        )
-        if result.not_modified and previous is not None:
-            return previous
-        entries: list[DomainEntry] = list(result.domains or [])
-        return DomainCoverage(
-            entries,
-            etag=result.etag,
-            max_age_seconds=result.max_age_seconds,
-        )
 
     async def search_products(
         self,
@@ -890,9 +821,7 @@ class OctogenClient:
         The verb and path template come from :data:`OPERATIONS`, so a method
         cannot reach a route the published contract does not define without
         ``tests/contract`` failing. Callers that only want the decoded body use
-        :meth:`_json`; the ones that need a status code or a header — the
-        ``ETag`` on
-        ``listDomains`` — use this.
+        :meth:`_json`; the ones that need a status code or a header use this.
 
         ``timeout`` applies to this request only, including on an injected
         ``http_client``; ``None`` keeps the client's own timeout.
@@ -1111,14 +1040,6 @@ def _read_env_api_key() -> str | None:
             )
         return deprecated
     return None
-
-
-def _parse_max_age(header: str | None) -> int | None:
-    """``max-age`` in seconds from a ``Cache-Control`` header, when present."""
-    if not header:
-        return None
-    match = _MAX_AGE.search(header)
-    return int(match.group(1)) if match else None
 
 
 def _decode_json(response: httpx.Response) -> Any:

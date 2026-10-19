@@ -47,7 +47,7 @@ and local npm installs can replace that link. A one-shot invocation selects the
 new executable explicitly:
 
 ```bash
-npm exec --yes --package=@storerouter/cli@next -- storerouter domains
+npm exec --yes --package=@storerouter/cli@next -- storerouter search "linen dress"
 ```
 
 Keep existing API keys: `STOREROUTER_API_KEY` takes priority over

@@ -694,32 +694,6 @@ export interface CoverageUrlListUrlsPage {
   nextCursor?: string | null;
 }
 
-// ── Covered domains (/v1/domains) ───────────────────────────────────────────
-
-export type DomainEntry = components["schemas"]["DomainEntry"];
-
-export type ListDomainsResponse = components["schemas"]["ListDomainsResponse"];
-
-export interface ListDomainsOptions {
-  /**
-   * Revalidate instead of refetching: an `ETag` from a previous response. When
-   * the server's list is unchanged it answers `304` and
-   * {@link ListDomainsResult.notModified} is `true` with no `domains` body.
-   */
-  ifNoneMatch?: string;
-}
-
-export interface ListDomainsResult {
-  /** `true` when the server answered `304` — reuse the cached snapshot. */
-  notModified: boolean;
-  /** The covered-domain set; `undefined` on a `304`. */
-  domains: readonly DomainEntry[] | undefined;
-  /** The strong `ETag` to revalidate with next time. */
-  etag: string | undefined;
-  /** `max-age` from `Cache-Control`, in seconds, when the server sent one. */
-  maxAgeSeconds: number | undefined;
-}
-
 // ── Caller identity (/v1/me) ────────────────────────────────────────────────
 
 export type MeResponse = components["schemas"]["MeResponse"];

@@ -221,27 +221,6 @@ class CoverageUrlsRequest(BaseModel):
     )
 
 
-class DomainEntry(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    catalog: str = Field(
-        ..., description="Catalog key covering the host.", title="Catalog"
-    )
-    catalog_display_name: str = Field(
-        ...,
-        alias="catalogDisplayName",
-        description="Human-readable display name for the catalog.",
-        title="Catalogdisplayname",
-    )
-    host: str = Field(
-        ...,
-        description="Normalized host covered by a catalog (e.g. `allbirds.com`, `www.allbirds.com`). Match a page's host against this set before calling `/products/lookup`.",
-        title="Host",
-    )
-
-
 class Facet(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -268,18 +247,6 @@ class IdentifiersView(BaseModel):
         None, alias="productGroupId", title="Productgroupid"
     )
     product_id: str | None = Field(None, alias="productId", title="Productid")
-
-
-class ListDomainsResponse(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    domains: list[DomainEntry] = Field(
-        ...,
-        description="Every covered host, one entry per `(host, catalog)` pair.",
-        title="Domains",
-    )
 
 
 class MeKey(BaseModel):

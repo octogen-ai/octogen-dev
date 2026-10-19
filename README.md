@@ -138,7 +138,7 @@ for the SDKs: production integrations use an SDK, and the CLI is what you (or an
 agent) reach for mid-task.
 
 ```bash
-npx -y @storerouter/cli@next domains --check https://www.macys.com/shop/product/x
+npx -y @storerouter/cli@next search "linen dress" --limit 3
 ```
 
 Two properties are worth knowing before reading the code:

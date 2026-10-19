@@ -125,8 +125,9 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     });
     await transport(
       {
-        url: "https://api.storerouter.ai/v1/domains",
-        method: "GET",
+        url: "https://api.storerouter.ai/v1/products/search",
+        method: "POST",
+        body: JSON.stringify({ q: "dress" }),
         headers: {
           Authorization: "Bearer fixture-secret",
           "User-Agent": "test",
@@ -140,9 +141,12 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
   });
   it("denies query smuggling, unsafe bodies and other verbs", () => {
     for (const request of [
-      { url: "https://api.storerouter.ai/v1/domains?destination=evil", method: "GET" },
-      { url: "https://evil.example/v1/domains", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains", method: "POST" },
+      {
+        url: "https://api.storerouter.ai/v1/products/search?destination=evil",
+        method: "GET",
+      },
+      { url: "https://evil.example/v1/products/search", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/products/search", method: "POST" },
       {
         url: "https://api.storerouter.ai/v1/products/search",
         method: "POST",

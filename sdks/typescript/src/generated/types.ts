@@ -138,31 +138,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/domains": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List covered domains
-         * @description List every host covered by an active crawled catalog.
-         *
-         *     A client caches this set (revalidating with ``If-None-Match``) and only
-         *     sends a URL to ``/products/lookup`` when its host is present, so
-         *     client-side coverage matching never disagrees with the server's own
-         *     coverage classification. Read-only and full-corpus, like search/lookup.
-         */
-        get: operations["listDomains"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me": {
         parameters: {
             query?: never;
@@ -724,30 +699,6 @@ export interface components {
             urls: string[];
         };
         /**
-         * DomainEntry
-         * @description One covered host and the catalog that claims it.
-         *
-         *     Multiple hosts may map to one catalog, and (rarely) multiple catalogs may
-         *     claim the same host; each ``(host, catalog)`` pair is emitted once.
-         */
-        DomainEntry: {
-            /**
-             * Catalog
-             * @description Catalog key covering the host.
-             */
-            catalog: string;
-            /**
-             * Catalogdisplayname
-             * @description Human-readable display name for the catalog.
-             */
-            catalogDisplayName: string;
-            /**
-             * Host
-             * @description Normalized host covered by a catalog (e.g. `allbirds.com`, `www.allbirds.com`). Match a page's host against this set before calling `/products/lookup`.
-             */
-            host: string;
-        };
-        /**
          * EmbeddingColumn
          * @enum {string}
          */
@@ -783,21 +734,6 @@ export interface components {
             productGroupId?: string | null;
             /** Productid */
             productId?: string | null;
-        };
-        /**
-         * ListDomainsResponse
-         * @description The full covered-domain set.
-         *
-         *     Sorted deterministically by ``(host, catalog)`` so the response — and the
-         *     strong ``ETag`` computed over it — is stable across requests while the
-         *     underlying catalog registry is unchanged.
-         */
-        ListDomainsResponse: {
-            /**
-             * Domains
-             * @description Every covered host, one entry per `(host, catalog)` pair.
-             */
-            domains: components["schemas"]["DomainEntry"][];
         };
         /**
          * MeKey
@@ -2911,78 +2847,6 @@ export interface operations {
             };
             /** @description The standard per-org request-rate limit. */
             429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    listDomains: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The covered-domain set (also returns the strong `ETag`). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListDomainsResponse"];
-                };
-            };
-            /** @description The client's `If-None-Match` matches the current list; body is empty. Reuse the cached response. */
-            304: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing or invalid Bearer API key. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description API key is valid but its organization may not use `/v1`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Standard per-org request-rate limit. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Catalog registry unavailable (fail closed, safe to retry). */
-            503: {
                 headers: {
                     [name: string]: unknown;
                 };
