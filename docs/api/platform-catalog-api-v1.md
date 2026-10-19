@@ -34,35 +34,25 @@ immediately on the next request.
 
 ## Endpoints
 
-The published contract carries **19 operations across 16 paths**. They use the
+The published contract carries **18 operations across 15 paths**. They use the
 same access policy as the
 [Catalog Partner MCP server](../guides/catalog-partner-mcp.md), so access
 control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `listDomains`, `resolveProductFromHtml`, the
+SDK — `getMe`, `resolveProductFromHtml`, the
 [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
 | Operation                                  | What it is for                                                                        |
 | ------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `GET /domains`                             | Every covered host. Check this before `lookup` — see the note below.                  |
 | `GET /me`                                  | Your organization, key id and provenance, quotas, rate-limit posture.                 |
 | `POST /products/resolve-from-html`         | Resolve a product from HTML you already have. No index, no fetch.                     |
 | `GET /taxonomy/categories`                 | Root categories, or one category's children, with the facets that select each.        |
 | `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |
 | `GET /taxonomy/attributes/{handle}/values` | An attribute's canonical value handles, such as `neckline__halter`.                   |
 | `POST /products/facet-counts`              | Product counts by category, attribute value and colour family under search's filters. |
-
-> **`GET /domains` returns hosts normalized by the server** — lowercased, with a
-> leading `www.` stripped. It reports `macys.com` and never `www.macys.com`.
-> Product URLs in the wild usually _do_ carry `www.`, so comparing a raw URL
-> host against that list reports covered merchants as uncovered. Normalize your
-> side the same way, or use the SDK helpers (`isHostCovered` /
-> `is_host_covered`), which do it for you. The endpoint carries a strong `ETag`
-> and `Cache-Control: max-age=300`: revalidate with `If-None-Match` rather than
-> refetching.
 
 ### `POST /products/lookup` — lookup product by URL
 
@@ -482,7 +472,7 @@ https://cdn.storerouter.ai/openapi/platform/v1/openapi.json
 It includes:
 
 - Server URLs and OpenAPI version.
-- All 15 operation IDs, including `listDomains`, `getMe`, `searchProducts`,
+- Operation IDs including `getMe`, `searchProducts`,
   `moreLikeThisProducts`, `lookupProduct`,
   `resolveProductFromHtml`.
 - Full request and response schemas for code generation.

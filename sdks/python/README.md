@@ -44,44 +44,10 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-### Start with coverage
+### Product lookup
 
-Octogen does not cover every merchant, and the coverage check is the cheapest
-call you can make. `GET /v1/domains` returns hosts **normalized by the
-server** — lowercased, with a leading `www.` stripped — so it reports
-`macys.com` and never `www.macys.com`. Real product URLs usually *do* carry
-`www.`, so comparing a raw URL host against that list reports covered merchants
-as uncovered. `fetch_domain_coverage` normalizes both sides for you:
-
-```python
-async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
-    coverage = await client.fetch_domain_coverage()
-
-    url = "https://www.macys.com/shop/product/some-dress"
-    if coverage.is_host_covered(url):
-        found = await client.lookup_product(url)
-        print(found.product.title)
-    else:
-        print("Contact https://storerouter.ai/contact to discuss coverage.")
-```
-
-The endpoint is `Cache-Control: max-age=300` behind a strong `ETag`, and clients
-are expected to revalidate rather than refetch. Pass the previous snapshot back
-and a `304` returns it untouched:
-
-```python
-coverage = await client.fetch_domain_coverage()
-# …later…
-coverage = await client.fetch_domain_coverage(coverage)  # sends If-None-Match
-
-print(len(coverage.hosts), "covered hosts")
-print(coverage.catalogs_for("https://www.macys.com/x"))  # ("macys",)
-```
-
-Use `list_domains(if_none_match=...)` directly if you manage the cache
-yourself; it reports `not_modified`, `etag`, and `max_age_seconds` and leaves
-the decision to you. `normalize_host` and `is_host_covered` are exported for
-callers with their own storage.
+Look up a product URL directly. A missing product does not prove that its whole
+merchant domain is unsupported. Use `get_me()` to check credentials.
 
 ## API
 
@@ -92,8 +58,7 @@ if that stops being true — see
 - `get_me()` returns the calling organization, key id and provenance, quotas,
   and rate-limit posture. Read-only and side-effect free: safe on startup and
   in CI.
-- `list_domains(...)` and `fetch_domain_coverage(previous=None)` return the
-  covered hosts, with `ETag` revalidation and host normalization.
+
 - `search_products(...)` searches every active catalog by default, or only the
   catalogs in `catalogs` (1–500 keys) when it is provided. The query field is
   `q`, understood by default; `understand`, `facets`, `exclude_facets`, the

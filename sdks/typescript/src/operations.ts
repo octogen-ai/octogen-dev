@@ -33,7 +33,6 @@ export const OPERATIONS = {
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
-  listDomains: { method: "GET", path: "/domains" },
   listTaxonomyAttributeValues: {
     method: "GET",
     path: "/taxonomy/attributes/{handle}/values",

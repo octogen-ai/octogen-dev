@@ -1,6 +1,22 @@
 # Changelog — `octogen-ai-sdk`
 
-## 0.8.0 (unreleased)
+## 0.9.0 (unreleased)
+
+**Breaking:** the covered-domain list is gone. The API no longer serves
+`GET /v1/domains` (octogen#13525), so `list_domains` and
+`fetch_domain_coverage` fail against it on every version that has them.
+
+- Remove `list_domains`, `fetch_domain_coverage`, `DomainCoverage`,
+  `coverage_hosts`, `DomainEntry`, `ListDomainsResponse` and
+  `ListDomainsResult`. Call `lookup_product` directly instead of checking the
+  host first, and use `get_me` to check credentials. A lookup miss does not
+  mean the merchant is uncovered.
+- `is_host_covered` and `normalize_host` stay, for host sets you supply
+  yourself.
+- Regenerate the contract mirror without the `listDomains` operation and its
+  schemas.
+
+## 0.8.0 — 2026-10-19
 
 More-like-this takes the same caller controls as search. **Breaking:** the
 `include_facets` keyword is gone. The API now refuses `include_facets` with a

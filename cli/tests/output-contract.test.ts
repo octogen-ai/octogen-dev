@@ -10,17 +10,11 @@ import { describe, expect, it } from "vitest";
 
 import { ExitCode } from "../src/exit.js";
 import { SCHEMA_VERSION } from "../src/output.js";
-import {
-  DOMAINS_BODY,
-  ME_BODY,
-  parseSingleObject,
-  runCli,
-  TEST_KEY,
-} from "./harness.js";
+import { ME_BODY, parseSingleObject, runCli, TEST_KEY } from "./harness.js";
 
 const KEYED = { OCTOGEN_PLATFORM_API_KEY: TEST_KEY };
 const ROUTES = {
-  "GET /domains": { body: DOMAINS_BODY, headers: { etag: '"v1"' } },
+  "POST /products/search": { body: { items: [{ uuid: "u", title: "Dress" }] } },
   "GET /me": { body: ME_BODY },
 };
 
@@ -121,7 +115,7 @@ describe("--quiet and --verbose change stderr, never stdout", () => {
     const runs = await Promise.all(
       [[], ["--quiet"], ["--verbose"]].map((extra) =>
         runCli({
-          argv: ["domains", "--check", "https://www.macys.com/x", ...extra],
+          argv: ["search", "dress", ...extra],
           env: KEYED,
           routes: ROUTES,
         }),
@@ -134,14 +128,14 @@ describe("--quiet and --verbose change stderr, never stdout", () => {
 
   it("silences diagnostics under --quiet", async () => {
     const noisy = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x"],
+      argv: ["search", "dress"],
       routes: ROUTES,
     });
     // Keyless: the notice is a diagnostic and lands on stderr.
     expect(noisy.stderr).toMatch(/No API key found/);
 
     const quiet = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x", "--quiet"],
+      argv: ["search", "dress", "--quiet"],
       routes: ROUTES,
     });
     expect(quiet.stderr).toBe("");
@@ -150,11 +144,11 @@ describe("--quiet and --verbose change stderr, never stdout", () => {
 
   it("adds timing under --verbose", async () => {
     const result = await runCli({
-      argv: ["domains", "--check", "https://www.macys.com/x", "--verbose"],
+      argv: ["search", "dress", "--verbose"],
       env: KEYED,
       routes: ROUTES,
     });
-    expect(result.stderr).toMatch(/GET \/domains ok in \d+ms/);
+    expect(result.stderr).toMatch(/POST \/products\/search ok in \d+ms/);
   });
 });
 

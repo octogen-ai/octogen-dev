@@ -1,6 +1,6 @@
 {
   "name": "@storerouter/cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "The StoreRouter CLI: coverage, lookup, and search from your terminal or your agent",
   "type": "module",
   "license": "Apache-2.0",
@@ -47,7 +47,7 @@
     "storerouter": "tsx src/bin.ts"
   },
   "dependencies": {
-    "@octogen-ai/sdk": "0.6.0"
+    "@octogen-ai/sdk": "0.7.0"
   },
   "publishConfig": {
     "access": "public",

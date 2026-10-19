@@ -1,4 +1,3 @@
-import { DomainCoverage } from "./domains.js";
 import {
   MissingAPIKeyError,
   OctogenAPIError,
@@ -18,10 +17,7 @@ import type {
   CoverageUrlListPage,
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
-  ListDomainsOptions,
   ListTaxonomyCategoriesParams,
-  ListDomainsResponse,
-  ListDomainsResult,
   MeResponse,
   MoreLikeThisProductsParams,
   MoreLikeThisProductsResponse,
@@ -46,7 +42,7 @@ import type {
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.6.0";
+export const SDK_VERSION = "0.7.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -74,7 +70,6 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
  * is about to make is even eligible.
  */
 export const KEYLESS_TRIAL_OPERATIONS: readonly OperationId[] = Object.freeze([
-  "listDomains",
   "lookupProduct",
   "searchProducts",
 ]);
@@ -200,65 +195,6 @@ export class OctogenClient {
   async getMe(): Promise<MeResponse> {
     const data = await this.json("getMe");
     return data as MeResponse;
-  }
-
-  /**
-   * The covered-host set (`GET /v1/domains`), with `ETag` revalidation.
-   *
-   * Prefer {@link fetchDomainCoverage}, which handles the `304` and gives you
-   * a matcher that normalizes hosts. Use this when you manage the cache
-   * yourself.
-   */
-  async listDomains(options: ListDomainsOptions = {}): Promise<ListDomainsResult> {
-    const headers: Record<string, string> = {};
-    if (options.ifNoneMatch !== undefined) {
-      headers["If-None-Match"] = options.ifNoneMatch;
-    }
-    const { data, response } = await this.request("listDomains", { headers });
-    const etag = response.headers.get("ETag") ?? undefined;
-    const maxAgeSeconds = parseMaxAge(response.headers.get("Cache-Control"));
-
-    if (response.status === 304) {
-      return { notModified: true, domains: undefined, etag, maxAgeSeconds };
-    }
-    const body = data as ListDomainsResponse;
-    return {
-      notModified: false,
-      domains: body.domains,
-      etag,
-      maxAgeSeconds,
-    };
-  }
-
-  /**
-   * Fetch (or revalidate) the covered-domain snapshot.
-   *
-   * Pass the previous snapshot and this sends `If-None-Match`; on a `304` it
-   * returns that same snapshot untouched, which is what the endpoint's
-   * `max-age=300` and strong `ETag` are for.
-   *
-   * ```ts
-   * let coverage = await client.fetchDomainCoverage();
-   * if (coverage.isHostCovered("https://www.macys.com/shop/product/x")) {
-   *   await client.lookupProduct("https://www.macys.com/shop/product/x");
-   * }
-   * // Later — one cheap revalidation, no re-download while unchanged:
-   * coverage = await client.fetchDomainCoverage(coverage);
-   * ```
-   */
-  async fetchDomainCoverage(previous?: DomainCoverage): Promise<DomainCoverage> {
-    const options: ListDomainsOptions = {};
-    if (previous?.etag !== undefined) {
-      options.ifNoneMatch = previous.etag;
-    }
-    const result = await this.listDomains(options);
-    if (result.notModified && previous !== undefined) {
-      return previous;
-    }
-    return new DomainCoverage(result.domains ?? [], {
-      etag: result.etag,
-      maxAgeSeconds: result.maxAgeSeconds,
-    });
   }
 
   /**
@@ -659,17 +595,6 @@ function readEnvApiKey(): string | undefined {
 }
 
 /** `max-age` in seconds from a `Cache-Control` header, when present. */
-function parseMaxAge(header: string | null): number | undefined {
-  if (header === null) {
-    return undefined;
-  }
-  const match = /(?:^|[\s,])max-age\s*=\s*(\d+)/i.exec(header);
-  if (match?.[1] === undefined) {
-    return undefined;
-  }
-  const seconds = Number.parseInt(match[1], 10);
-  return Number.isFinite(seconds) ? seconds : undefined;
-}
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");

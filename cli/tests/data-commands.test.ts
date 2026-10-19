@@ -134,9 +134,7 @@ describe("storerouter lookup", () => {
     // The host may well be covered; this URL is simply not indexed. Coverage is
     // a different question and the remediation says which command asks it.
     expect(body["coverage"]).toBe("unknown");
-    expect((body["remediation"] as Record<string, string>)["command"]).toMatch(
-      /domains --check/,
-    );
+    expect(body["remediation"]).toBeUndefined();
   });
 
   it("refuses more than one URL rather than looping silently", async () => {
@@ -532,4 +530,10 @@ describe("retired commands", () => {
     expect(result.exitCode).not.toBe(ExitCode.Success);
     expect(result.requests).toEqual([]);
   });
+});
+
+it("rejects the retired domains command without a request", async () => {
+  const result = await runCli({ argv: ["domains"] });
+  expect(result.exitCode).toBe(ExitCode.Usage);
+  expect(result.requests).toHaveLength(0);
 });

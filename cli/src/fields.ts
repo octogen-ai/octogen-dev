@@ -144,5 +144,4 @@ export const FIELD_MAPS: Readonly<
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   getMe: {},
-  listDomains: {},
 });

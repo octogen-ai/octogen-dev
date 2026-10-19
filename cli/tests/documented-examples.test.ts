@@ -9,7 +9,7 @@ it("all shell examples in the linked public CLI reference use accepted commands 
   const examples = blocks
     .flatMap((block) => (block[1] ?? "").split("\n"))
     .filter((line) => /\bstorerouter\s|@storerouter\/cli@next\s/.test(line));
-  expect(examples.length).toBeGreaterThan(10);
+  expect(examples.length).toBeGreaterThan(8);
   for (const example of examples) {
     const invocation = example
       .replace(/^.*?\bstorerouter\s/, "")

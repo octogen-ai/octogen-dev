@@ -10,7 +10,6 @@ import pytest
 import respx
 from octogen_ai_sdk import (
     CoverageUrlList,
-    DomainEntry,
     MerchantProductUrlLookupResponse,
     MeResponse,
     OctogenAPIError,
@@ -131,7 +130,7 @@ def test_unknown_effective_query_keys_survive_model_dump() -> None:
     assert dumped["relaxation"]["strategy"] == "staged"
 
 
-def test_me_and_domain_models_keep_unknown_fields() -> None:
+def test_me_models_keep_unknown_fields() -> None:
     me = MeResponse.model_validate(
         {
             "principal": "api_key",
@@ -145,19 +144,9 @@ def test_me_and_domain_models_keep_unknown_fields() -> None:
             },
         }
     )
-    domain = DomainEntry.model_validate(
-        {
-            "catalog": "acme",
-            "catalogDisplayName": "Acme",
-            "host": "acme.com",
-            "priority": 3,
-        }
-    )
-
     assert me.model_dump(by_alias=True)["region"] == "us"
     assert me.organization is not None
     assert me.organization.model_extra == {"tier": "gold"}
-    assert domain.model_extra == {"priority": 3}
 
 
 @pytest.mark.parametrize(
@@ -171,8 +160,6 @@ def test_me_and_domain_models_keep_unknown_fields() -> None:
         contract.MeOrganization,
         contract.MeQuotas,
         contract.MeRateLimit,
-        contract.DomainEntry,
-        contract.ListDomainsResponse,
     ],
 )
 def test_generated_response_models_allow_extra(model: type[pydantic.BaseModel]) -> None:
