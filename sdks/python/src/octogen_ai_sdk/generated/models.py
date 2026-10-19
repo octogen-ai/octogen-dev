@@ -221,6 +221,22 @@ class CoverageUrlsRequest(BaseModel):
     )
 
 
+class DomainFieldValue(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(
+        ..., description="Approximate number of products with the value.", title="Count"
+    )
+    label: str = Field(..., description="Human-readable value label.", title="Label")
+    value: str = Field(
+        ...,
+        description="Canonical search value: pass it with the field `name` as a `/v1/products/search` facet.",
+        title="Value",
+    )
+
+
 class Facet(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -387,6 +403,40 @@ class MerchantVariantView(BaseModel):
     product_url: str | None = Field(None, alias="productUrl", title="Producturl")
     size: str | None = Field(None, title="Size")
     sku: str | None = Field(None, title="Sku")
+
+
+class PriceBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., description="Products priced in this range.", title="Count")
+    max: float = Field(..., description="Exclusive upper edge.", title="Max")
+    min: float = Field(..., description="Inclusive lower edge.", title="Min")
+
+
+class PriceDistribution(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    above: int = Field(
+        ..., description="Priced products at or above the last bucket.", title="Above"
+    )
+    below: int = Field(
+        ..., description="Priced products below the first bucket.", title="Below"
+    )
+    buckets: list[PriceBucket] = Field(
+        ...,
+        description="Equal-width, contiguous buckets, lowest first.",
+        title="Buckets",
+    )
+    median: float = Field(
+        ..., description="Approximate median current price.", title="Median"
+    )
+    populated: int = Field(
+        ..., description="Products with a current price above zero.", title="Populated"
+    )
 
 
 class ProductDetailsView(BaseModel):
@@ -1026,6 +1076,45 @@ class CoverageUrlListListResponse(BaseModel):
     )
     items: list[CoverageUrlList] = Field(..., title="Items")
     next_cursor: str | None = Field(..., alias="nextCursor", title="Nextcursor")
+
+
+class DomainField(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    coverage: float = Field(
+        ...,
+        description="`populated / productCount`, rounded to 3 decimals.",
+        title="Coverage",
+    )
+    display_name: str = Field(
+        ...,
+        alias="displayName",
+        description="Human-readable facet name.",
+        title="Displayname",
+    )
+    distinct: int = Field(
+        ..., description="Approximate number of distinct values.", title="Distinct"
+    )
+    name: str = Field(..., description="Public search facet name.", title="Name")
+    populated: int = Field(
+        ..., description="Products with at least one value.", title="Populated"
+    )
+    source: Literal["product", "enrichment", "brands"] | str = Field(
+        ...,
+        description="`product` for merchant data, `enrichment` for Octogen classification and attributes, `brands` for brand facts.",
+        title="Source",
+    )
+    top_values: list[DomainFieldValue] = Field(
+        ...,
+        alias="topValues",
+        description="Up to 10 most common values, most common first.",
+        title="Topvalues",
+    )
+    truncated: bool = Field(
+        ..., description="Whether values beyond `topValues` exist.", title="Truncated"
+    )
 
 
 class HTTPValidationError(BaseModel):
@@ -1671,6 +1760,53 @@ class TaxonomyAttributePage(BaseModel):
     total: int = Field(
         ..., description="Number of attributes across all pages.", title="Total"
     )
+
+
+class DomainCatalogCoverage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog: str = Field(..., description="Catalog key.", title="Catalog")
+    catalog_display_name: str = Field(
+        ...,
+        alias="catalogDisplayName",
+        description="Human-readable display name for the catalog.",
+        title="Catalogdisplayname",
+    )
+    computed_at: str = Field(
+        ...,
+        alias="computedAt",
+        description="When the snapshot was computed (UTC ISO 8601).",
+        title="Computedat",
+    )
+    fields: list[DomainField] = Field(
+        ...,
+        description="Populated public facets, ordered by `source` then coverage.",
+        title="Fields",
+    )
+    price: PriceDistribution | None = Field(
+        None, description="Current-price histogram; null when nothing is priced."
+    )
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Indexed product groups in the catalog.",
+        title="Productcount",
+    )
+
+
+class DomainCoverageResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalogs: list[DomainCatalogCoverage] = Field(
+        ...,
+        description="One snapshot per catalog serving the host, sorted by catalog.",
+        title="Catalogs",
+    )
+    host: str = Field(..., description="The normalized host.", title="Host")
 
 
 class MerchantProductView(BaseModel):

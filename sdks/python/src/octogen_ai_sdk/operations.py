@@ -34,6 +34,7 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "countProductFacets": Operation("POST", "/products/facet-counts"),
     "createUrlList": Operation("POST", "/coverage/url-lists"),
     "deleteUrlList": Operation("DELETE", "/coverage/url-lists/{urlListId}"),
+    "getDomain": Operation("GET", "/domains/{host}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
     "listTaxonomyAttributeValues": Operation(

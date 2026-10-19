@@ -1104,6 +1104,175 @@
         "title": "CoverageUrlsRequest",
         "type": "object"
       },
+      "DomainCatalogCoverage": {
+        "description": "A catalog serving the host, with its coverage snapshot.",
+        "properties": {
+          "catalog": {
+            "description": "Catalog key.",
+            "title": "Catalog",
+            "type": "string"
+          },
+          "catalogDisplayName": {
+            "description": "Human-readable display name for the catalog.",
+            "title": "Catalogdisplayname",
+            "type": "string"
+          },
+          "computedAt": {
+            "description": "When the snapshot was computed (UTC ISO 8601).",
+            "title": "Computedat",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Populated public facets, ordered by `source` then coverage.",
+            "items": {
+              "$ref": "#/components/schemas/DomainField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceDistribution"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current-price histogram; null when nothing is priced."
+          },
+          "productCount": {
+            "description": "Indexed product groups in the catalog.",
+            "title": "Productcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "catalogDisplayName",
+          "computedAt",
+          "fields",
+          "productCount"
+        ],
+        "title": "DomainCatalogCoverage",
+        "type": "object"
+      },
+      "DomainCoverageResponse": {
+        "description": "Coverage snapshots for every catalog serving one host.\n\nCounts are approximate (Elasticsearch aggregations) and refreshed about\ndaily.",
+        "properties": {
+          "catalogs": {
+            "description": "One snapshot per catalog serving the host, sorted by catalog.",
+            "items": {
+              "$ref": "#/components/schemas/DomainCatalogCoverage"
+            },
+            "title": "Catalogs",
+            "type": "array"
+          },
+          "host": {
+            "description": "The normalized host.",
+            "title": "Host",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalogs",
+          "host"
+        ],
+        "title": "DomainCoverageResponse",
+        "type": "object"
+      },
+      "DomainField": {
+        "description": "A public search facet populated for at least one product.",
+        "properties": {
+          "coverage": {
+            "description": "`populated / productCount`, rounded to 3 decimals.",
+            "title": "Coverage",
+            "type": "number"
+          },
+          "displayName": {
+            "description": "Human-readable facet name.",
+            "title": "Displayname",
+            "type": "string"
+          },
+          "distinct": {
+            "description": "Approximate number of distinct values.",
+            "title": "Distinct",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Public search facet name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "populated": {
+            "description": "Products with at least one value.",
+            "title": "Populated",
+            "type": "integer"
+          },
+          "source": {
+            "description": "`product` for merchant data, `enrichment` for Octogen classification and attributes, `brands` for brand facts.",
+            "enum": [
+              "product",
+              "enrichment",
+              "brands"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "topValues": {
+            "description": "Up to 10 most common values, most common first.",
+            "items": {
+              "$ref": "#/components/schemas/DomainFieldValue"
+            },
+            "title": "Topvalues",
+            "type": "array"
+          },
+          "truncated": {
+            "description": "Whether values beyond `topValues` exist.",
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "coverage",
+          "displayName",
+          "distinct",
+          "name",
+          "populated",
+          "source",
+          "topValues",
+          "truncated"
+        ],
+        "title": "DomainField",
+        "type": "object"
+      },
+      "DomainFieldValue": {
+        "description": "One of a field's most common values among the catalog's products.",
+        "properties": {
+          "count": {
+            "description": "Approximate number of products with the value.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "description": "Human-readable value label.",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "description": "Canonical search value: pass it with the field `name` as a `/v1/products/search` facet.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "label",
+          "value"
+        ],
+        "title": "DomainFieldValue",
+        "type": "object"
+      },
       "EmbeddingColumn": {
         "enum": [
           "embedding",
@@ -2236,6 +2405,75 @@
           }
         },
         "title": "MerchantVariantView",
+        "type": "object"
+      },
+      "PriceBucket": {
+        "description": "One histogram bar: products whose current price is in ``[min, max)``.",
+        "properties": {
+          "count": {
+            "description": "Products priced in this range.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "max": {
+            "description": "Exclusive upper edge.",
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "description": "Inclusive lower edge.",
+            "title": "Min",
+            "type": "number"
+          }
+        },
+        "required": [
+          "count",
+          "max",
+          "min"
+        ],
+        "title": "PriceBucket",
+        "type": "object"
+      },
+      "PriceDistribution": {
+        "description": "Current-price histogram of a catalog's priced products.\n\nPrices are in the catalog's listing currency (usually USD). Buckets span\nroughly the 1st to 95th percentile so a long tail cannot flatten the\nchart; products outside that span are counted in ``below``/``above``.",
+        "properties": {
+          "above": {
+            "description": "Priced products at or above the last bucket.",
+            "title": "Above",
+            "type": "integer"
+          },
+          "below": {
+            "description": "Priced products below the first bucket.",
+            "title": "Below",
+            "type": "integer"
+          },
+          "buckets": {
+            "description": "Equal-width, contiguous buckets, lowest first.",
+            "items": {
+              "$ref": "#/components/schemas/PriceBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "median": {
+            "description": "Approximate median current price.",
+            "title": "Median",
+            "type": "number"
+          },
+          "populated": {
+            "description": "Products with a current price above zero.",
+            "title": "Populated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "above",
+          "below",
+          "buckets",
+          "median",
+          "populated"
+        ],
+        "title": "PriceDistribution",
         "type": "object"
       },
       "ProductDetailsView": {
@@ -6027,6 +6265,55 @@
         "tags": [
           "platform-catalog-api",
           "platform-coverage-api"
+        ]
+      }
+    },
+    "/domains/{host}": {
+      "get": {
+        "description": "Coverage snapshot of every catalog serving one covered host.\n\n``host`` is a bare host (not a URL), lowercased with a leading ``www.`` removed.\nUnbilled; snapshots are computed from Elasticsearch aggregations and\ncached per catalog for about a day.",
+        "operationId": "getDomain",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "title": "Host",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Get a covered domain's coverage snapshot",
+        "tags": [
+          "platform-catalog-api",
+          "platform-domains-api"
         ]
       }
     },

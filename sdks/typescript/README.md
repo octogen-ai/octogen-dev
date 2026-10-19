@@ -49,6 +49,11 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
 
 - `getMe()` returns the calling organization, key id and provenance, quotas, and
   rate-limit posture. Read-only and side-effect free: safe on startup and in CI.
+- `getDomain(urlOrHost)` returns one store's coverage snapshot
+  (`GET /v1/domains/{host}`): every catalog serving the host, with product
+  counts, populated facets and a price histogram. A URL is normalized to its
+  host first. An uncovered host throws `OctogenNotFoundError` with
+  `detail` `domain_not_covered`. There is no list of covered hosts.
 
 - `searchProducts(params)` searches every active catalog by default, or only
   the catalogs in `catalogs` (1–500 keys) when it is provided. The query field

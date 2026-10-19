@@ -118,10 +118,13 @@ in the existing `cli.node` field for compatibility.
 serialized SDK request `{url, method, headers, body?}`. `BrowserRuntime` always
 applies `withDemoPolicy` before calling the supplied transport. It uses SDK
 `OPERATIONS` and the existing generated contract validator, not another command
-or schema registry. It allows only search, lookup/parse, and similar on
+or schema registry. It allows only search, lookup/parse, similar and store on
 exact `https://api.storerouter.ai/v1` paths and methods; it denies arbitrary
 destinations, query smuggling, unknown body fields, mutation/admin routes and
-lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Raw `api` may
+lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Store is
+`GET /domains/{host}` for exactly one already-normalized host (lowercase, no
+`www.`, port, encoding or extra segment) with no body; `GET /domains`, the
+covered-host list, stays denied. Raw `api` may
 call these same approved operations; it cannot escape the policy. Browser headers
 are reduced to Accept/Content-Type/If-None-Match; Authorization and User-Agent
 are never forwarded. Policy failures use existing CLI network failure semantics.

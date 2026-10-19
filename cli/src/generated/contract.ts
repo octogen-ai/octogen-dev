@@ -403,6 +403,25 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}"
     },
+    "getDomain": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "host",
+          "required": true,
+          "schema": {
+            "title": "Host",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/domains/{host}"
+    },
     "getMe": {
       "body": {
         "properties": {},
@@ -1499,6 +1518,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "616662408ab832281e7710670902a78f7e9b790f81f2634a3228ced67f938155",
+  "sha256": "6148345139e68a8a7b61085518d623b9d1cf9c2b28c32dddc57bbbe27eec7913",
   "version": "1.0.0"
 } as const;

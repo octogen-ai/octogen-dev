@@ -31,6 +31,7 @@ export const OPERATIONS = {
   countProductFacets: { method: "POST", path: "/products/facet-counts" },
   createUrlList: { method: "POST", path: "/coverage/url-lists" },
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
+  getDomain: { method: "GET", path: "/domains/{host}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
   listTaxonomyAttributeValues: {

@@ -31,11 +31,17 @@ from octogen_ai_sdk.generated import models as _contract
 # `url` or `uuid`"), and constructor ergonomics — the generator turns a
 # `minLength`/`maxLength` string into a constrained root-model alias, so a
 # generated request body would not accept a plain `str`.
+DomainCatalogCoverage = _contract.DomainCatalogCoverage
+DomainCoverageResponse = _contract.DomainCoverageResponse
+DomainField = _contract.DomainField
+DomainFieldValue = _contract.DomainFieldValue
 MeKey = _contract.MeKey
 MeOrganization = _contract.MeOrganization
 MeQuotas = _contract.MeQuotas
 MeRateLimit = _contract.MeRateLimit
 MeResponse = _contract.MeResponse
+PriceBucket = _contract.PriceBucket
+PriceDistribution = _contract.PriceDistribution
 ProgrammaticProductSearchEffectiveFacet = (
     _contract.ProgrammaticProductSearchEffectiveFacet
 )

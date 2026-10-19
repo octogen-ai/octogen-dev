@@ -32,6 +32,7 @@ from octogen_ai_sdk.errors import (
     OctogenTimeoutError,
     OctogenValidationError,
 )
+from octogen_ai_sdk.hosts import normalize_host
 from octogen_ai_sdk.models import (
     CoverageContainsResponse,
     CoverageUrlList,
@@ -40,6 +41,7 @@ from octogen_ai_sdk.models import (
     CoverageUrlListUrlsPage,
     CoverageUrlMutationResponse,
     CoverageUrlsRequest,
+    DomainCoverageResponse,
     Facet,
     FacetCountName,
     MerchantProductUrlLookupResponse,
@@ -308,6 +310,26 @@ class OctogenClient:
         """
         data = await self._json("getMe", timeout=timeout)
         return MeResponse.model_validate(data)
+
+    async def get_domain(
+        self, url_or_host: str, *, timeout: Timeout | None = None
+    ) -> DomainCoverageResponse:
+        """One covered store's coverage snapshot (``GET /v1/domains/{host}``).
+
+        Every catalog serving the host, with product counts, populated facets
+        and a price histogram. Takes a bare host or a URL and normalizes it the
+        way the server does (lowercased, port and leading ``www.`` dropped). A
+        host no catalog claims raises :class:`OctogenNotFoundError` with
+        ``detail == "domain_not_covered"``. There is deliberately no way to
+        list hosts: ask about the one you have.
+        """
+        host = normalize_host(url_or_host)
+        if host is None:
+            raise ValueError(f"get_domain: no host in {url_or_host!r}")
+        data = await self._json(
+            "getDomain", path_params={"host": host}, timeout=timeout
+        )
+        return DomainCoverageResponse.model_validate(data)
 
     async def search_products(
         self,
