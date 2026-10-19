@@ -5,6 +5,14 @@ interface Token {
   kind: "word" | "operator";
   value: string;
 }
+/** `$` and backticks expand in a real shell, so say how to keep them literal. */
+function expansionError(ch: string): Error {
+  const what = ch === "$" ? "Shell expansion ($)" : "Command substitution (`)";
+  const example = ch === "$" ? "'under $300'" : "'`'";
+  return new Error(
+    `${what} is unsupported. For a literal ${ch}, use single quotes (${example}) or escape it (\\${ch}).`,
+  );
+}
 /** Bounded shell grammar. Quoting is lexical; no eval, expansion or host shell. */
 export function tokenize(line: string): Token[] {
   if (line.length > 65536) throw new Error("Command exceeds 64 KiB");
@@ -34,7 +42,7 @@ export function tokenize(line: string): Token[] {
     if (quote === '"') {
       if (ch === '"') quote = "";
       else {
-        if (ch === "$" || ch === "`") throw new Error("Shell expansion is unsupported");
+        if (ch === "$" || ch === "`") throw expansionError(ch);
         word += ch;
       }
       continue;
@@ -51,8 +59,8 @@ export function tokenize(line: string): Token[] {
         i++;
       }
       tokens.push({ kind: "operator", value });
-    } else if (";&`$()".includes(ch))
-      throw new Error(`Unsupported shell syntax: ${ch}`);
+    } else if (ch === "$" || ch === "`") throw expansionError(ch);
+    else if (";&()".includes(ch)) throw new Error(`Unsupported shell syntax: ${ch}`);
     else {
       word += ch;
       started = true;

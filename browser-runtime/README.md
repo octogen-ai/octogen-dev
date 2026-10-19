@@ -171,6 +171,8 @@ boundary. No Voyager surface is added.
   JSON processing works; byte-exact whitespace-sensitive jq output is unsupported.
 - No Bash, expansion, substitutions, globbing, `;`, `&&`, `||`, background jobs,
   package manager, shell scripts, host processes, symlinks or disk mounts.
+  `$` and backticks are refused, unquoted or in double quotes, with a hint to
+  single-quote them (`'under $300'`) or escape them (`\$`).
 
 The harness has editable command input, output, ↑/↓ session history, cancellation,
 reset and a virtual file editor. It uses basic repository-neutral styling because

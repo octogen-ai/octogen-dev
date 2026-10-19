@@ -185,6 +185,17 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     ])
       expect(() => tokenize(line)).toThrow();
   });
+  it("explains how to keep $ and backticks literal", () => {
+    for (const line of [`echo "under $300"`, "echo under $300"])
+      expect(() => tokenize(line)).toThrow(
+        "Shell expansion ($) is unsupported. For a literal $, use single quotes ('under $300') or escape it (\\$).",
+      );
+    for (const line of ['echo "`id`"', "echo `id`"])
+      expect(() => tokenize(line)).toThrow("Command substitution (`) is unsupported.");
+    expect(
+      tokenize(`echo "men's belts under \\$300" 'under $300'`).map((x) => x.value),
+    ).toEqual(["echo", "men's belts under $300", "under $300"]);
+  });
   it("rejects malformed pipelines and unknown executables", async () => {
     for (const line of [
       "storerouter search x | bash",
