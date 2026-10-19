@@ -2,6 +2,11 @@
 
 ## 0.6.0 (unreleased)
 
+- Add `listTaxonomyCategories`, `listTaxonomyAttributes` and
+  `listTaxonomyAttributeValues` for `GET /v1/taxonomy/...`, and
+  `countProductFacets` for `POST /v1/products/facet-counts`, which counts by
+  `categories`, `attributes` and `facetNames` under search's filters. Local
+  checks mirror the server's `422` rules.
 - **Breaking:** remove customer Voyage methods and types. Voyage is admin-only;
   customer applications must stop calling these retired endpoints.
 - Regenerate the public contract mirror without Voyage operations and schemas.

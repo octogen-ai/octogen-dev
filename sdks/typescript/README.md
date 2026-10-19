@@ -97,6 +97,14 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   the request field is `url`.
 - `resolveProductFromHtml(params)` resolves a product from page HTML you already
   have — no index read, no outbound fetch.
+- `listTaxonomyCategories(params?)`, `listTaxonomyAttributes(category, params?)`
+  and `listTaxonomyAttributeValues(handle, params?)` discover categories, their
+  attributes and the attributes' value handles, paged with `offset`/`limit`.
+  A category's `facets` and an attribute's `facetName` plus value `handle` go
+  back into `searchProducts` unchanged.
+- `countProductFacets(params?)` counts the products `searchProducts` would
+  filter to — by `categories`, `attributes` and `facetNames` — under the same
+  `q`, facets, bounds and `catalogs`.
 
 - `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
   `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`

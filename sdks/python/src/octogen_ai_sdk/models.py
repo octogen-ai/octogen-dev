@@ -45,6 +45,17 @@ ProgrammaticProductSearchEffectiveQuery = (
     _contract.ProgrammaticProductSearchEffectiveQuery
 )
 ProgrammaticProductSearchRelaxation = _contract.ProgrammaticProductSearchRelaxation
+ProgrammaticAttributeCounts = _contract.ProgrammaticAttributeCounts
+ProgrammaticCategoryCount = _contract.ProgrammaticCategoryCount
+ProgrammaticFacetCountsResponse = _contract.ProgrammaticFacetCountsResponse
+ProgrammaticFacetValueCount = _contract.ProgrammaticFacetValueCount
+ProgrammaticFacetValueCounts = _contract.ProgrammaticFacetValueCounts
+TaxonomyAttribute = _contract.TaxonomyAttribute
+TaxonomyAttributePage = _contract.TaxonomyAttributePage
+TaxonomyAttributeValue = _contract.TaxonomyAttributeValue
+TaxonomyAttributeValuePage = _contract.TaxonomyAttributeValuePage
+TaxonomyCategory = _contract.TaxonomyCategory
+TaxonomyCategoryPage = _contract.TaxonomyCategoryPage
 
 
 class _ResponseModel(BaseModel):
@@ -263,6 +274,95 @@ class ProgrammaticProductSearchRequest(_RequestModel):
             high = getattr(self, f"{field}_max")
             if low is not None and high is not None and low > high:
                 raise ValueError(f"{field}_min must not exceed {field}_max")
+        return self
+
+
+FacetCountName = Literal["color_family", "category_path.depth_0"]
+
+
+class ProgrammaticFacetCountCategory(_RequestModel):
+    """One category to count, named by the facets that select it.
+
+    A :class:`TaxonomyCategory`'s ``facets`` go here unchanged.
+    """
+
+    key: str = Field(min_length=1, max_length=200)
+    facets: list[Facet] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="after")
+    def reject_repeated_facets(self) -> ProgrammaticFacetCountCategory:
+        _facet_names(self.facets, f"category {self.key!r}")
+        return self
+
+
+class ProgrammaticFacetCountsRequest(_RequestModel):
+    """Body for ``POST /v1/products/facet-counts``.
+
+    The filter fields mean what they mean on
+    :class:`ProgrammaticProductSearchRequest`; ``q`` is always understood, and
+    only its understood filters narrow the counts. ``categories``,
+    ``attributes`` and ``facet_names`` say what to count. The contradictions
+    the server refuses with a ``422`` and that are cheap to mirror fail here.
+    """
+
+    q: str | None = None
+    facets: list[Facet] | None = Field(default=None, max_length=50)
+    exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    omit_generated_facets: list[str] | None = Field(default=None, max_length=50)
+    fallback_category: list[str] | None = Field(
+        default=None, min_length=1, max_length=4
+    )
+    price_min: float | None = Field(default=None, ge=0)
+    price_max: float | None = Field(default=None, ge=0)
+    brand_quality_min: float | None = Field(default=None, ge=1, le=6)
+    brand_quality_max: float | None = Field(default=None, ge=1, le=6)
+    catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
+    categories: list[ProgrammaticFacetCountCategory] | None = Field(
+        default=None, max_length=100
+    )
+    attributes: list[str] | None = Field(default=None, max_length=50)
+    #: ``None`` sends nothing, and the server counts ``color_family``.
+    facet_names: list[FacetCountName] | None = Field(default=None, max_length=2)
+    value_limit: int | None = Field(default=None, ge=1, le=1000)
+
+    _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+    _check_fallback_category = field_validator("fallback_category")(
+        _validate_fallback_category
+    )
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> ProgrammaticFacetCountsRequest:
+        has_query = self.q is not None and bool(self.q.strip())
+        if self.omit_generated_facets and not has_query:
+            raise ValueError("omit_generated_facets requires q")
+        if self.fallback_category is not None and not has_query:
+            raise ValueError("fallback_category requires q")
+
+        facet_names = _facet_names(self.facets, "facets")
+        _facet_names(self.exclude_facets, "exclude_facets")
+        for name in self.omit_generated_facets or ():
+            if name in facet_names:
+                raise ValueError(
+                    f"facet {name!r} is in both facets and omit_generated_facets; "
+                    "a facet you send already replaces the understood one"
+                )
+        for field in ("price", "brand_quality"):
+            low = getattr(self, f"{field}_min")
+            high = getattr(self, f"{field}_max")
+            if low is not None and high is not None and low > high:
+                raise ValueError(f"{field}_min must not exceed {field}_max")
+
+        keys = [category.key for category in self.categories or ()]
+        if len(set(keys)) != len(keys):
+            raise ValueError("categories keys must be unique")
+        for field in ("attributes", "facet_names"):
+            values = getattr(self, field) or []
+            if len(set(values)) != len(values):
+                raise ValueError(f"{field} lists a value more than once")
+        if self.facet_names == [] and not (self.categories or self.attributes):
+            raise ValueError(
+                "nothing to count: send categories, attributes or facet_names"
+            )
         return self
 
 

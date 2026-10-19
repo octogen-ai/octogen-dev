@@ -11,6 +11,7 @@ import {
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
+  CountProductFacetsParams,
   CoverageContainsResponse,
   CoveragePaginationParams,
   CoverageUrlList,
@@ -18,6 +19,7 @@ import type {
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
   ListDomainsOptions,
+  ListTaxonomyCategoriesParams,
   ListDomainsResponse,
   ListDomainsResult,
   MeResponse,
@@ -26,6 +28,8 @@ import type {
   MoreLikeThisSource,
   LookupProductOptions,
   MerchantProductUrlLookupResponse,
+  ProgrammaticFacetCountsRequest,
+  ProgrammaticFacetCountsResponse,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductLookupRequestBody,
   ProgrammaticProductSearchPage,
@@ -34,6 +38,10 @@ import type {
   ResolveProductFromHtmlParams,
   SearchProductsParams,
   Facet,
+  TaxonomyAttributePage,
+  TaxonomyAttributeValuePage,
+  TaxonomyCategoryPage,
+  TaxonomyPageParams,
 } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
@@ -267,6 +275,66 @@ export class OctogenClient {
     const body = toSearchPayload(params);
     const data = await this.json("searchProducts", { body });
     return data as ProgrammaticProductSearchPage;
+  }
+
+  /**
+   * Count the products {@link searchProducts} would filter to, by category,
+   * attribute value and facet value (`POST /v1/products/facet-counts`).
+   *
+   * The filter params mean what they mean on `searchProducts`; counts span
+   * every catalog your key can access unless `catalogs` narrows them.
+   * Contradictions the server would refuse with `422` throw a `TypeError`.
+   */
+  async countProductFacets(
+    params: CountProductFacetsParams = {},
+  ): Promise<ProgrammaticFacetCountsResponse> {
+    const body = toFacetCountsPayload(params);
+    const data = await this.json("countProductFacets", { body });
+    return data as ProgrammaticFacetCountsResponse;
+  }
+
+  /**
+   * Root taxonomy categories, or one category's children
+   * (`GET /v1/taxonomy/categories`). Each category's `facets` select it in
+   * `searchProducts` and `countProductFacets` unchanged.
+   */
+  async listTaxonomyCategories(
+    params: ListTaxonomyCategoriesParams = {},
+  ): Promise<TaxonomyCategoryPage> {
+    const data = await this.json("listTaxonomyCategories", {
+      query: { parent: params.parent, offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyCategoryPage;
+  }
+
+  /**
+   * The attributes a category carries (`GET /v1/taxonomy/attributes`).
+   * `category` takes a UUID, section handle or category path.
+   */
+  async listTaxonomyAttributes(
+    category: string,
+    params: TaxonomyPageParams = {},
+  ): Promise<TaxonomyAttributePage> {
+    assertNonEmptyString(category.trim(), "category");
+    const data = await this.json("listTaxonomyAttributes", {
+      query: { category, offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyAttributePage;
+  }
+
+  /**
+   * An attribute's canonical values (`GET /v1/taxonomy/attributes/{handle}/values`).
+   * Filter search with `{ name: page.attribute.facetName, values: [value.handle] }`.
+   */
+  async listTaxonomyAttributeValues(
+    handle: string,
+    params: TaxonomyPageParams = {},
+  ): Promise<TaxonomyAttributeValuePage> {
+    const data = await this.json("listTaxonomyAttributeValues", {
+      pathParams: { handle },
+      query: { offset: params.offset, limit: params.limit },
+    });
+    return data as TaxonomyAttributeValuePage;
   }
 
   async moreLikeThisProducts(
@@ -802,6 +870,126 @@ function assertSearchControls(params: SearchProductsParams): void {
       );
     }
   }
+}
+
+const FACET_COUNT_NAMES: ReadonlySet<string> = new Set([
+  "color_family",
+  "category_path.depth_0",
+]);
+
+function toFacetCountsPayload(
+  params: CountProductFacetsParams,
+): ProgrammaticFacetCountsRequest {
+  // The server treats a blank `q` as omitted.
+  const hasQuery = params.q !== undefined && params.q.trim().length > 0;
+  if (params.catalogs !== undefined) {
+    assertCatalogs(params.catalogs, 500);
+  }
+  const facetNames = assertFacetList(params.facets, "facets");
+  assertFacetList(params.excludeFacets, "excludeFacets");
+  const omitted = params.omitGeneratedFacets;
+  if (omitted !== undefined) {
+    assertStringArray(omitted, "omitGeneratedFacets");
+    if (omitted.length > 0 && !hasQuery) {
+      throw new TypeError("omitGeneratedFacets requires q");
+    }
+    for (const name of omitted) {
+      if (facetNames.has(name)) {
+        throw new TypeError(
+          `facet ${JSON.stringify(name)} is in both facets and omitGeneratedFacets; ` +
+            "a facet you send already replaces the understood one",
+        );
+      }
+    }
+  }
+  if (params.fallbackCategory !== undefined) {
+    assertStringArray(params.fallbackCategory, "fallbackCategory");
+    if (!hasQuery) {
+      throw new TypeError("fallbackCategory requires q");
+    }
+  }
+  assertBounds(params.priceMin, params.priceMax, "price", 0, undefined);
+  assertBounds(params.brandQualityMin, params.brandQualityMax, "brandQuality", 1, 6);
+
+  const categories = params.categories;
+  if (categories !== undefined) {
+    if (!Array.isArray(categories) || categories.length > 100) {
+      throw new TypeError("categories accepts at most 100 categories");
+    }
+    const keys = new Set<string>();
+    for (const category of categories) {
+      if (keys.has(category.key)) {
+        throw new TypeError("categories keys must be unique");
+      }
+      keys.add(category.key);
+      if (category.facets.length < 1 || category.facets.length > 10) {
+        throw new TypeError(
+          `category ${JSON.stringify(category.key)} needs 1-10 facets`,
+        );
+      }
+      assertFacetList(category.facets, `category ${JSON.stringify(category.key)}`);
+    }
+  }
+  for (const [field, values] of [
+    ["attributes", params.attributes],
+    ["facetNames", params.facetNames],
+  ] as const) {
+    if (values === undefined) {
+      continue;
+    }
+    assertStringArray(values, field);
+    if (new Set(values).size !== values.length) {
+      throw new TypeError(`${field} lists a value more than once`);
+    }
+  }
+  if (params.attributes !== undefined && params.attributes.length > 50) {
+    throw new TypeError("attributes accepts at most 50 handles");
+  }
+  if (params.facetNames?.some((name) => !FACET_COUNT_NAMES.has(name)) === true) {
+    throw new TypeError("facetNames accepts color_family and category_path.depth_0");
+  }
+  if (
+    params.facetNames?.length === 0 &&
+    (categories?.length ?? 0) === 0 &&
+    (params.attributes?.length ?? 0) === 0
+  ) {
+    throw new TypeError("nothing to count: send categories, attributes or facetNames");
+  }
+  const valueLimit = params.valueLimit;
+  if (
+    valueLimit !== undefined &&
+    (!Number.isInteger(valueLimit) || valueLimit < 1 || valueLimit > 1000)
+  ) {
+    throw new TypeError("valueLimit must be an integer between 1 and 1000");
+  }
+
+  const payload: ProgrammaticFacetCountsRequest = {};
+  if (params.q !== undefined) payload.q = params.q;
+  if (params.facets !== undefined) payload.facets = params.facets;
+  if (params.excludeFacets !== undefined) payload.exclude_facets = params.excludeFacets;
+  if (omitted !== undefined) payload.omit_generated_facets = [...omitted];
+  if (params.fallbackCategory !== undefined) {
+    payload.fallback_category = [...params.fallbackCategory];
+  }
+  if (params.priceMin !== undefined) payload.price_min = params.priceMin;
+  if (params.priceMax !== undefined) payload.price_max = params.priceMax;
+  if (params.brandQualityMin !== undefined) {
+    payload.brand_quality_min = params.brandQualityMin;
+  }
+  if (params.brandQualityMax !== undefined) {
+    payload.brand_quality_max = params.brandQualityMax;
+  }
+  if (params.catalogs !== undefined) payload.catalogs = [...params.catalogs];
+  if (categories !== undefined) {
+    payload.categories = categories.map((category) => ({
+      key: category.key,
+      facets: category.facets,
+    }));
+  }
+  if (params.attributes !== undefined) payload.attributes = [...params.attributes];
+  if (params.facetNames !== undefined) payload.facet_names = [...params.facetNames];
+  if (valueLimit !== undefined) payload.value_limit = valueLimit;
+  return payload;
 }
 
 /**

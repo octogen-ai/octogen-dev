@@ -43,6 +43,7 @@ from octogen_ai_sdk.models import (
     CoverageUrlsRequest,
     DomainEntry,
     Facet,
+    FacetCountName,
     ListDomainsResponse,
     ListDomainsResult,
     MerchantProductUrlLookupResponse,
@@ -52,6 +53,9 @@ from octogen_ai_sdk.models import (
     ProductLookupMatchMode,
     ProductLookupResolutionMode,
     ProductMarkdownLookupResult,
+    ProgrammaticFacetCountCategory,
+    ProgrammaticFacetCountsRequest,
+    ProgrammaticFacetCountsResponse,
     ProgrammaticMoreLikeThisRequest,
     ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
@@ -59,6 +63,9 @@ from octogen_ai_sdk.models import (
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
+    TaxonomyAttributePage,
+    TaxonomyAttributeValuePage,
+    TaxonomyCategoryPage,
 )
 from octogen_ai_sdk.operations import OPERATIONS, resolve_operation_path
 
@@ -93,6 +100,11 @@ _ERROR_CLASSES: dict[int, type[OctogenAPIError]] = {
 }
 
 _warned_deprecated_api_key_env_var = False
+
+
+#: A facet as a method accepts it: a :class:`Facet`, a ``{"name", "values"}``
+#: dict, or a facet a response returned, such as a ``TaxonomyCategory``'s.
+FacetInput = Facet | BaseModel | dict[str, Any]
 
 
 def _package_version() -> str:
@@ -371,8 +383,8 @@ class OctogenClient:
         *,
         q: str | None = None,
         understand: bool | None = None,
-        facets: Sequence[Facet | dict[str, Any]] | None = None,
-        exclude_facets: Sequence[Facet | dict[str, Any]] | None = None,
+        facets: Sequence[FacetInput] | None = None,
+        exclude_facets: Sequence[FacetInput] | None = None,
         omit_generated_facets: Sequence[str] | None = None,
         price_min: float | None = None,
         price_max: float | None = None,
@@ -475,14 +487,178 @@ class OctogenClient:
         data = await self._json("searchProducts", json=_body(resolved), timeout=timeout)
         return ProgrammaticProductSearchPage.model_validate(data)
 
+    async def count_product_facets(
+        self,
+        *,
+        q: str | None = None,
+        facets: Sequence[FacetInput] | None = None,
+        exclude_facets: Sequence[FacetInput] | None = None,
+        omit_generated_facets: Sequence[str] | None = None,
+        fallback_category: Sequence[str] | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
+        brand_quality_min: float | None = None,
+        brand_quality_max: float | None = None,
+        catalogs: Sequence[str] | None = None,
+        categories: Sequence[ProgrammaticFacetCountCategory | dict[str, Any]]
+        | None = None,
+        attributes: Sequence[str] | None = None,
+        facet_names: Sequence[FacetCountName] | None = None,
+        value_limit: int | None = None,
+        request: ProgrammaticFacetCountsRequest | None = None,
+        timeout: Timeout | None = None,
+    ) -> ProgrammaticFacetCountsResponse:
+        """Count the products :meth:`search_products` would filter to.
+
+        The filter keywords mean what they mean on :meth:`search_products`:
+        ``q`` is understood and its understood filters narrow the counts (the
+        text itself does not), and counts span every catalog your key can
+        access unless ``catalogs`` narrows them. The rest say what to count:
+
+        * ``categories`` — ``{"key", "facets"}`` entries; each count is the
+          products matching the filters and that category's facets. A
+          :class:`TaxonomyCategory`'s ``facets`` go in unchanged.
+        * ``attributes`` — attribute handles such as ``"neckline"``, from
+          :meth:`list_taxonomy_attributes`. A value's count ignores your own
+          facet on that attribute, so it shows what selecting it would return.
+        * ``facet_names`` — ``"color_family"`` (the server default) and/or
+          ``"category_path.depth_0"``, counted the same way.
+
+        ``value_limit`` caps the values returned per attribute and facet.
+        ``effective_query`` on the response reports the filters applied::
+
+            counts = await client.count_product_facets(
+                q="red dresses", attributes=["neckline"]
+            )
+            for value in counts.attributes[0].values:
+                print(value.value, value.count)
+
+        Pass ``request`` instead of the keywords to send a prebuilt
+        :class:`ProgrammaticFacetCountsRequest` as is.
+        """
+        if request is not None:
+            _reject_mixed(
+                "count_product_facets",
+                q=q,
+                facets=facets,
+                exclude_facets=exclude_facets,
+                omit_generated_facets=omit_generated_facets,
+                fallback_category=fallback_category,
+                price_min=price_min,
+                price_max=price_max,
+                brand_quality_min=brand_quality_min,
+                brand_quality_max=brand_quality_max,
+                catalogs=catalogs,
+                categories=categories,
+                attributes=attributes,
+                facet_names=facet_names,
+                value_limit=value_limit,
+            )
+            resolved = _require_model(
+                "count_product_facets", request, ProgrammaticFacetCountsRequest
+            )
+        else:
+            resolved = ProgrammaticFacetCountsRequest(
+                q=q,
+                facets=_facet_list(facets),
+                exclude_facets=_facet_list(exclude_facets),
+                omit_generated_facets=_string_list(
+                    omit_generated_facets, "omit_generated_facets"
+                ),
+                fallback_category=_string_list(fallback_category, "fallback_category"),
+                price_min=price_min,
+                price_max=price_max,
+                brand_quality_min=brand_quality_min,
+                brand_quality_max=brand_quality_max,
+                catalogs=_catalog_list(catalogs),
+                categories=None
+                if categories is None
+                else [_coerce_count_category(category) for category in categories],
+                attributes=_string_list(attributes, "attributes"),
+                facet_names=_facet_name_list(facet_names),
+                value_limit=value_limit,
+            )
+        data = await self._json(
+            "countProductFacets", json=_body(resolved), timeout=timeout
+        )
+        return ProgrammaticFacetCountsResponse.model_validate(data)
+
+    async def list_taxonomy_categories(
+        self,
+        *,
+        parent: str | None = None,
+        offset: int | None = None,
+        limit: int | None = None,
+        timeout: Timeout | None = None,
+    ) -> TaxonomyCategoryPage:
+        """Root taxonomy categories, or one category's direct children.
+
+        ``parent`` is a category UUID, a section handle such as ``"apparel"``,
+        or a category path such as ``"Apparel & Accessories > Clothing"`` in
+        any letter case. Each category's ``facets`` select it in
+        :meth:`search_products` and :meth:`count_product_facets` unchanged.
+        ``limit`` is 1-50 (server default 25); continue with ``next_offset``.
+        Definitions only: a listed category may hold no products.
+        """
+        data = await self._json(
+            "listTaxonomyCategories",
+            params={"parent": parent, "offset": offset, "limit": limit},
+            timeout=timeout,
+        )
+        return TaxonomyCategoryPage.model_validate(data)
+
+    async def list_taxonomy_attributes(
+        self,
+        category: str,
+        *,
+        offset: int | None = None,
+        limit: int | None = None,
+        timeout: Timeout | None = None,
+    ) -> TaxonomyAttributePage:
+        """The attributes a category carries, such as ``neckline`` for dresses.
+
+        ``category`` takes the same references as ``parent`` on
+        :meth:`list_taxonomy_categories`. Each attribute's ``facet_name`` is
+        the search facet its value handles go under; ``None`` means it is not
+        filterable. ``limit`` is 1-100 (server default 50).
+        """
+        data = await self._json(
+            "listTaxonomyAttributes",
+            params={"category": category, "offset": offset, "limit": limit},
+            timeout=timeout,
+        )
+        return TaxonomyAttributePage.model_validate(data)
+
+    async def list_taxonomy_attribute_values(
+        self,
+        handle: str,
+        *,
+        offset: int | None = None,
+        limit: int | None = None,
+        timeout: Timeout | None = None,
+    ) -> TaxonomyAttributeValuePage:
+        """An attribute's canonical values, such as ``neckline__halter``.
+
+        Filter search with
+        ``Facet(name=page.attribute.facet_name, values=[value.handle])``.
+        ``limit`` is 1-100 (server default 50); continue with ``next_offset``.
+        """
+        data = await self._json(
+            "listTaxonomyAttributeValues",
+            params={"offset": offset, "limit": limit},
+            path_params={"handle": handle},
+            timeout=timeout,
+        )
+        return TaxonomyAttributeValuePage.model_validate(data)
+
     async def more_like_this_products(
         self,
         *,
         source_url: str | None = None,
         source_uuid: str | None = None,
         catalogs: Sequence[str] | None = None,
-        include_facets: Sequence[Facet | dict[str, Any]] | None = None,
-        exclude_facets: Sequence[Facet | dict[str, Any]] | None = None,
+        include_facets: Sequence[FacetInput] | None = None,
+        exclude_facets: Sequence[FacetInput] | None = None,
         price_preference: PricePreference | str | None = None,
         cursor: str | None = None,
         limit: int | None = None,
@@ -853,16 +1029,38 @@ def _string_list(values: Sequence[str] | None, field: str) -> list[str] | None:
     return None if values is None else list(values)
 
 
+def _facet_name_list(
+    names: Sequence[FacetCountName] | None,
+) -> list[FacetCountName] | None:
+    if isinstance(names, str):
+        raise TypeError("facet_names must be a list of facet names, not a string")
+    return None if names is None else list(names)
+
+
 def _facet_list(
-    facets: Sequence[Facet | dict[str, Any]] | None,
+    facets: Sequence[FacetInput] | None,
 ) -> list[Facet] | None:
     return None if facets is None else [_coerce_facet(facet) for facet in facets]
 
 
-def _coerce_facet(value: Facet | dict[str, Any]) -> Facet:
+def _coerce_facet(value: FacetInput) -> Facet:
     if isinstance(value, Facet):
         return value
+    if isinstance(value, BaseModel):
+        # A facet a response returned, such as a TaxonomyCategory's, goes back
+        # into a request unchanged.
+        value = value.model_dump(mode="json", by_alias=True, exclude_none=True)
     return Facet.model_validate(value)
+
+
+def _coerce_count_category(
+    value: ProgrammaticFacetCountCategory | dict[str, Any],
+) -> ProgrammaticFacetCountCategory:
+    if isinstance(value, ProgrammaticFacetCountCategory):
+        return value
+    return ProgrammaticFacetCountCategory(
+        key=value["key"], facets=_facet_list(value["facets"]) or []
+    )
 
 
 def _read_env_api_key() -> str | None:

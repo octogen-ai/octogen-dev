@@ -453,6 +453,119 @@ class ProductResolutionMetadata(BaseModel):
     rendered: bool | None = Field(None, title="Rendered")
 
 
+class ProgrammaticCategoryCount(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., title="Count")
+    key: str = Field(
+        ..., description="The `key` you sent for the category.", title="Key"
+    )
+
+
+class ProgrammaticFacetCountCategory(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    facets: list[Facet] = Field(
+        ...,
+        description="Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.",
+        title="Facets",
+    )
+    key: str = Field(
+        ...,
+        description="Your identifier for this category; its count carries it back.",
+        title="Key",
+    )
+
+
+class ProgrammaticFacetCountsRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    attributes: list[str] | None = Field(
+        None,
+        description="Attribute handles, such as `neckline`, whose values to count. Find a category's handles with `GET /taxonomy/attributes`. A value's count ignores your own facet on that attribute, so every value shows what selecting it would return.",
+        title="Attributes",
+    )
+    brand_quality_max: float | None = Field(None, title="Brand Quality Max")
+    brand_quality_min: float | None = Field(None, title="Brand Quality Min")
+    catalogs: list[str] | None = Field(
+        None,
+        description="Catalog keys to count in. Omit to count every catalog your key can access. Keys your key cannot access count nothing.",
+        title="Catalogs",
+    )
+    categories: list[ProgrammaticFacetCountCategory] | None = Field(
+        None,
+        description="Categories to count. Each count is the products matching the filters above and the category's own facets.",
+        title="Categories",
+    )
+    exclude_facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must not match, as on search.",
+        title="Exclude Facets",
+    )
+    facet_names: list[Literal["color_family", "category_path.depth_0"]] | None = Field(
+        None,
+        description="Facets whose values to count, ignoring your own facet of that name like `attributes`. `category_path.depth_0` counts top-level categories.",
+        title="Facet Names",
+    )
+    facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must match, as on search. A facet you send replaces any understood facet of the same name. Each name at most once.",
+        title="Facets",
+    )
+    fallback_category: list[str] | None = Field(
+        None,
+        description="Category path to filter to when understanding finds no category in `q`, as on search. Requires `q`.",
+        title="Fallback Category",
+    )
+    omit_generated_facets: list[str] | None = Field(
+        None,
+        description="Understood facets to drop, as on search. Requires `q`.",
+        title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(None, title="Price Max")
+    price_min: float | None = Field(None, title="Price Min")
+    q: str | None = Field(
+        None,
+        description="Free-text query, understood as search understands it. The category, gender, colour, brand, price and attribute filters understood from it apply to the counts; the text itself does not narrow them. Blank is the same as omitted.",
+        title="Q",
+    )
+    value_limit: int | None = Field(
+        100,
+        description="Most values returned per attribute and per facet, by count.",
+        title="Value Limit",
+    )
+
+
+class ProgrammaticFacetValueCount(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    count: int = Field(..., title="Count")
+    value: str = Field(
+        ..., description="A value to send back in that facet's `values`.", title="Value"
+    )
+
+
+class ProgrammaticFacetValueCounts(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    name: str = Field(..., description="The facet name you sent.", title="Name")
+    values: list[ProgrammaticFacetValueCount] = Field(
+        ...,
+        description="Values with at least one product, most products first.",
+        title="Values",
+    )
+
+
 class ProgrammaticMoreLikeThisEffectiveFacet(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -741,6 +854,128 @@ class ReviewView(BaseModel):
         None, alias="publishedAt", title="Publishedat"
     )
     rating: float | None = Field(None, title="Rating")
+
+
+class TaxonomyAttribute(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    description: str | None = Field(None, title="Description")
+    facet_name: str | None = Field(
+        ...,
+        alias="facetName",
+        description="The search facet name for this attribute; send its value handles under this name in `facets`. Null when the attribute is not filterable.",
+        title="Facetname",
+    )
+    handle: str = Field(
+        ...,
+        description="Canonical attribute handle, such as `neckline`.",
+        title="Handle",
+    )
+    matching: str | None = Field(
+        ...,
+        description="How a facet on this attribute matches; null when not filterable.",
+        title="Matching",
+    )
+    name: str = Field(
+        ..., description="Display name, such as `Neckline`.", title="Name"
+    )
+    value_count: int = Field(
+        ...,
+        alias="valueCount",
+        description="Number of canonical values.",
+        title="Valuecount",
+    )
+
+
+class TaxonomyAttributeValue(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    handle: str = Field(
+        ...,
+        description="Canonical value handle, such as `neckline__halter`; send it unchanged in the attribute facet's `values`.",
+        title="Handle",
+    )
+    name: str = Field(..., description="Display label, such as `Halter`.", title="Name")
+
+
+class TaxonomyAttributeValuePage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    attribute: TaxonomyAttribute
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of values across all pages.", title="Total"
+    )
+    values: list[TaxonomyAttributeValue] = Field(..., title="Values")
+
+
+class TaxonomyCategory(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    child_count: int = Field(
+        ...,
+        alias="childCount",
+        description="Number of direct child categories.",
+        title="Childcount",
+    )
+    depth: int = Field(..., description="0 for a root category.", title="Depth")
+    facets: list[Facet] | None = Field(
+        ...,
+        description="Search `facets` that select this category, one `category_path.depth_N` facet per level; send them unchanged to `POST /products/search`. Null for a category too deep to filter on.",
+        title="Facets",
+    )
+    id: str = Field(..., description="Canonical category UUID.", title="Id")
+    name: str = Field(..., description="Display name, such as `Dresses`.", title="Name")
+    path: str = Field(
+        ...,
+        description="Fully qualified name, root first and ` > ` separated, such as `Apparel & Accessories > Clothing > Dresses`.",
+        title="Path",
+    )
+
+
+class TaxonomyCategoryPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    categories: list[TaxonomyCategory] = Field(..., title="Categories")
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    parent: TaxonomyCategory | None = Field(
+        ..., description="The requested parent category; null when listing roots."
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of children across all pages.", title="Total"
+    )
 
 
 class ValidationError(BaseModel):
@@ -1186,6 +1421,27 @@ class ProductEnrichment(BaseModel):
     )
 
 
+class ProgrammaticAttributeCounts(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    facet_name: str = Field(
+        ...,
+        alias="facetName",
+        description="The search facet name for its values.",
+        title="Facetname",
+    )
+    handle: str = Field(
+        ..., description="The attribute handle you sent.", title="Handle"
+    )
+    values: list[ProgrammaticFacetValueCount] = Field(
+        ...,
+        description="Values with at least one product, most products first.",
+        title="Values",
+    )
+
+
 class ProgrammaticMoreLikeThisEffectiveQuery(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1390,6 +1646,30 @@ class ProgrammaticProductSearchPage(BaseModel):
     )
 
 
+class TaxonomyAttributePage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    attributes: list[TaxonomyAttribute] = Field(..., title="Attributes")
+    category: TaxonomyCategory
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next page; repeat the request with it. Null on the last page.",
+        title="Nextoffset",
+    )
+    taxonomy_version: str = Field(
+        ...,
+        alias="taxonomyVersion",
+        description="Canonical taxonomy version name.",
+        title="Taxonomyversion",
+    )
+    total: int = Field(
+        ..., description="Number of attributes across all pages.", title="Total"
+    )
+
+
 class MerchantProductView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1458,6 +1738,33 @@ class MerchantProductView(BaseModel):
     uuid: str | None = Field(..., title="Uuid")
     variants: list[MerchantVariantView] | None = Field([], title="Variants")
     videos: list[VideoView] | None = Field([], title="Videos")
+
+
+class ProgrammaticFacetCountsResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    attributes: list[ProgrammaticAttributeCounts] = Field(
+        ...,
+        description="One entry per requested attribute, in request order.",
+        title="Attributes",
+    )
+    categories: list[ProgrammaticCategoryCount] = Field(
+        ...,
+        description="One count per requested category, in request order.",
+        title="Categories",
+    )
+    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
+        ...,
+        alias="effectiveQuery",
+        description="The filters and bounds the counts applied, with each facet's origin, as search reports them.",
+    )
+    facets: list[ProgrammaticFacetValueCounts] = Field(
+        ...,
+        description="One entry per requested facet name, in request order.",
+        title="Facets",
+    )
 
 
 class ProgrammaticProductLookupResponse(BaseModel):
