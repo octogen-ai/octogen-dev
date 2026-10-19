@@ -130,7 +130,9 @@ function announceKeyless(context: ApiContext): void {
   }
   context.announcedKeyless = true;
   if (context.host.keylessNotice !== undefined) {
-    context.writer.diagnostic(context.host.keylessNotice);
+    // An empty host notice means the host explains credentials itself.
+    if (context.host.keylessNotice)
+      context.writer.diagnostic(context.host.keylessNotice);
     return;
   }
   context.writer.diagnostic(

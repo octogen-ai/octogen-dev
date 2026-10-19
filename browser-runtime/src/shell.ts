@@ -103,6 +103,8 @@ function parse(line: string): Stage[] {
 }
 export interface ShellOptions {
   line: string;
+  /** The host renders a terminal: the final, unredirected stage's stdout is a TTY. */
+  terminal?: boolean;
   files: VirtualFiles;
   signal: AbortSignal;
   runId: string;
@@ -111,6 +113,7 @@ export interface ShellOptions {
     argv: string[],
     stdin: string,
     emit: (event: ExecutionEvent) => void,
+    isTty: boolean,
   ) => Promise<ExecutionResult>;
   jq: (
     input: string,
@@ -123,7 +126,7 @@ export async function executeShell(options: ShellOptions): Promise<ExecutionResu
   let input = "";
   let stderr = "";
   let code = 0;
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     options.signal.throwIfAborted();
     if (stage.input)
       input = options.files.read(
@@ -132,9 +135,16 @@ export async function executeShell(options: ShellOptions): Promise<ExecutionResu
     const [name, ...args] = stage.argv;
     let result: { stdout: string; stderr: string; code: number };
     if (name === "storerouter" || name === "octogen") {
-      result = await options.cli(args, input, (event) => {
-        if (event.type === "result" || event.type === "stderr") options.emit(event);
-      });
+      const isTty =
+        options.terminal === true && index === stages.length - 1 && !stage.output;
+      result = await options.cli(
+        args,
+        input,
+        (event) => {
+          if (event.type === "result" || event.type === "stderr") options.emit(event);
+        },
+        isTty,
+      );
     } else if (name === "jq") {
       const filter = args.at(-1);
       const flags = args.slice(0, -1);
