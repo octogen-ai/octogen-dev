@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   API_KEY_ENV_VAR,
   DEPRECATED_API_KEY_ENV_VAR,
+  EmbeddingColumn,
   FacetName,
   MissingAPIKeyError,
   OctogenAPIError,
@@ -647,6 +648,66 @@ describe("OctogenClient", () => {
     expect(page.source).toBeUndefined();
     expect(page.sources?.map((source) => source.uuid)).toEqual(["p1", "p2"]);
     expect(page.sources?.[1]?.catalogKey).toBe("globex");
+    expect(page.requestId).toBe("req-1");
+  });
+
+  it("sends more-like-this generated-facet and embedding controls", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      items: [],
+      requestId: "req-2",
+      resolution: "cached_image_query",
+      sourceImage: { hash: "abc123" },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.moreLikeThisProducts({
+      omitGeneratedFacets: ["color_family"],
+      rankingEmbeddingColumns: [EmbeddingColumn.EMBEDDING],
+      retrievalEmbeddingColumns: ["style_embedding", "tags_embedding"],
+      source: { uuid: "p1" },
+    });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      debug: false,
+      limit: 12,
+      omit_generated_facets: ["color_family"],
+      price_preference: "any",
+      ranking_embedding_columns: ["embedding"],
+      retrieval_embedding_columns: ["style_embedding", "tags_embedding"],
+      source: { uuid: "p1" },
+    });
+    expect(page.source).toBeUndefined();
+    expect(page.sourceImage?.hash).toBe("abc123");
+    expect(page.resolution).toBe("cached_image_query");
+    expect(page.requestId).toBe("req-2");
+  });
+
+  it("rejects invalid more-like-this controls before making a request", async () => {
+    const { calls, fetchMock } = createFetchMock();
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    const source = { uuid: "p1" };
+
+    await expect(
+      client.moreLikeThisProducts({ retrievalEmbeddingColumns: [], source }),
+    ).rejects.toThrow("retrievalEmbeddingColumns must name at least one");
+    await expect(
+      client.moreLikeThisProducts({ rankingEmbeddingColumns: [], source }),
+    ).rejects.toThrow("rankingEmbeddingColumns must name at least one");
+    const unknownColumn = {
+      rankingEmbeddingColumns: ["image_embedding"],
+      source,
+    } as unknown as Parameters<OctogenClient["moreLikeThisProducts"]>[0];
+    await expect(client.moreLikeThisProducts(unknownColumn)).rejects.toThrow(
+      'unknown embedding column "image_embedding"',
+    );
+    const bareOmit = {
+      omitGeneratedFacets: "color_family",
+      source,
+    } as unknown as Parameters<OctogenClient["moreLikeThisProducts"]>[0];
+    await expect(client.moreLikeThisProducts(bareOmit)).rejects.toThrow(
+      "omitGeneratedFacets must be an array of strings",
+    );
+    expect(calls).toHaveLength(0);
   });
 
   it("rejects invalid more-like-this sources lists before making a request", async () => {

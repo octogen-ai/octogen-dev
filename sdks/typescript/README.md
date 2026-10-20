@@ -68,6 +68,8 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   `relax` defaults to `true` on the server: a short page 1 is retried with
   Platform's generated facets dropped, never yours, and reported in
   `effectiveQuery.relaxation` with `debug: true`. `facets` replaced `includeFacets` in 0.6.0.
+  `omitGeneratedFacets` and the embedding-column lists tune what is generated
+  and how candidates are retrieved and ranked.
 - `lookupProduct(url, options?)` resolves a product URL from the index or on
   demand. `matchMode`, `resolutionMode`, and `onDemandCachePolicy` are optional;
   the request field is `url`.

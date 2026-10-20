@@ -77,6 +77,8 @@ if that stops being true — see
   `relax` defaults to `True` on the server: a short page 1 is retried with
   Platform's generated facets dropped, never yours, and reported in
   `effective_query.relaxation` with `debug=True`. `facets` replaced `include_facets` in 0.8.0.
+  `omit_generated_facets` and the embedding-column lists tune what is generated
+  and how candidates are retrieved and ranked.
 - `lookup_product(url, match_mode=..., resolution_mode=..., on_demand_cache_policy=...)`
   resolves a product URL from the index or on demand. `resolution_mode` and
   `on_demand_cache_policy` default to `auto` and `prefer_cache`; omitting

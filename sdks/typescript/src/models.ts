@@ -291,6 +291,16 @@ export interface MoreLikeThisProductsParams {
   facets?: Facet[];
   /** Filters a product must not match, as on search. */
   excludeFacets?: Facet[];
+  /**
+   * Generated facets to drop by name, when you have no value of your own to
+   * put in their place (a same-name `facets` entry replaces one instead).
+   * Unknown names are ignored. Unlike search, needs no `q`.
+   */
+  omitGeneratedFacets?: readonly string[];
+  /** Embedding columns that retrieve candidates (1 or more). Omit for the server's default. */
+  retrievalEmbeddingColumns?: readonly EmbeddingColumn[];
+  /** Embedding columns that rank candidates (1 or more). Omit for the base embedding. */
+  rankingEmbeddingColumns?: readonly EmbeddingColumn[];
   /** Inclusive price bounds, as on search. Never relaxed. */
   priceMin?: number;
   priceMax?: number;
@@ -320,6 +330,9 @@ export interface ProgrammaticMoreLikeThisRequest {
   limit: number;
   facets?: Facet[];
   exclude_facets?: Facet[];
+  omit_generated_facets?: string[];
+  retrieval_embedding_columns?: EmbeddingColumn[];
+  ranking_embedding_columns?: EmbeddingColumn[];
   price_min?: number;
   price_max?: number;
   brand_quality_min?: number;
@@ -334,6 +347,12 @@ export interface MoreLikeThisSourceResponse {
   uuid: string;
   productUrl: string;
   title?: string | null;
+}
+
+/** Identity of an image source, which has no indexed product. */
+export interface MoreLikeThisSourceImageResponse {
+  /** Content hash of the submitted image bytes. */
+  hash: string;
 }
 
 export interface MoreLikeThisEffectiveFacet {
@@ -361,9 +380,18 @@ export interface MoreLikeThisProductsResponse {
   source?: MoreLikeThisSourceResponse | null;
   /** The resolved `sources`, in request order; present only when the request sent `sources`. */
   sources?: MoreLikeThisSourceResponse[] | null;
+  /** The image source's identity; absent for product sources. */
+  sourceImage?: MoreLikeThisSourceImageResponse | null;
+  /**
+   * How an image source was resolved (`"image_query_generation"` or
+   * `"cached_image_query"`); absent for product sources.
+   */
+  resolution?: string | null;
   items: MerchantProductListItem[];
   nextCursor?: string | null;
   effectiveQuery?: MoreLikeThisEffectiveQuery | null;
+  /** Server-generated id for this execution, matching `X-Request-ID`. */
+  requestId?: string | null;
 }
 
 export interface AttributeValue {

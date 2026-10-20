@@ -42,6 +42,7 @@ from octogen_ai_sdk.models import (
     CoverageUrlMutationResponse,
     CoverageUrlsRequest,
     DomainCoverageResponse,
+    EmbeddingColumn,
     Facet,
     FacetCountName,
     MerchantProductUrlLookupResponse,
@@ -613,6 +614,9 @@ class OctogenClient:
         catalogs: Sequence[str] | None = None,
         facets: Sequence[FacetInput] | None = None,
         exclude_facets: Sequence[FacetInput] | None = None,
+        omit_generated_facets: Sequence[str] | None = None,
+        retrieval_embedding_columns: Sequence[EmbeddingColumn | str] | None = None,
+        ranking_embedding_columns: Sequence[EmbeddingColumn | str] | None = None,
         price_min: float | None = None,
         price_max: float | None = None,
         brand_quality_min: float | None = None,
@@ -643,7 +647,13 @@ class OctogenClient:
         ``facets``, ``exclude_facets`` and the price and brand-quality bounds
         work as on :meth:`search_products`. A facet you send replaces the
         generated facet of the same name. ``facets`` replaces the removed
-        ``include_facets``.
+        ``include_facets``. ``omit_generated_facets`` drops generated facets
+        by name when you have no value of your own to put in their place;
+        unknown names are ignored, and it needs no ``q`` here.
+
+        ``retrieval_embedding_columns`` and ``ranking_embedding_columns``
+        (each one or more :class:`EmbeddingColumn`) override which embeddings
+        retrieve and rank candidates. Omit them for the server's defaults.
 
         ``relax`` is omitted unless set, and the server defaults it to
         ``True``: a short page 1 is retried with Platform's generated facets
@@ -665,6 +675,9 @@ class OctogenClient:
                 catalogs=catalogs,
                 facets=facets,
                 exclude_facets=exclude_facets,
+                omit_generated_facets=omit_generated_facets,
+                retrieval_embedding_columns=retrieval_embedding_columns,
+                ranking_embedding_columns=ranking_embedding_columns,
                 price_min=price_min,
                 price_max=price_max,
                 brand_quality_min=brand_quality_min,
@@ -696,6 +709,15 @@ class OctogenClient:
                 limit=12 if limit is None else limit,
                 facets=_facet_list(facets),
                 exclude_facets=_facet_list(exclude_facets),
+                omit_generated_facets=_string_list(
+                    omit_generated_facets, "omit_generated_facets"
+                ),
+                retrieval_embedding_columns=_embedding_columns(
+                    retrieval_embedding_columns, "retrieval_embedding_columns"
+                ),
+                ranking_embedding_columns=_embedding_columns(
+                    ranking_embedding_columns, "ranking_embedding_columns"
+                ),
                 price_min=price_min,
                 price_max=price_max,
                 brand_quality_min=brand_quality_min,
@@ -1023,6 +1045,14 @@ def _string_list(values: Sequence[str] | None, field: str) -> list[str] | None:
     if isinstance(values, str):
         raise TypeError(f"{field} must be a list of strings, not a string")
     return None if values is None else list(values)
+
+
+def _embedding_columns(
+    columns: Sequence[EmbeddingColumn | str] | None, field: str
+) -> list[EmbeddingColumn] | None:
+    if isinstance(columns, str):
+        raise TypeError(f"{field} must be a list of embedding columns, not a string")
+    return None if columns is None else [EmbeddingColumn(column) for column in columns]
 
 
 def _facet_name_list(

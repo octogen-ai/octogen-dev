@@ -35,6 +35,15 @@ More-like-this takes several source products at once.
   request order when the request sent `sources`. `source` is then absent, so
   it is now optional.
 - Regenerate the public contract mirror for `sources`.
+- `moreLikeThisProducts` takes `omitGeneratedFacets` (generated facets to drop
+  by name; unknown names are ignored and no `q` is needed) and
+  `retrievalEmbeddingColumns` / `rankingEmbeddingColumns` (one or more
+  `EmbeddingColumn`s; an empty list or an unknown column throws `TypeError`).
+  `ProgrammaticMoreLikeThisRequest` declares their wire names.
+- `MoreLikeThisProductsResponse` declares `requestId`, `resolution` and
+  `sourceImage` (the new `MoreLikeThisSourceImageResponse`). The parity test
+  now requires the more-like-this request and response to cover every
+  contract field.
 
 ## 0.6.0 — 2026-10-19
 
