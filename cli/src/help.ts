@@ -4,6 +4,6 @@ import type { CommandSpec } from "./registry.js";
 export function renderRootHelp(commands: readonly CommandSpec[]) {
   return root(commands, nodeHost.version);
 }
-export function renderCommandHelp(spec: CommandSpec) {
-  return command(spec, nodeHost.version);
+export function renderCommandHelp(spec: CommandSpec, invokedAs?: string) {
+  return command(spec, nodeHost.version, invokedAs);
 }

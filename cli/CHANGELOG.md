@@ -15,6 +15,9 @@
 - `similar` does not expose more-like-this `sources`; send several source
   products with `storerouter api`.
 - Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
+- `storerouter parse --help` and `parse`'s usage errors name `parse` instead
+  of `lookup`. Requests, exit codes and the JSON `command` (`lookup`) are
+  unchanged.
 
 ## 0.4.0 — 2026-10-19 (`next`)
 

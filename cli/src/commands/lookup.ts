@@ -24,13 +24,13 @@ async function runLookup(context: CommandContext): Promise<ExitCode> {
   const url = context.positionals[0];
   if (url === undefined || url.length === 0) {
     throw usageError(
-      "storerouter lookup <url> requires a product URL.",
+      `storerouter ${context.invokedAs} <url> requires a product URL.`,
       "missing_argument",
     );
   }
   if (context.positionals.length > 1) {
     throw usageError(
-      "storerouter lookup takes one URL. For several, run it once per URL — each " +
+      `storerouter ${context.invokedAs} takes one URL. For several, run it once per URL — each ` +
         "is a separate request against your rate limit.",
       "too_many_arguments",
     );
@@ -153,7 +153,8 @@ export const lookupCommand = {
   flags: contractFlags("lookupProduct", LOOKUP_FIELDS),
   name: "lookup",
   notes: [
-    "Alias: parse. Uses the same /products/lookup request and lookup JSON command.",
+    "parse and lookup are one command: the same /products/lookup request and",
+    "lookup JSON command.",
     "Exit 6 means the server looked and found nothing for this URL — which is",
     "not the same as the merchant being uncovered. Ask the coverage question",
     "by contacting StoreRouter about merchant coverage.",

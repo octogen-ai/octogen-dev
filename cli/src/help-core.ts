@@ -49,11 +49,16 @@ export function renderRootHelp(
   return lines.join("\n");
 }
 
+/** `invokedAs` is the alias typed, if any: `storerouter parse --help` shows `parse`. */
 export function renderCommandHelp(
   command: CommandSpec,
   version: CliHost["version"],
+  invokedAs: string = command.name,
 ): string {
-  const lines = [`storerouter ${command.usage}`, "", `  ${command.summary}`];
+  const usage = command.usage.startsWith(command.name)
+    ? `${invokedAs}${command.usage.slice(command.name.length)}`
+    : command.usage;
+  const lines = [`storerouter ${usage}`, "", `  ${command.summary}`];
   if (command.notes !== undefined && command.notes.length > 0) {
     lines.push("");
     for (const note of command.notes) {

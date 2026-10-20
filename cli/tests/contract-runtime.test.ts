@@ -15,6 +15,7 @@ import {
 import { SEARCH_FIELDS, LOOKUP_FIELDS, FIELD_MAPS } from "../src/fields.js";
 import { COMMAND_LIST } from "../src/commands/index.js";
 import { EXCLUDED_OPERATIONS, mappedOperations } from "../src/registry.js";
+import { ExitCode } from "../src/exit.js";
 import { runCli, TEST_KEY } from "./harness.js";
 
 function mutation(): { contract: Contract; search: RequestOperation } {
@@ -172,6 +173,23 @@ describe("real dispatcher and SDK serialization", () => {
       resolutionMode: "index_only",
       onDemandCachePolicy: "prefer_cache",
     });
+  });
+  it("names parse, not lookup, in parse's help and usage errors", async () => {
+    const help = await runCli({ argv: ["parse", "--help"] });
+    expect(help.exitCode).toBe(ExitCode.Success);
+    expect(help.stderr).toMatch(/^storerouter parse <url> /);
+    expect(help.stderr).not.toContain("storerouter lookup");
+
+    const missing = await runCli({ argv: ["parse"] });
+    expect(missing.exitCode).toBe(ExitCode.Usage);
+    expect(missing.json()["message"]).toBe(
+      "storerouter parse <url> requires a product URL.",
+    );
+    // The JSON envelope keeps the canonical command, so agents see one shape.
+    expect(missing.json()["command"]).toBe("lookup");
+
+    const lookupHelp = await runCli({ argv: ["lookup", "--help"] });
+    expect(lookupHelp.stderr).toMatch(/^storerouter lookup <url> /);
   });
   it("sends contract field names and defaults through the SDK, never camel-case wire keys", async () => {
     const result = await runCli({
