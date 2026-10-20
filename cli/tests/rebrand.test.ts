@@ -173,10 +173,13 @@ describe("parse is exactly lookup", () => {
         });
       const lookup = await invoke("lookup");
       const parse = await invoke("parse");
+      // Help and usage errors name the word that was typed; nothing else differs.
+      const asLookup = (text: string) =>
+        text.replaceAll("storerouter parse", "storerouter lookup");
       expect(parse.exitCode).toBe(code);
       expect(parse.exitCode).toBe(lookup.exitCode);
-      expect(parse.stdout).toBe(lookup.stdout);
-      expect(parse.stderr).toBe(lookup.stderr);
+      expect(asLookup(parse.stdout)).toBe(lookup.stdout);
+      expect(asLookup(parse.stderr)).toBe(lookup.stderr);
       expect(parse.requests).toEqual(lookup.requests);
     },
   );

@@ -37,7 +37,8 @@ storerouter lookup <url> [--match-mode …] [--resolution-mode …] [--on-demand
 
   Resolve one product URL to a product
 
-  Alias: parse. Uses the same /products/lookup request and lookup JSON command.
+  parse and lookup are one command: the same /products/lookup request and
+  lookup JSON command.
   Exit 6 means the server looked and found nothing for this URL — which is
   not the same as the merchant being uncovered. Ask the coverage question
   by contacting StoreRouter about merchant coverage.

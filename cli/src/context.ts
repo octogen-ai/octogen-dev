@@ -17,6 +17,11 @@ export interface CommandContext {
   /** The command as invoked, e.g. `"status"`. */
   host: CliHost;
   command: string;
+  /**
+   * The command word as typed: `"parse"` for `lookup`'s alias. Help and usage
+   * errors name it; the JSON envelope's `command` stays the canonical name.
+   */
+  invokedAs: string;
   args: Args;
   writer: Writer;
   /** The remaining positionals, with the command's own words removed. */

@@ -44,12 +44,12 @@ export interface RunOptions {
  */
 function matchCommand(
   positionals: readonly string[],
-): { command: CommandSpec; rest: string[] } | undefined {
+): { command: CommandSpec; invokedAs: string; rest: string[] } | undefined {
   for (const words of [2, 1]) {
     const name = positionals.slice(0, words).join(" ");
     const command = COMMAND_TABLE.get(name === "parse" ? "lookup" : name);
     if (command !== undefined) {
-      return { command, rest: positionals.slice(words) };
+      return { command, invokedAs: name, rest: positionals.slice(words) };
     }
   }
   return undefined;
@@ -113,7 +113,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     if (matched === undefined) {
       throw usageError(`Unknown command: ${bare[0] ?? ""}`, "unknown_command");
     }
-    const { command } = matched;
+    const { command, invokedAs } = matched;
     if (unavailable.has(command.name)) {
       throw usageError(
         `storerouter ${command.name} is not available here. Install the CLI to use it: npm i -g @storerouter/cli`,
@@ -125,7 +125,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     const args = new Args(parsed);
 
     if (args.flag("help")) {
-      writer.diagnostic(renderCommandHelp(command, options.host.version));
+      writer.diagnostic(renderCommandHelp(command, options.host.version, invokedAs));
       return ExitCode.Success;
     }
 
@@ -169,8 +169,9 @@ export async function run(options: RunOptions): Promise<ExitCode> {
       cwd,
       env,
       help: () => {
-        writer.diagnostic(renderCommandHelp(command, options.host.version));
+        writer.diagnostic(renderCommandHelp(command, options.host.version, invokedAs));
       },
+      invokedAs,
       positionals,
       readStdin: options.readStdin ?? (() => ""),
       writer,
