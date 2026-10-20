@@ -20,16 +20,18 @@ import { lookupCommand } from "./lookup.js";
 import { resolveCommand } from "./resolve.js";
 import { searchCommand } from "./search.js";
 import { similarCommand } from "./similar.js";
+import { skillCommand } from "./skill.js";
 import { statusCommand } from "./status.js";
 import { storeCommand } from "./store.js";
 
 /**
- * Every command, in the order `--help` lists them: onboarding and the
- * coverage-first loop first, then the rest of the published surface, then the
- * escape hatch.
+ * Every command, in the order `--help` lists them: onboarding (the credential
+ * check, then the agent skill) and the coverage-first loop first, then the
+ * rest of the published surface, then the escape hatch.
  */
 export const ALL_COMMANDS = [
   statusCommand,
+  skillCommand,
   lookupCommand,
   searchCommand,
   similarCommand,

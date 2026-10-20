@@ -2,6 +2,13 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- Add `storerouter skill [<reference>]`: prints the agent skill bundled with
+  this version (`skills/storerouter/SKILL.md`), covering when to use
+  StoreRouter, which command fits a task, what each exit code means, and how to
+  present results. `storerouter skill references/commands.md` prints the
+  command reference. No network or credential; `--no-json` prints the Markdown
+  itself. Root `--help` points agents to it.
+
 - **Breaking:** remove `storerouter domains` and its local coverage cache. The
   API no longer serves `GET /v1/domains` (octogen#13525), so `domains` fails
   on 0.4.0 and older. Run `lookup` directly; a miss no longer points at
