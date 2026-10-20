@@ -434,6 +434,10 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
     Send exactly one of ``source`` and ``sources``. ``sources`` is 1-20
     distinct indexed product UUIDs treated as one set: results exclude every
     source, and a facet is generated only when every source has it.
+
+    ``omit_generated_facets`` drops generated facets by name; unknown names
+    are ignored, and unlike search it needs no ``q``. The embedding-column
+    lists override which embeddings retrieve and rank candidates.
     """
 
     source: ProgrammaticMoreLikeThisSource | None = None
@@ -445,6 +449,13 @@ class ProgrammaticMoreLikeThisRequest(_RequestModel):
     limit: int = Field(default=12, ge=1, le=100)
     facets: list[Facet] | None = Field(default=None, max_length=50)
     exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+    omit_generated_facets: list[str] | None = None
+    retrieval_embedding_columns: list[EmbeddingColumn] | None = Field(
+        default=None, min_length=1
+    )
+    ranking_embedding_columns: list[EmbeddingColumn] | None = Field(
+        default=None, min_length=1
+    )
     price_min: float | None = Field(default=None, ge=0)
     price_max: float | None = Field(default=None, ge=0)
     brand_quality_min: float | None = Field(default=None, ge=1, le=6)
@@ -478,6 +489,13 @@ class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):
     uuid: str
     product_url: str = Field(alias="productUrl")
     title: str | None = None
+
+
+class ProgrammaticMoreLikeThisSourceImageResponse(_ResponseModel):
+    """Identity of an image source, which has no indexed product."""
+
+    #: Content hash of the submitted image bytes.
+    hash: str
 
 
 class ProgrammaticMoreLikeThisEffectiveFacet(_ResponseModel):
@@ -516,12 +534,22 @@ class ProgrammaticMoreLikeThisResponse(_ResponseModel):
     #: The resolved ``sources``, in request order; ``None`` unless the request
     #: sent ``sources``.
     sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = None
+    #: The image source's identity; ``None`` for product sources.
+    source_image: ProgrammaticMoreLikeThisSourceImageResponse | None = Field(
+        default=None,
+        alias="sourceImage",
+    )
+    #: How an image source was resolved (``"image_query_generation"`` or
+    #: ``"cached_image_query"``); ``None`` for product sources.
+    resolution: str | None = None
     items: list[MerchantProductListItem] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, alias="nextCursor")
     effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
         default=None,
         alias="effectiveQuery",
     )
+    #: Server-generated id for this execution, matching ``X-Request-ID``.
+    request_id: str | None = Field(default=None, alias="requestId")
 
 
 class AttributeValue(_ResponseModel):

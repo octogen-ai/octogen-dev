@@ -41,6 +41,7 @@ import type {
   TaxonomyCategoryPage,
   TaxonomyPageParams,
 } from "./models.js";
+import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -1061,6 +1062,22 @@ function toMoreLikeThisPayload(
   if (params.excludeFacets !== undefined) {
     payload.exclude_facets = params.excludeFacets;
   }
+  if (params.omitGeneratedFacets !== undefined) {
+    assertStringArray(params.omitGeneratedFacets, "omitGeneratedFacets");
+    payload.omit_generated_facets = [...params.omitGeneratedFacets];
+  }
+  if (params.retrievalEmbeddingColumns !== undefined) {
+    payload.retrieval_embedding_columns = toEmbeddingColumns(
+      params.retrievalEmbeddingColumns,
+      "retrievalEmbeddingColumns",
+    );
+  }
+  if (params.rankingEmbeddingColumns !== undefined) {
+    payload.ranking_embedding_columns = toEmbeddingColumns(
+      params.rankingEmbeddingColumns,
+      "rankingEmbeddingColumns",
+    );
+  }
   if (params.priceMin !== undefined) {
     payload.price_min = params.priceMin;
   }
@@ -1078,6 +1095,26 @@ function toMoreLikeThisPayload(
   }
 
   return payload;
+}
+
+const EMBEDDING_COLUMNS: ReadonlySet<string> = new Set(Object.values(EmbeddingColumn));
+
+function toEmbeddingColumns(
+  columns: readonly EmbeddingColumn[],
+  field: string,
+): EmbeddingColumn[] {
+  assertStringArray(columns, field);
+  if (columns.length === 0) {
+    throw new TypeError(`${field} must name at least one embedding column`);
+  }
+  for (const column of columns) {
+    if (!EMBEDDING_COLUMNS.has(column)) {
+      throw new TypeError(
+        `${field} has unknown embedding column ${JSON.stringify(column)}`,
+      );
+    }
+  }
+  return [...columns];
 }
 
 function toMoreLikeThisSourcePayload(

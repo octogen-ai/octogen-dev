@@ -102,18 +102,20 @@ const facetCountsRequestKeysCurrent: ExtraFacetCountsRequestKeys extends never
   ? true
   : ExtraFacetCountsRequestKeys = true;
 
-// The more-like-this body must not carry a field the contract retired (as it
-// retired `include_facets` for `facets`), and must cover every field except
-// the ones this SDK does not expose yet.
-type UnexposedMoreLikeThisRequestKeys =
-  "omit_generated_facets" | "ranking_embedding_columns" | "retrieval_embedding_columns";
+// The more-like-this body must carry exactly the contract's fields: none it
+// retired (as it retired `include_facets` for `facets`), none it lacks.
 type MissingMoreLikeThisRequestKeys = Exclude<
   keyof GeneratedMoreLikeThisRequest,
-  keyof ProgrammaticMoreLikeThisRequest | UnexposedMoreLikeThisRequestKeys
+  keyof ProgrammaticMoreLikeThisRequest
 >;
 type ExtraMoreLikeThisRequestKeys = Exclude<
   keyof ProgrammaticMoreLikeThisRequest,
   keyof GeneratedMoreLikeThisRequest
+>;
+// Its response must declare every top-level field the server sends.
+type MissingMoreLikeThisResponseKeys = Exclude<
+  keyof GeneratedMoreLikeThisResponse,
+  keyof MoreLikeThisProductsResponse
 >;
 // Its effective query must not declare a field the server stopped sending, as
 // it stopped sending `relaxationRounds` for `relaxation`.
@@ -128,6 +130,17 @@ const moreLikeThisRequestKeysCovered: MissingMoreLikeThisRequestKeys extends nev
 const moreLikeThisRequestKeysCurrent: ExtraMoreLikeThisRequestKeys extends never
   ? true
   : ExtraMoreLikeThisRequestKeys = true;
+const moreLikeThisResponseKeysCovered: MissingMoreLikeThisResponseKeys extends never
+  ? true
+  : MissingMoreLikeThisResponseKeys = true;
+const moreLikeThisEmbeddingColumnsParity: Extends<
+  NonNullable<GeneratedMoreLikeThisRequest["retrieval_embedding_columns"]>,
+  NonNullable<ProgrammaticMoreLikeThisRequest["retrieval_embedding_columns"]>
+> = true;
+const moreLikeThisSourceImageParity: Extends<
+  NonNullable<GeneratedMoreLikeThisResponse["sourceImage"]>,
+  NonNullable<MoreLikeThisProductsResponse["sourceImage"]>
+> = true;
 const moreLikeThisEffectiveQueryKeysCurrent: ExtraMoreLikeThisEffectiveQueryKeys extends never
   ? true
   : ExtraMoreLikeThisEffectiveQueryKeys = true;
@@ -166,6 +179,9 @@ describe("Unit: view model parity with the generated contract", () => {
     expect(facetCountsRequestKeysCurrent).toBe(true);
     expect(moreLikeThisRequestKeysCovered).toBe(true);
     expect(moreLikeThisRequestKeysCurrent).toBe(true);
+    expect(moreLikeThisResponseKeysCovered).toBe(true);
+    expect(moreLikeThisEmbeddingColumnsParity).toBe(true);
+    expect(moreLikeThisSourceImageParity).toBe(true);
     expect(moreLikeThisEffectiveQueryKeysCurrent).toBe(true);
     expect(moreLikeThisRelaxationParity).toBe(true);
     expect(moreLikeThisSourcesParity).toBe(true);

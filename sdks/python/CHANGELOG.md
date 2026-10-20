@@ -37,6 +37,16 @@ More-like-this takes several source products at once.
   request order when the request sent `sources`. `source` is then `None`, so
   it is now typed `ProgrammaticMoreLikeThisSourceResponse | None`.
 - Regenerate the contract mirror for `sources`.
+- `more_like_this_products` and `ProgrammaticMoreLikeThisRequest` take
+  `omit_generated_facets` (generated facets to drop by name; unknown names are
+  ignored and no `q` is needed) and `retrieval_embedding_columns` /
+  `ranking_embedding_columns` (one or more `EmbeddingColumn`s). Before this the
+  request model refused all three, so they could not be sent at all.
+- `ProgrammaticMoreLikeThisResponse` declares `request_id` (`requestId`),
+  `resolution` and `source_image` (`sourceImage`, the new
+  `ProgrammaticMoreLikeThisSourceImageResponse`) instead of leaving them as
+  extras. The more-like-this request and response models now declare every
+  top-level contract property, and a test keeps it that way.
 
 ## 0.8.0 — 2026-10-19
 

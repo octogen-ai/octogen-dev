@@ -15,6 +15,7 @@ from octogen_ai_sdk import (
     AttributeValue,
     CanonicalBrand,
     CanonicalBrandEnrichment,
+    EmbeddingColumn,
     Facet,
     FacetName,
     HTTPValidationError,
@@ -28,13 +29,18 @@ from octogen_ai_sdk import (
     ProductLookupResolutionMode,
     ProductResolutionMetadata,
     ProgrammaticMoreLikeThisRequest,
+    ProgrammaticMoreLikeThisResponse,
     ProgrammaticMoreLikeThisSource,
+    ProgrammaticMoreLikeThisSourceImageResponse,
+    ProgrammaticMoreLikeThisSourceResponse,
     ProgrammaticProductLookupRequest,
     ProgrammaticProductSearchEffectiveQuery,
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ValidationErrorModel,
 )
+from octogen_ai_sdk.generated import models as contract
+from pydantic import BaseModel
 
 BASE_URL = "https://api.octogen.ai/v1"
 
@@ -782,6 +788,95 @@ async def test_more_like_this_products_sends_sources() -> None:
     assert page.sources is not None
     assert [source.uuid for source in page.sources] == ["p1", "p2"]
     assert page.sources[1].catalog_key == "globex"
+    assert page.request_id == "req-1"
+
+
+@respx.mock
+async def test_more_like_this_products_sends_omit_and_embedding_controls() -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "sourceImage": {"hash": "abc123"},
+                "resolution": "cached_image_query",
+                "items": [],
+                "requestId": "req-2",
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.more_like_this_products(
+            source_uuid="p1",
+            omit_generated_facets=["color_family"],
+            retrieval_embedding_columns=[
+                "style_embedding",
+                EmbeddingColumn.TAGS_EMBEDDING,
+            ],
+            ranking_embedding_columns=[EmbeddingColumn.EMBEDDING],
+        )
+
+    assert json.loads(route.calls.last.request.read()) == {
+        "source": {"uuid": "p1"},
+        "limit": 12,
+        "omit_generated_facets": ["color_family"],
+        "retrieval_embedding_columns": ["style_embedding", "tags_embedding"],
+        "ranking_embedding_columns": ["embedding"],
+        "price_preference": "any",
+        "debug": False,
+    }
+    assert page.source is None
+    assert page.source_image is not None
+    assert page.source_image.hash == "abc123"
+    assert page.resolution == "cached_image_query"
+    assert page.request_id == "req-2"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"retrieval_embedding_columns": []}, ValueError, "at least 1 item"),
+        ({"ranking_embedding_columns": []}, ValueError, "at least 1 item"),
+        ({"ranking_embedding_columns": "embedding"}, TypeError, "not a string"),
+        ({"retrieval_embedding_columns": ["image_embedding"]}, ValueError, "image"),
+        ({"omit_generated_facets": "color_family"}, TypeError, "not a string"),
+    ],
+)
+@respx.mock
+async def test_more_like_this_products_rejects_bad_controls(
+    kwargs: dict[str, Any], error: type[Exception], match: str
+) -> None:
+    route = respx.post(f"{BASE_URL}/products/more-like-this")
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(error, match=match):
+            await client.more_like_this_products(source_uuid="p1", **kwargs)
+
+    assert not route.called
+
+
+def test_more_like_this_models_declare_every_contract_property() -> None:
+    # Cosimo's contract-lag check fails on a request property the SDK cannot
+    # send and lists response properties it does not declare; keep both empty
+    # for more-like-this so its bridges can go.
+    pairs: list[tuple[type[BaseModel], type[BaseModel]]] = [
+        (ProgrammaticMoreLikeThisRequest, contract.ProgrammaticMoreLikeThisRequest),
+        (ProgrammaticMoreLikeThisResponse, contract.ProgrammaticMoreLikeThisResponse),
+        (
+            ProgrammaticMoreLikeThisSourceResponse,
+            contract.ProgrammaticMoreLikeThisSourceResponse,
+        ),
+        (
+            ProgrammaticMoreLikeThisSourceImageResponse,
+            contract.ProgrammaticMoreLikeThisSourceImageResponse,
+        ),
+    ]
+    for model, generated in pairs:
+        assert _wire_names(model) == _wire_names(generated), model.__name__
+
+
+def _wire_names(model: type[BaseModel]) -> set[str]:
+    return {field.alias or name for name, field in model.model_fields.items()}
 
 
 @pytest.mark.parametrize(
