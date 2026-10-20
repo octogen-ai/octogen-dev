@@ -30,6 +30,23 @@ Calls: getMe (through @octogen-ai/sdk 0.7.0)
 Global options: storerouter --help
 ```
 
+## skill
+
+```text
+storerouter skill [<reference>]
+
+  Print the agent skill: how to use this CLI well
+
+  Prints the agent skill bundled with this CLI version: when to use
+  StoreRouter, which command fits a task, what each exit code means, and
+  how to present results. With a path, prints a reference it links to.
+
+  Piped output is the usual JSON envelope with the text in `markdown`;
+  --no-json prints the Markdown itself. No network, no credential.
+
+Global options: storerouter --help
+```
+
 ## lookup
 
 ```text

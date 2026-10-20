@@ -6,7 +6,7 @@ or from an agent, which is the caller this is actually designed for.
 > **Pre-release.** Targets the `@next` dist-tag only. Set
 > `STOREROUTER_API_KEY` or use `--api-key-file <path>` with your StoreRouter API key.
 > See [MIGRATION.md](MIGRATION.md) for package migration and release steps.
-> `init`, skills, and MCP registration are not implemented.
+> `init` and MCP registration are not implemented.
 
 ```bash
 npm exec --yes --package=@storerouter/cli@next -- storerouter search "linen dress" --limit 3
@@ -93,6 +93,20 @@ loop. `--offline` reports local state with no network calls.
 
 The probe is `GET /v1/me`, which requires a key and returns calling identity
 and rate limits.
+
+### `storerouter skill [<reference>]`
+
+```bash
+storerouter skill --no-json
+storerouter skill references/commands.md --no-json
+```
+
+The agent skill bundled with this CLI version: when to use StoreRouter, which
+command fits a task, what each exit code means, and how to present results. Its
+source is [`skills/storerouter/SKILL.md`](../skills/storerouter/SKILL.md);
+codegen bundles it, with this reference as `references/commands.md`, so the
+guidance always matches the installed commands and flags. Piped output keeps
+the JSON envelope, with the text in `markdown`. No network and no credential.
 
 ### `storerouter lookup <url>` (alias: `parse`)
 

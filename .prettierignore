@@ -21,3 +21,6 @@ cli/REFERENCE.md
 
 # Generated guest source is tool-owned
 browser-runtime/src/core-source.generated.ts
+
+# Skill frontmatter keeps `metadata` as one line of JSON, as skill loaders expect
+skills/storerouter/SKILL.md

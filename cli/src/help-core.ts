@@ -30,6 +30,8 @@ export function renderRootHelp(
     "",
     "Aliases: parse = lookup; octogen = storerouter (compatibility executable).",
     "",
+    "Agents: storerouter skill --no-json prints how to use this CLI well.",
+    "",
     "Credentials: --api-key-stdin, --api-key-file, STOREROUTER_API_KEY,",
     "  OCTOGEN_PLATFORM_API_KEY, OCTO_API_KEY (deprecated), then nearest .env.",
     "",
