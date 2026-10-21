@@ -230,3 +230,35 @@ describe("storerouter brands categories", () => {
     expect(result.json()["categories"]).toEqual([{ name: "Dresses", level: 2 }]);
   });
 });
+
+describe("storerouter brands, the group", () => {
+  it("lists its subcommands on stderr when none is given", async () => {
+    const result = await runCli({ argv: ["brands"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.stdout).toBe("");
+    for (const subcommand of [
+      "search",
+      "similar",
+      "show",
+      "products",
+      "categories",
+      "prefix",
+    ])
+      expect(result.stderr).toContain(`  ${subcommand} `);
+    expect(result.requests).toEqual([]);
+  });
+
+  it("exits 0 for brands --help", async () => {
+    const result = await runCli({ argv: ["brands", "--help"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.stderr).toContain("Usage: storerouter brands <subcommand>");
+  });
+
+  it("names the valid subcommands for an unknown one", async () => {
+    const result = await runCli({ argv: ["brands", "nope", "--json"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["message"]).toBe(
+      "Unknown brands subcommand: nope. Use one of: search, similar, show, products, categories, prefix.",
+    );
+  });
+});

@@ -51,6 +51,31 @@ export function renderRootHelp(
   return lines.join("\n");
 }
 
+/** `storerouter brands`: a command group's subcommands, as root help lists commands. */
+export function renderGroupHelp(
+  group: string,
+  commands: readonly CommandSpec[],
+  version: CliHost["version"],
+): string {
+  const subcommands = commands.map((command) => ({
+    name: command.name.slice(group.length + 1),
+    summary: command.summary,
+  }));
+  const width = Math.max(...subcommands.map((command) => command.name.length));
+  return [
+    `storerouter ${version.version} (sdk ${version.sdkVersion})`,
+    "",
+    `Usage: storerouter ${group} <subcommand> [options]`,
+    "",
+    "Subcommands:",
+    ...subcommands.map(
+      (command) => `  ${command.name.padEnd(width)}  ${command.summary}`,
+    ),
+    "",
+    `storerouter ${group} <subcommand> --help for a subcommand's own options.`,
+  ].join("\n");
+}
+
 /** `invokedAs` is the alias typed, if any: `storerouter parse --help` shows `parse`. */
 export function renderCommandHelp(
   command: CommandSpec,

@@ -7,7 +7,8 @@
   (`--facet`, `--exclude-facet`, `--limit`), `brands prefix <prefix>`, `brands
 show <brand>`, `brands products <brand>` (`--limit`, `--offset`) and `brands
 categories <brand>` (`--min-level`, `--limit`). `404 brand_not_found` and empty
-  results exit `6`. Requires `@octogen-ai/sdk` 0.9.0.
+  results exit `6`. `storerouter brands` alone lists the subcommands, and an
+  unknown one names the valid ones. Requires `@octogen-ai/sdk` 0.9.0.
 
 - Add `storerouter skill [<reference>]`: prints the agent skill bundled with
   this version (`skills/storerouter/SKILL.md`), covering when to use
