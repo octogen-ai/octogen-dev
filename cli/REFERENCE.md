@@ -132,19 +132,19 @@ Calls: moreLikeThisProducts (through @octogen-ai/sdk 0.9.0)
 Global options: storerouter --help
 ```
 
-## store
+## stores show
 
 ```text
-storerouter store <host|url>
+storerouter stores show <domain|url>
 
   Show one store's coverage: catalogs, product counts, fields, prices
 
-  Takes a bare host or any URL on the store, normalized the way the API
+  Takes a bare domain or any URL on the store, normalized the way the API
   normalizes hosts: lowercased, port and leading `www.` dropped. So
   `https://www.TheReformation.com/products/x` asks about thereformation.com.
 
   Exit 6 means the server answered 404 domain_not_covered: no catalog serves
-  that host. One host per call; there is no list of covered hosts.
+  that domain. One domain per call; there is no list of covered stores.
 
 Calls: getStore (through @octogen-ai/sdk 0.9.0)
 
@@ -208,7 +208,8 @@ storerouter brands show <brand>
   answered 404 brand_not_found.
 
   Coverage counts the brand's products in every catalog, shaped like one
-  `store` catalog. Pass a listed host to `store` for that store's coverage.
+  `stores show` catalog. Pass a listed host to `stores show` for that store's
+  coverage.
 
 Calls: getBrandDetails (through @octogen-ai/sdk 0.9.0)
 

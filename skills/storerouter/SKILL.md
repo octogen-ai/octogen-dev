@@ -41,7 +41,7 @@ conversation.
 | A product URL                              | `storerouter parse <url>`                       |
 | A need, but no URL                         | `storerouter search '<query>'`                  |
 | A product, and want alternatives           | `storerouter similar <url-or-uuid>`             |
-| A store, and want its coverage and filters | `storerouter store <host>`                      |
+| A store, and want its coverage and filters | `storerouter stores show <domain>`              |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
 | A brand, and want its details and coverage | `storerouter brands show <brand>`               |
@@ -73,7 +73,7 @@ warnings. Diagnostics go to stderr. `--no-json` prints the human rendering.
 
 Exit `6` is narrow. From `parse` it means this URL is not in the index, not that
 the store is uncovered. From `search` it means nothing matched this query and
-these filters. Only `store <host>` exiting `6` with `covered: false` means no
+these filters. Only `stores show <domain>` exiting `6` with `covered: false` means no
 catalog serves the store; the next step is for a human to request coverage at
 https://storerouter.ai/contact. Never conclude that a store is unsupported from
 exit `1`, `3`, `4` or `5`.
@@ -93,7 +93,7 @@ alone, so a miss is a fast exit `6`. On-demand results can be partial.
 
 ```bash
 storerouter search 'linen dress' --limit 10
-storerouter store macys.com --json
+storerouter stores show macys.com --json
 storerouter search dress --catalog macys --facet color_family=red,blue --price-max 300
 ```
 
@@ -103,7 +103,7 @@ storerouter search dress --catalog macys --facet color_family=red,blue --price-m
   `--facet name=value` (one per facet name; comma-separate its values),
   `--price-min` and `--price-max`, and `--catalog <key>` for one store.
 - Facet names and values are canonical keys, not display text. To learn a
-  store's, run `storerouter store <host> --json`: each catalog lists its
+  store's, run `storerouter stores show <domain> --json`: each catalog lists its
   `fields`, where `name` is the facet name and each of `topValues` has the
   `value` to pass. Categories are `category_path.depth_0` to
   `category_path.depth_6`, and `brand_name` filters by brand.

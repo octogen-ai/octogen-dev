@@ -122,7 +122,7 @@ describe("every published request field is accounted for", () => {
       resolveProductFromHtml: "resolve",
       searchProducts: "search",
       getMe: "status",
-      getStore: "store",
+      getStore: "stores show",
       searchBrandsFromText: "brands search",
       searchSimilarBrands: "brands similar",
       searchBrandPrefix: "brands prefix",

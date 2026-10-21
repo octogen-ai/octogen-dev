@@ -138,11 +138,11 @@ storerouter search dress --facet color=red,blue --price-max 300 --catalog macys
 storerouter similar https://lagence.com/products/akiya-satin-maxi-dress-merlot-red
 ```
 
-### `storerouter store <host|url>`
+### `storerouter stores show <domain|url>`
 
 ```bash
-storerouter store thereformation.com
-storerouter store https://www.thereformation.com/products/some-dress --json
+storerouter stores show thereformation.com
+storerouter stores show https://www.thereformation.com/products/some-dress --json
 ```
 
 One store's coverage snapshot from `GET /v1/stores/{domain}`: every catalog

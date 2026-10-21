@@ -30,7 +30,7 @@ import { searchCommand } from "./search.js";
 import { similarCommand } from "./similar.js";
 import { skillCommand } from "./skill.js";
 import { statusCommand } from "./status.js";
-import { storeCommand } from "./store.js";
+import { storesShowCommand } from "./stores.js";
 
 /**
  * Every command, in the order `--help` lists them: onboarding (the credential
@@ -43,7 +43,7 @@ export const ALL_COMMANDS = [
   lookupCommand,
   searchCommand,
   similarCommand,
-  storeCommand,
+  storesShowCommand,
   brandsSearchCommand,
   brandsSimilarCommand,
   brandsShowCommand,

@@ -36,7 +36,7 @@ import {
 } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 import { parseFacets } from "./search.js";
-import { formatCount, renderSnapshot } from "./store.js";
+import { formatCount, renderSnapshot } from "./stores.js";
 
 /** The one positional brand, or a usage error naming the command. */
 function brandArgument(context: CommandContext): string {
@@ -310,7 +310,7 @@ function detailLine(
     : [`  ${label.padEnd(10)} ${String(value)}`];
 }
 
-/** Catalogs carrying the brand, most products first, with hosts for `store`. */
+/** Catalogs carrying the brand, most products first, with hosts for `stores show`. */
 function renderBrandCatalogs(details: BrandCoverageResponse): string[] {
   const { catalogs } = details;
   if (catalogs.length === 0) return ["  catalogs   —"];
@@ -334,7 +334,7 @@ function renderBrandCatalogs(details: BrandCoverageResponse): string[] {
   return lines;
 }
 
-/** Hosts shown per catalog; any one of them works with `storerouter store`. */
+/** Hosts shown per catalog; any one of them works with `storerouter stores show`. */
 const HOSTS_PER_CATALOG = 2;
 
 async function runShow(context: CommandContext): Promise<ExitCode> {
@@ -380,7 +380,8 @@ export const brandsShowCommand = {
     "answered 404 brand_not_found.",
     "",
     "Coverage counts the brand's products in every catalog, shaped like one",
-    "`store` catalog. Pass a listed host to `store` for that store's coverage.",
+    "`stores show` catalog. Pass a listed host to `stores show` for that store's",
+    "coverage.",
   ],
   operations: ["getBrandDetails"] as const,
   run: runShow,

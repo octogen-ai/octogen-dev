@@ -218,9 +218,9 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
       expect(result.code).not.toBe(0);
     }
   });
-  it("store runs one normalized single-host GET through the policy", async () => {
+  it("stores show runs one normalized single-host GET through the policy", async () => {
     const result = await shell(
-      "storerouter store https://WWW.Example.com/products/linen-dress --json | jq -c '{host, covered, catalog: .catalogs[0].catalog}'",
+      "storerouter stores show https://WWW.Example.com/products/linen-dress --json | jq -c '{host, covered, catalog: .catalogs[0].catalog}'",
     );
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({

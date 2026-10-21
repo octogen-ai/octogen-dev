@@ -560,10 +560,14 @@ const STORE_BODY = {
   ],
 };
 
-describe("storerouter store", () => {
+describe("storerouter stores show", () => {
   it("GETs one normalized host, with no body and no query", async () => {
     const result = await runCli({
-      argv: ["store", "https://WWW.TheReformation.com:443/products/x?color=red"],
+      argv: [
+        "stores",
+        "show",
+        "https://WWW.TheReformation.com:443/products/x?color=red",
+      ],
       env: KEYED,
       routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
     });
@@ -579,13 +583,13 @@ describe("storerouter store", () => {
 
   it("emits the host, covered: true and every catalog's full snapshot", async () => {
     const result = await runCli({
-      argv: ["store", "thereformation.com", "--json"],
+      argv: ["stores", "show", "thereformation.com", "--json"],
       env: KEYED,
       routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
     });
     const body = result.json();
     expect(body["ok"]).toBe(true);
-    expect(body["command"]).toBe("store");
+    expect(body["command"]).toBe("stores show");
     expect(body["host"]).toBe("thereformation.com");
     expect(body["covered"]).toBe(true);
     expect(body["coverage"]).toBe("covered");
@@ -594,7 +598,7 @@ describe("storerouter store", () => {
 
   it("prints a human summary on a terminal", async () => {
     const result = await runCli({
-      argv: ["store", "thereformation.com"],
+      argv: ["stores", "show", "thereformation.com"],
       env: KEYED,
       isTty: true,
       routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
@@ -637,7 +641,7 @@ describe("storerouter store", () => {
       },
     };
     const human = await runCli({
-      argv: ["store", "thereformation.com"],
+      argv: ["stores", "show", "thereformation.com"],
       env: KEYED,
       isTty: true,
       routes,
@@ -649,7 +653,7 @@ describe("storerouter store", () => {
     expect(human.stdout).not.toContain("enrichment_6");
     expect(human.stdout).toContain("    … 4 more fields (--json for all)");
     const json = await runCli({
-      argv: ["store", "thereformation.com"],
+      argv: ["stores", "show", "thereformation.com"],
       env: KEYED,
       routes,
     });
@@ -658,7 +662,7 @@ describe("storerouter store", () => {
 
   it("exits 6 with covered: false on 404 domain_not_covered", async () => {
     const result = await runCli({
-      argv: ["store", "example.com"],
+      argv: ["stores", "show", "example.com"],
       env: KEYED,
       routes: {
         "GET /stores/example.com": {
@@ -681,7 +685,7 @@ describe("storerouter store", () => {
 
   it("does not read any other 404 as 'not covered'", async () => {
     const result = await runCli({
-      argv: ["store", "example.com"],
+      argv: ["stores", "show", "example.com"],
       env: KEYED,
       routes: {
         "GET /stores/example.com": { body: { detail: "Not Found" }, status: 404 },
@@ -692,9 +696,9 @@ describe("storerouter store", () => {
   });
 
   it.each([
-    [["store"], "missing_argument"],
-    [["store", "a.example", "b.example"], "too_many_arguments"],
-    [["store", "not a host/with a path"], "invalid_host"],
+    [["stores", "show"], "missing_argument"],
+    [["stores", "show", "a.example", "b.example"], "too_many_arguments"],
+    [["stores", "show", "not a host/with a path"], "invalid_host"],
   ])("refuses %j before any request", async (argv, code) => {
     const result = await runCli({ argv, env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);
@@ -704,8 +708,8 @@ describe("storerouter store", () => {
 
   it("has no list mode", async () => {
     for (const argv of [
-      ["store", "--list"],
-      ["store", "--all"],
+      ["stores", "show", "--list"],
+      ["stores", "show", "--all"],
     ]) {
       const result = await runCli({ argv, env: KEYED });
       expect(result.exitCode).toBe(ExitCode.Usage);
@@ -723,6 +727,30 @@ describe("retired commands", () => {
     const result = await runCli({ argv, routes: {} });
     expect(result.exitCode).not.toBe(ExitCode.Success);
     expect(result.requests).toEqual([]);
+  });
+});
+
+describe("storerouter stores", () => {
+  it("lists its subcommands", async () => {
+    const result = await runCli({ argv: ["stores"] });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.stderr).toContain("Usage: storerouter stores <subcommand>");
+    expect(result.stderr).toContain("show");
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it("names the valid subcommands for an unknown one", async () => {
+    const result = await runCli({ argv: ["stores", "list"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["message"]).toContain("Use one of: show");
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it("has no singular `store` alias", async () => {
+    const result = await runCli({ argv: ["store", "thereformation.com"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe("unknown_command");
+    expect(result.requests).toHaveLength(0);
   });
 });
 
