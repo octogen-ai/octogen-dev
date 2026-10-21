@@ -2,6 +2,14 @@
 
 ## 0.9.0 (unreleased)
 
+- **Breaking:** `getDomain` is now `getStore` (`GET /v1/stores/{domain}`),
+  returning `StoreCoverageResponse`; `DomainCoverageResponse` and
+  `DomainCatalogCoverage` are now `StoreCoverageResponse` and
+  `StoreCatalogCoverage`. The API publishes only the stores route.
+- **Breaking:** `getBrandDetails` returns `BrandCoverageResponse` (was
+  `BrandDetailsView`): brand metadata plus a snapshot of the brand's products
+  across catalogs (`productCount`, `computedAt`, `fields`, `price`) and
+  `catalogs`, each a `BrandCatalog` with `hosts` for `getStore`.
 - Add the six published `/v1/brands` operations: `searchBrandPrefix`,
   `searchBrandsFromText`, `searchSimilarBrands`, `getBrandDetails`,
   `browseBrandProducts` and `getBrandTopCategories`, with their request and

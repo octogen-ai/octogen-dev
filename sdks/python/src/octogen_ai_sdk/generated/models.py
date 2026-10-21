@@ -31,61 +31,28 @@ class AudienceView(BaseModel):
     genders: list[str] | None = Field([], title="Genders")
 
 
-class BrandDetailsView(BaseModel):
+class BrandCatalog(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
     )
-    brand_description: str | None = Field(
-        None,
-        alias="brandDescription",
-        description="Short description of the brand.",
-        title="Branddescription",
-    )
-    brand_name: str = Field(
+    catalog: str = Field(..., description="Catalog key.", title="Catalog")
+    catalog_display_name: str = Field(
         ...,
-        alias="brandName",
-        description="Canonical name of the brand.",
-        title="Brandname",
+        alias="catalogDisplayName",
+        description="Human-readable display name for the catalog.",
+        title="Catalogdisplayname",
     )
-    brand_slug: str | None = Field(
-        None,
-        alias="brandSlug",
-        description="Canonical slug for the brand.",
-        title="Brandslug",
-    )
-    brand_uuid: str = Field(
+    hosts: list[str] = Field(
         ...,
-        alias="brandUuid",
-        description="Unique identifier for the brand.",
-        title="Branduuid",
+        description="Normalized hosts the catalog serves, each usable with `GET /v1/stores/{domain}`.",
+        title="Hosts",
     )
-    directory_subheading: str | None = Field(
-        None,
-        alias="directorySubheading",
-        description="Brand subheading for directory display.",
-        title="Directorysubheading",
-    )
-    domain: str | None = Field(
-        None, description="Primary website domain for the brand.", title="Domain"
-    )
-    founded_year: int | None = Field(
-        None,
-        alias="foundedYear",
-        description="Year the brand was founded.",
-        title="Foundedyear",
-    )
-    origin_country: str | None = Field(
-        None,
-        alias="originCountry",
-        description="Country of origin for the brand.",
-        title="Origincountry",
-    )
-    price_tier: str | None = Field(
-        None,
-        alias="priceTier",
-        description="Price positioning for the brand.",
-        title="Pricetier",
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Indexed product groups of this brand in the catalog.",
+        title="Productcount",
     )
 
 
@@ -1013,6 +980,70 @@ class SimilarBrandsResponse(BaseModel):
         description="Total number of matching brands found.",
         title="Totalfound",
     )
+
+
+class StoreIdentity(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    catalog: str = Field(
+        ...,
+        description="Catalog key to pass in products/search's catalogs filter.",
+        title="Catalog",
+    )
+    display_name: str = Field(..., alias="displayName", title="Displayname")
+    domains: list[str] = Field(
+        ...,
+        description="Normalized bare hosts, including primaryDomain.",
+        title="Domains",
+    )
+    primary_domain: str = Field(
+        ...,
+        alias="primaryDomain",
+        description="Normalized bare primary host.",
+        title="Primarydomain",
+    )
+    store_id: str = Field(
+        ..., alias="storeId", description="Stable store identifier.", title="Storeid"
+    )
+
+
+class StoreProfileProvenance(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    counting_unit: str = Field(
+        ...,
+        alias="countingUnit",
+        description="One source product document; not necessarily a distinct style.",
+        title="Countingunit",
+    )
+    observed_at: AwareDatetime = Field(
+        ...,
+        alias="observedAt",
+        description="Source observation time, with timezone.",
+        title="Observedat",
+    )
+    taxonomy_version: str | None = Field(
+        None,
+        alias="taxonomyVersion",
+        description="Taxonomy version when known.",
+        title="Taxonomyversion",
+    )
+
+
+class StoreProfileValue(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    count: int = Field(
+        ..., description="Products containing this value, once each.", title="Count"
+    )
+    label: str = Field(..., title="Label")
+    value: str = Field(..., description="Canonical value identifier.", title="Value")
 
 
 class TaxonomyAttribute(BaseModel):
@@ -2024,6 +2055,42 @@ class SimilarBrandsRequest(BaseModel):
     )
 
 
+class StoreProfileDistribution(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    approximate: bool = Field(
+        ..., description="Whether counts are approximate.", title="Approximate"
+    )
+    name: str = Field(..., description="Canonical profile field name.", title="Name")
+    populated_count: int = Field(
+        ...,
+        alias="populatedCount",
+        description="Products with a known value; others are unknown, not absent.",
+        title="Populatedcount",
+    )
+    population_count: int = Field(
+        ...,
+        alias="populationCount",
+        description="Denominator for value shares.",
+        title="Populationcount",
+    )
+    source: Literal["product", "enrichment", "brands"] | str = Field(
+        ...,
+        description="Brand-derived values describe stocked brands, not store policies.",
+        title="Source",
+    )
+    truncated: bool = Field(
+        ..., description="True when additional values were omitted.", title="Truncated"
+    )
+    values: list[StoreProfileValue] = Field(
+        ...,
+        description="Value shares are count / populationCount (undefined for an empty population). Multi-valued field shares can sum to more than 100%.",
+        title="Values",
+    )
+
+
 class TaxonomyAttributePage(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2045,6 +2112,95 @@ class TaxonomyAttributePage(BaseModel):
     )
     total: int = Field(
         ..., description="Number of attributes across all pages.", title="Total"
+    )
+
+
+class BrandCoverageResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_description: str | None = Field(
+        None,
+        alias="brandDescription",
+        description="Short description of the brand.",
+        title="Branddescription",
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical name of the brand.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical slug for the brand.",
+        title="Brandslug",
+    )
+    brand_uuid: str = Field(
+        ...,
+        alias="brandUuid",
+        description="Unique identifier for the brand.",
+        title="Branduuid",
+    )
+    catalogs: list[BrandCatalog] = Field(
+        ...,
+        description="Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.",
+        title="Catalogs",
+    )
+    catalogs_truncated: bool = Field(
+        ...,
+        alias="catalogsTruncated",
+        description="Whether the brand is carried by more catalogs than listed.",
+        title="Catalogstruncated",
+    )
+    computed_at: str = Field(
+        ...,
+        alias="computedAt",
+        description="When the coverage was computed (UTC ISO 8601).",
+        title="Computedat",
+    )
+    directory_subheading: str | None = Field(
+        None,
+        alias="directorySubheading",
+        description="Brand subheading for directory display.",
+        title="Directorysubheading",
+    )
+    domain: str | None = Field(
+        None, description="Primary website domain for the brand.", title="Domain"
+    )
+    fields: list[DomainField] = Field(
+        ...,
+        description="Populated public facets of the brand's products, ordered by `source` then coverage.",
+        title="Fields",
+    )
+    founded_year: int | None = Field(
+        None,
+        alias="foundedYear",
+        description="Year the brand was founded.",
+        title="Foundedyear",
+    )
+    origin_country: str | None = Field(
+        None,
+        alias="originCountry",
+        description="Country of origin for the brand.",
+        title="Origincountry",
+    )
+    price: PriceDistribution | None = Field(
+        None, description="Current-price histogram; null when nothing is priced."
+    )
+    price_tier: str | None = Field(
+        None,
+        alias="priceTier",
+        description="Price positioning for the brand.",
+        title="Pricetier",
+    )
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Indexed product groups of the brand across catalogs.",
+        title="Productcount",
     )
 
 
@@ -2085,53 +2241,6 @@ class BrandProductsPage(BaseModel):
         description="Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.",
         title="Total",
     )
-
-
-class DomainCatalogCoverage(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    catalog: str = Field(..., description="Catalog key.", title="Catalog")
-    catalog_display_name: str = Field(
-        ...,
-        alias="catalogDisplayName",
-        description="Human-readable display name for the catalog.",
-        title="Catalogdisplayname",
-    )
-    computed_at: str = Field(
-        ...,
-        alias="computedAt",
-        description="When the snapshot was computed (UTC ISO 8601).",
-        title="Computedat",
-    )
-    fields: list[DomainField] = Field(
-        ...,
-        description="Populated public facets, ordered by `source` then coverage.",
-        title="Fields",
-    )
-    price: PriceDistribution | None = Field(
-        None, description="Current-price histogram; null when nothing is priced."
-    )
-    product_count: int = Field(
-        ...,
-        alias="productCount",
-        description="Indexed product groups in the catalog.",
-        title="Productcount",
-    )
-
-
-class DomainCoverageResponse(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    catalogs: list[DomainCatalogCoverage] = Field(
-        ...,
-        description="One snapshot per catalog serving the host, sorted by catalog.",
-        title="Catalogs",
-    )
-    host: str = Field(..., description="The normalized host.", title="Host")
 
 
 class MerchantProductView(BaseModel):
@@ -2294,6 +2403,71 @@ class ProgrammaticProductLookupResponse(BaseModel):
     )
 
 
+class StoreAssortmentProfile(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    distributions: list[StoreProfileDistribution] = Field(..., title="Distributions")
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Observed indexed products in this scope.",
+        title="Productcount",
+    )
+    summary: str = Field(
+        ..., description="Description derived from this population.", title="Summary"
+    )
+
+
+class StoreDepartmentProfile(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    category_path: list[str] = Field(
+        ...,
+        alias="categoryPath",
+        description="Canonical category path, root first.",
+        title="Categorypath",
+    )
+    department_id: str = Field(..., alias="departmentId", title="Departmentid")
+    distributions: list[StoreProfileDistribution] = Field(..., title="Distributions")
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Observed indexed products in this scope.",
+        title="Productcount",
+    )
+    summary: str = Field(
+        ..., description="Description derived from this population.", title="Summary"
+    )
+
+
+class StoreProfile(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    computed_at: AwareDatetime = Field(
+        ...,
+        alias="computedAt",
+        description="Profile computation time, with timezone.",
+        title="Computedat",
+    )
+    departments: list[StoreDepartmentProfile] = Field(..., title="Departments")
+    overall: StoreAssortmentProfile
+    profile_version: str = Field(
+        ...,
+        alias="profileVersion",
+        description="Opaque published generation ID.",
+        title="Profileversion",
+    )
+    provenance: StoreProfileProvenance
+    schema_version: str = Field(..., alias="schemaVersion", title="Schemaversion")
+    store: StoreIdentity
+
+
 class MerchantProductUrlLookupResponse(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2349,4 +2523,59 @@ class MerchantProductUrlLookupResponse(BaseModel):
         None,
         description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
         title="Warnings",
+    )
+
+
+class StoreCatalogCoverage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog: str = Field(..., description="Catalog key.", title="Catalog")
+    catalog_display_name: str = Field(
+        ...,
+        alias="catalogDisplayName",
+        description="Human-readable display name for the catalog.",
+        title="Catalogdisplayname",
+    )
+    computed_at: str = Field(
+        ...,
+        alias="computedAt",
+        description="When the snapshot was computed (UTC ISO 8601).",
+        title="Computedat",
+    )
+    fields: list[DomainField] = Field(
+        ...,
+        description="Populated public facets, ordered by `source` then coverage.",
+        title="Fields",
+    )
+    price: PriceDistribution | None = Field(
+        None, description="Current-price histogram; null when nothing is priced."
+    )
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Indexed product groups in the catalog.",
+        title="Productcount",
+    )
+    profile: StoreProfile | None = Field(
+        None,
+        description="Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation.",
+    )
+
+
+class StoreCoverageResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalogs: list[StoreCatalogCoverage] = Field(
+        ...,
+        description="One entry per catalog serving the domain, sorted by catalog. A shared domain does not imply that catalogs are the same store.",
+        title="Catalogs",
+    )
+    host: str = Field(
+        ...,
+        description="Normalized requested domain; retained for compatibility.",
+        title="Host",
     )

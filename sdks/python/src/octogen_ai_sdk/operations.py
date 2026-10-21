@@ -37,7 +37,7 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "deleteUrlList": Operation("DELETE", "/coverage/url-lists/{urlListId}"),
     "getBrandDetails": Operation("GET", "/brands/{brand}"),
     "getBrandTopCategories": Operation("GET", "/brands/{brand}/top-categories"),
-    "getDomain": Operation("GET", "/domains/{host}"),
+    "getStore": Operation("GET", "/stores/{domain}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
     "listTaxonomyAttributeValues": Operation(

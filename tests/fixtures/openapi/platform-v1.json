@@ -93,8 +93,44 @@
         "title": "AudienceView",
         "type": "object"
       },
-      "BrandDetailsView": {
-        "description": "Public-safe metadata for one resolved brand.",
+      "BrandCatalog": {
+        "description": "One catalog carrying the brand.",
+        "properties": {
+          "catalog": {
+            "description": "Catalog key.",
+            "title": "Catalog",
+            "type": "string"
+          },
+          "catalogDisplayName": {
+            "description": "Human-readable display name for the catalog.",
+            "title": "Catalogdisplayname",
+            "type": "string"
+          },
+          "hosts": {
+            "description": "Normalized hosts the catalog serves, each usable with `GET /v1/stores/{domain}`.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "productCount": {
+            "description": "Indexed product groups of this brand in the catalog.",
+            "title": "Productcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "catalogDisplayName",
+          "hosts",
+          "productCount"
+        ],
+        "title": "BrandCatalog",
+        "type": "object"
+      },
+      "BrandCoverageResponse": {
+        "description": "Brand metadata plus coverage of the brand's products across catalogs.\n\nCounts are approximate (Elasticsearch aggregations) and refreshed about\ndaily. The same product sold by several stores is counted once per catalog.",
         "properties": {
           "brandDescription": {
             "anyOf": [
@@ -130,6 +166,24 @@
             "title": "Branduuid",
             "type": "string"
           },
+          "catalogs": {
+            "description": "Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.",
+            "items": {
+              "$ref": "#/components/schemas/BrandCatalog"
+            },
+            "title": "Catalogs",
+            "type": "array"
+          },
+          "catalogsTruncated": {
+            "description": "Whether the brand is carried by more catalogs than listed.",
+            "title": "Catalogstruncated",
+            "type": "boolean"
+          },
+          "computedAt": {
+            "description": "When the coverage was computed (UTC ISO 8601).",
+            "title": "Computedat",
+            "type": "string"
+          },
           "directorySubheading": {
             "anyOf": [
               {
@@ -153,6 +207,14 @@
             ],
             "description": "Primary website domain for the brand.",
             "title": "Domain"
+          },
+          "fields": {
+            "description": "Populated public facets of the brand's products, ordered by `source` then coverage.",
+            "items": {
+              "$ref": "#/components/schemas/DomainField"
+            },
+            "title": "Fields",
+            "type": "array"
           },
           "foundedYear": {
             "anyOf": [
@@ -178,6 +240,17 @@
             "description": "Country of origin for the brand.",
             "title": "Origincountry"
           },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceDistribution"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current-price histogram; null when nothing is priced."
+          },
           "priceTier": {
             "anyOf": [
               {
@@ -189,13 +262,23 @@
             ],
             "description": "Price positioning for the brand.",
             "title": "Pricetier"
+          },
+          "productCount": {
+            "description": "Indexed product groups of the brand across catalogs.",
+            "title": "Productcount",
+            "type": "integer"
           }
         },
         "required": [
           "brandName",
-          "brandUuid"
+          "brandUuid",
+          "catalogs",
+          "catalogsTruncated",
+          "computedAt",
+          "fields",
+          "productCount"
         ],
-        "title": "BrandDetailsView",
+        "title": "BrandCoverageResponse",
         "type": "object"
       },
       "BrandFacet": {
@@ -1448,83 +1531,6 @@
           "urls"
         ],
         "title": "CoverageUrlsRequest",
-        "type": "object"
-      },
-      "DomainCatalogCoverage": {
-        "description": "A catalog serving the host, with its coverage snapshot.",
-        "properties": {
-          "catalog": {
-            "description": "Catalog key.",
-            "title": "Catalog",
-            "type": "string"
-          },
-          "catalogDisplayName": {
-            "description": "Human-readable display name for the catalog.",
-            "title": "Catalogdisplayname",
-            "type": "string"
-          },
-          "computedAt": {
-            "description": "When the snapshot was computed (UTC ISO 8601).",
-            "title": "Computedat",
-            "type": "string"
-          },
-          "fields": {
-            "description": "Populated public facets, ordered by `source` then coverage.",
-            "items": {
-              "$ref": "#/components/schemas/DomainField"
-            },
-            "title": "Fields",
-            "type": "array"
-          },
-          "price": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PriceDistribution"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Current-price histogram; null when nothing is priced."
-          },
-          "productCount": {
-            "description": "Indexed product groups in the catalog.",
-            "title": "Productcount",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "catalog",
-          "catalogDisplayName",
-          "computedAt",
-          "fields",
-          "productCount"
-        ],
-        "title": "DomainCatalogCoverage",
-        "type": "object"
-      },
-      "DomainCoverageResponse": {
-        "description": "Coverage snapshots for every catalog serving one host.\n\nCounts are approximate (Elasticsearch aggregations) and refreshed about\ndaily.",
-        "properties": {
-          "catalogs": {
-            "description": "One snapshot per catalog serving the host, sorted by catalog.",
-            "items": {
-              "$ref": "#/components/schemas/DomainCatalogCoverage"
-            },
-            "title": "Catalogs",
-            "type": "array"
-          },
-          "host": {
-            "description": "The normalized host.",
-            "title": "Host",
-            "type": "string"
-          }
-        },
-        "required": [
-          "catalogs",
-          "host"
-        ],
-        "title": "DomainCoverageResponse",
         "type": "object"
       },
       "DomainField": {
@@ -5419,6 +5425,398 @@
         "title": "SimilarBrandsResponse",
         "type": "object"
       },
+      "StoreAssortmentProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "distributions": {
+            "items": {
+              "$ref": "#/components/schemas/StoreProfileDistribution"
+            },
+            "title": "Distributions",
+            "type": "array"
+          },
+          "productCount": {
+            "description": "Observed indexed products in this scope.",
+            "minimum": 0.0,
+            "title": "Productcount",
+            "type": "integer"
+          },
+          "summary": {
+            "description": "Description derived from this population.",
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "distributions",
+          "productCount",
+          "summary"
+        ],
+        "title": "StoreAssortmentProfile",
+        "type": "object"
+      },
+      "StoreCatalogCoverage": {
+        "properties": {
+          "catalog": {
+            "description": "Catalog key.",
+            "title": "Catalog",
+            "type": "string"
+          },
+          "catalogDisplayName": {
+            "description": "Human-readable display name for the catalog.",
+            "title": "Catalogdisplayname",
+            "type": "string"
+          },
+          "computedAt": {
+            "description": "When the snapshot was computed (UTC ISO 8601).",
+            "title": "Computedat",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Populated public facets, ordered by `source` then coverage.",
+            "items": {
+              "$ref": "#/components/schemas/DomainField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceDistribution"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current-price histogram; null when nothing is priced."
+          },
+          "productCount": {
+            "description": "Indexed product groups in the catalog.",
+            "title": "Productcount",
+            "type": "integer"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoreProfile"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation."
+          }
+        },
+        "required": [
+          "catalog",
+          "catalogDisplayName",
+          "computedAt",
+          "fields",
+          "productCount"
+        ],
+        "title": "StoreCatalogCoverage",
+        "type": "object"
+      },
+      "StoreCoverageResponse": {
+        "description": "Coverage and optional profiles for catalogs serving the requested domain.",
+        "properties": {
+          "catalogs": {
+            "description": "One entry per catalog serving the domain, sorted by catalog. A shared domain does not imply that catalogs are the same store.",
+            "items": {
+              "$ref": "#/components/schemas/StoreCatalogCoverage"
+            },
+            "title": "Catalogs",
+            "type": "array"
+          },
+          "host": {
+            "description": "Normalized requested domain; retained for compatibility.",
+            "title": "Host",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalogs",
+          "host"
+        ],
+        "title": "StoreCoverageResponse",
+        "type": "object"
+      },
+      "StoreDepartmentProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "categoryPath": {
+            "description": "Canonical category path, root first.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Categorypath",
+            "type": "array"
+          },
+          "departmentId": {
+            "minLength": 1,
+            "title": "Departmentid",
+            "type": "string"
+          },
+          "distributions": {
+            "items": {
+              "$ref": "#/components/schemas/StoreProfileDistribution"
+            },
+            "title": "Distributions",
+            "type": "array"
+          },
+          "productCount": {
+            "description": "Observed indexed products in this scope.",
+            "minimum": 0.0,
+            "title": "Productcount",
+            "type": "integer"
+          },
+          "summary": {
+            "description": "Description derived from this population.",
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "categoryPath",
+          "departmentId",
+          "distributions",
+          "productCount",
+          "summary"
+        ],
+        "title": "StoreDepartmentProfile",
+        "type": "object"
+      },
+      "StoreIdentity": {
+        "additionalProperties": false,
+        "description": "One catalog is the initial store boundary; domains are aliases.",
+        "properties": {
+          "catalog": {
+            "description": "Catalog key to pass in products/search's catalogs filter.",
+            "minLength": 1,
+            "title": "Catalog",
+            "type": "string"
+          },
+          "displayName": {
+            "minLength": 1,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "domains": {
+            "description": "Normalized bare hosts, including primaryDomain.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Domains",
+            "type": "array"
+          },
+          "primaryDomain": {
+            "description": "Normalized bare primary host.",
+            "minLength": 1,
+            "title": "Primarydomain",
+            "type": "string"
+          },
+          "storeId": {
+            "description": "Stable store identifier.",
+            "minLength": 1,
+            "title": "Storeid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalog",
+          "displayName",
+          "domains",
+          "primaryDomain",
+          "storeId"
+        ],
+        "title": "StoreIdentity",
+        "type": "object"
+      },
+      "StoreProfile": {
+        "additionalProperties": false,
+        "description": "One published profile generation, including its department evidence.",
+        "properties": {
+          "computedAt": {
+            "description": "Profile computation time, with timezone.",
+            "format": "date-time",
+            "title": "Computedat",
+            "type": "string"
+          },
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/StoreDepartmentProfile"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/StoreAssortmentProfile"
+          },
+          "profileVersion": {
+            "description": "Opaque published generation ID.",
+            "minLength": 1,
+            "title": "Profileversion",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/StoreProfileProvenance"
+          },
+          "schemaVersion": {
+            "const": "1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "store": {
+            "$ref": "#/components/schemas/StoreIdentity"
+          }
+        },
+        "required": [
+          "computedAt",
+          "departments",
+          "overall",
+          "profileVersion",
+          "provenance",
+          "schemaVersion",
+          "store"
+        ],
+        "title": "StoreProfile",
+        "type": "object"
+      },
+      "StoreProfileDistribution": {
+        "additionalProperties": false,
+        "description": "A field's distribution within one overall or department population.",
+        "properties": {
+          "approximate": {
+            "description": "Whether counts are approximate.",
+            "title": "Approximate",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Canonical profile field name.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "populatedCount": {
+            "description": "Products with a known value; others are unknown, not absent.",
+            "minimum": 0.0,
+            "title": "Populatedcount",
+            "type": "integer"
+          },
+          "populationCount": {
+            "description": "Denominator for value shares.",
+            "minimum": 0.0,
+            "title": "Populationcount",
+            "type": "integer"
+          },
+          "source": {
+            "description": "Brand-derived values describe stocked brands, not store policies.",
+            "enum": [
+              "product",
+              "enrichment",
+              "brands"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "truncated": {
+            "description": "True when additional values were omitted.",
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "values": {
+            "description": "Value shares are count / populationCount (undefined for an empty population). Multi-valued field shares can sum to more than 100%.",
+            "items": {
+              "$ref": "#/components/schemas/StoreProfileValue"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "approximate",
+          "name",
+          "populatedCount",
+          "populationCount",
+          "source",
+          "truncated",
+          "values"
+        ],
+        "title": "StoreProfileDistribution",
+        "type": "object"
+      },
+      "StoreProfileProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "countingUnit": {
+            "const": "indexed_product",
+            "description": "One source product document; not necessarily a distinct style.",
+            "title": "Countingunit",
+            "type": "string"
+          },
+          "observedAt": {
+            "description": "Source observation time, with timezone.",
+            "format": "date-time",
+            "title": "Observedat",
+            "type": "string"
+          },
+          "taxonomyVersion": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Taxonomy version when known.",
+            "title": "Taxonomyversion"
+          }
+        },
+        "required": [
+          "countingUnit",
+          "observedAt"
+        ],
+        "title": "StoreProfileProvenance",
+        "type": "object"
+      },
+      "StoreProfileValue": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "Products containing this value, once each.",
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "description": "Canonical value identifier.",
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "label",
+          "value"
+        ],
+        "title": "StoreProfileValue",
+        "type": "object"
+      },
       "TaxonomyAttribute": {
         "description": "One taxonomy attribute definition.",
         "properties": {
@@ -6258,7 +6656,7 @@
     },
     "/brands/{brand}": {
       "get": {
-        "description": "Resolve a corpus-wide brand by slug or case-insensitive name.\n\nReturns display metadata only. The domain is the brand website, not a\npromise that a store or seller is indexed.",
+        "description": "Resolve a corpus-wide brand by slug or case-insensitive name.\n\nReturns display metadata plus a coverage snapshot of the brand's products,\nshaped like a ``GET /v1/stores/{domain}`` catalog: product count, populated\nfacets with top values, and a price histogram. ``catalogs`` lists the\ncatalogs carrying the brand by product count; pass a host to\n``GET /v1/stores/{domain}`` for a store's own coverage. The domain is the brand website,\nnot a promise that a store or seller is indexed. Unbilled; snapshots are\ncached per brand for about a day.",
         "operationId": "getBrandDetails",
         "parameters": [
           {
@@ -6282,7 +6680,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandDetailsView"
+                  "$ref": "#/components/schemas/BrandCoverageResponse"
                 }
               }
             },
@@ -6373,7 +6771,7 @@
             "BearerApiKey": []
           }
         ],
-        "summary": "Get public-safe details for a brand",
+        "summary": "Get a brand's details and coverage",
         "tags": [
           "brands",
           "platform-catalog-api"
@@ -7871,61 +8269,6 @@
         ]
       }
     },
-    "/domains/{host}": {
-      "get": {
-        "description": "Coverage snapshot of every catalog serving one covered host.\n\n``host`` is a bare host (not a URL), lowercased with a leading ``www.`` removed.\nUnbilled; snapshots are computed from Elasticsearch aggregations and\ncached per catalog for about a day.",
-        "operationId": "getDomain",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "host",
-            "required": true,
-            "schema": {
-              "title": "Host",
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/RequestContext"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DomainCoverageResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "description": "Invalid X-Octogen-Request-Context header"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          }
-        ],
-        "summary": "Get a covered domain's coverage snapshot",
-        "tags": [
-          "platform-catalog-api",
-          "platform-domains-api"
-        ]
-      }
-    },
     "/me": {
       "get": {
         "description": "Return the caller's own organization, key, quotas, and rate limit.\n\nRead-only and side-effect free: safe to call on startup, in CI, and in a\nhealth loop (subject to the ``/v1`` rate limit it reports). Never includes\nkey material — only the key id and its non-secret display prefix.",
@@ -9217,6 +9560,61 @@
         "summary": "Search products",
         "tags": [
           "platform-catalog-api"
+        ]
+      }
+    },
+    "/stores/{domain}": {
+      "get": {
+        "description": "Inspect every catalog serving a covered store domain.\n\n``domain`` is a bare host (not a URL), lowercased with a leading ``www.``\nremoved. Unbilled; coverage snapshots are cached per catalog for about a day.\nEach catalog's profile is null until precomputed profiles are published.\nProfile counts describe observed assortment, not live product-query matches.",
+        "operationId": "getStore",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Get a store's coverage and assortment profiles",
+        "tags": [
+          "platform-catalog-api",
+          "platform-stores-api"
         ]
       }
     },

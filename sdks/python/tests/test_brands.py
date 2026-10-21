@@ -10,7 +10,7 @@ import octogen_ai_sdk
 import pytest
 import respx
 from octogen_ai_sdk import (
-    BrandDetailsView,
+    BrandCoverageResponse,
     BrandFacet,
     BrandProductsPage,
     BrandTopCategoriesPage,
@@ -41,6 +41,36 @@ BRAND_DETAILS = {
     "foundedYear": 2009,
     "originCountry": "United States",
     "priceTier": "premium",
+    "productCount": 4556,
+    "computedAt": "2026-10-21T19:40:00Z",
+    "fields": [
+        {
+            "name": "color",
+            "displayName": "Color",
+            "source": "product",
+            "populated": 4529,
+            "coverage": 0.994,
+            "distinct": 40,
+            "topValues": [{"value": "black", "label": "Black", "count": 900}],
+            "truncated": True,
+        }
+    ],
+    "price": None,
+    "catalogs": [
+        {
+            "catalog": "thereformation",
+            "catalogDisplayName": "Reformation",
+            "hosts": ["thereformation.com"],
+            "productCount": 3462,
+        },
+        {
+            "catalog": "farfetch",
+            "catalogDisplayName": "Farfetch",
+            "hosts": ["farfetch.com"],
+            "productCount": 440,
+        },
+    ],
+    "catalogsTruncated": False,
 }
 BRAND_PRODUCTS = {
     "brandName": "Reformation",
@@ -76,7 +106,7 @@ def _query(route: respx.Route) -> dict[str, str]:
 
 def test_brand_models_are_exported() -> None:
     for name in (
-        "BrandDetailsView",
+        "BrandCoverageResponse",
         "BrandFacet",
         "BrandProductsPage",
         "BrandTopCategoriesPage",
@@ -230,11 +260,17 @@ async def test_get_brand_details_encodes_the_brand_name() -> None:
 
     assert route.called
     assert route.calls.last.request.url.raw_path == b"/v1/brands/Rag%20%26%20Bone"
-    assert isinstance(details, BrandDetailsView)
+    assert isinstance(details, BrandCoverageResponse)
     assert details.brand_name == "Reformation"
     assert details.founded_year == 2009
     assert details.price_tier == "premium"
     assert details.brand_description is None
+    assert details.product_count == 4556
+    assert details.fields[0].top_values[0].value == "black"
+    assert [c.hosts for c in details.catalogs] == [
+        ["thereformation.com"],
+        ["farfetch.com"],
+    ]
 
 
 @respx.mock

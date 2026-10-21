@@ -34,7 +34,7 @@ export const OPERATIONS = {
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
   getBrandDetails: { method: "GET", path: "/brands/{brand}" },
   getBrandTopCategories: { method: "GET", path: "/brands/{brand}/top-categories" },
-  getDomain: { method: "GET", path: "/domains/{host}" },
+  getStore: { method: "GET", path: "/stores/{domain}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
   listTaxonomyAttributeValues: {

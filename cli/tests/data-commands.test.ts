@@ -520,7 +520,7 @@ it("does not recognize the removed refresh command or issue a request", async ()
   expect(result.requests).toEqual([]);
 });
 
-/** `GET /v1/domains/{host}`, trimmed from the live route (2026-10-19). */
+/** `GET /v1/stores/{domain}`, trimmed from the live route (2026-10-19). */
 const STORE_BODY = {
   host: "thereformation.com",
   catalogs: [
@@ -565,14 +565,14 @@ describe("storerouter store", () => {
     const result = await runCli({
       argv: ["store", "https://WWW.TheReformation.com:443/products/x?color=red"],
       env: KEYED,
-      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+      routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.requests).toHaveLength(1);
     const request = result.requests[0];
     expect(request?.method).toBe("GET");
     expect(request?.url).toBe(
-      "https://api.storerouter.ai/v1/domains/thereformation.com",
+      "https://api.storerouter.ai/v1/stores/thereformation.com",
     );
     expect(request?.body).toBeUndefined();
   });
@@ -581,7 +581,7 @@ describe("storerouter store", () => {
     const result = await runCli({
       argv: ["store", "thereformation.com", "--json"],
       env: KEYED,
-      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+      routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
     });
     const body = result.json();
     expect(body["ok"]).toBe(true);
@@ -597,7 +597,7 @@ describe("storerouter store", () => {
       argv: ["store", "thereformation.com"],
       env: KEYED,
       isTty: true,
-      routes: { "GET /domains/thereformation.com": { body: STORE_BODY } },
+      routes: { "GET /stores/thereformation.com": { body: STORE_BODY } },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.stdout).toBe(
@@ -632,7 +632,7 @@ describe("storerouter store", () => {
     ];
     const catalogs = [{ ...STORE_BODY.catalogs[0], fields }];
     const routes = {
-      "GET /domains/thereformation.com": {
+      "GET /stores/thereformation.com": {
         body: { host: "thereformation.com", catalogs },
       },
     };
@@ -661,7 +661,7 @@ describe("storerouter store", () => {
       argv: ["store", "example.com"],
       env: KEYED,
       routes: {
-        "GET /domains/example.com": {
+        "GET /stores/example.com": {
           body: { detail: "domain_not_covered" },
           status: 404,
         },
@@ -684,7 +684,7 @@ describe("storerouter store", () => {
       argv: ["store", "example.com"],
       env: KEYED,
       routes: {
-        "GET /domains/example.com": { body: { detail: "Not Found" }, status: 404 },
+        "GET /stores/example.com": { body: { detail: "Not Found" }, status: 404 },
       },
     });
     expect(result.exitCode).not.toBe(ExitCode.NoResult);

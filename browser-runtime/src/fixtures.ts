@@ -41,7 +41,36 @@ export const fixtureTransport: Transport = (request, signal) => {
       topCategories: [{ categoryName: "Dresses", categoryLevel: 2 }],
     };
   else if (path.startsWith("/v1/brands/"))
-    data = { ...brand, foundedYear: 2020, originCountry: "US", priceTier: "mid" };
+    data = {
+      ...brand,
+      foundedYear: 2020,
+      originCountry: "US",
+      priceTier: "mid",
+      productCount: 1200,
+      computedAt: "2026-10-19T00:00:00Z",
+      fields: [
+        {
+          name: "color",
+          displayName: "Color",
+          source: "product",
+          populated: 1100,
+          coverage: 0.917,
+          distinct: 12,
+          topValues: [{ value: "black", label: "Black", count: 400 }],
+          truncated: true,
+        },
+      ],
+      price: null,
+      catalogs: [
+        {
+          catalog: "example",
+          catalogDisplayName: "Example (fixture)",
+          hosts: ["example.com"],
+          productCount: 1200,
+        },
+      ],
+      catalogsTruncated: false,
+    };
   else if (path.endsWith("/search"))
     data = {
       items: [
@@ -71,9 +100,9 @@ export const fixtureTransport: Transport = (request, signal) => {
         variants: [],
       },
     };
-  else if (path.startsWith("/v1/domains/"))
+  else if (path.startsWith("/v1/stores/"))
     data = {
-      host: path.slice("/v1/domains/".length),
+      host: path.slice("/v1/stores/".length),
       catalogs: [
         {
           catalog: "example",

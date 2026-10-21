@@ -1,7 +1,7 @@
 /**
  * `storerouter store <host|url>` — one covered store's coverage snapshot.
  *
- * One host in, one snapshot out (`GET /v1/domains/{host}`). There is
+ * One host in, one snapshot out (`GET /v1/stores/{domain}`). There is
  * deliberately no list mode and no local host cache: the full covered-host
  * list is not public, and nothing here may rebuild it. Ask about the store you
  * have.
@@ -10,14 +10,20 @@
  * never `6` for any other reason.
  */
 
-import { normalizeHost, type DomainCoverageResponse } from "@octogen-ai/sdk";
+import { normalizeHost, type StoreCoverageResponse } from "@octogen-ai/sdk";
 
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
 import type { CommandSpec } from "../registry.js";
 
-type CatalogCoverage = DomainCoverageResponse["catalogs"][number];
+type CatalogCoverage = StoreCoverageResponse["catalogs"][number];
+
+/** What a store catalog and a brand share: one population's snapshot. */
+export type CoverageSnapshot = Pick<
+  CatalogCoverage,
+  "computedAt" | "fields" | "price" | "productCount"
+>;
 
 async function runStore(context: CommandContext): Promise<ExitCode> {
   const { writer } = context;
@@ -46,14 +52,11 @@ async function runStore(context: CommandContext): Promise<ExitCode> {
 
   const api = context.api();
 
-  let response: DomainCoverageResponse;
+  let response: StoreCoverageResponse;
   try {
-    response = await call(
-      api,
-      `GET /domains/${host}`,
-      () => api.client.getDomain(host),
-      { coverageAdjacent: true },
-    );
+    response = await call(api, `GET /stores/${host}`, () => api.client.getStore(host), {
+      coverageAdjacent: true,
+    });
   } catch (error) {
     throw asNotCoveredOrRethrow(error, host);
   }
@@ -86,7 +89,7 @@ function asNotCoveredOrRethrow(error: unknown, host: string): unknown {
   const code: unknown = (error as { code?: unknown }).code;
   if (status === 404 && code === "domain_not_covered") {
     return noResult({
-      answeredWith: "404 domain_not_covered from GET /domains/{host}",
+      answeredWith: "404 domain_not_covered from GET /stores/{domain}",
       code: "domain_not_covered",
       coverage: "not_covered",
       data: { host, covered: false, catalogs: [] },
@@ -98,7 +101,7 @@ function asNotCoveredOrRethrow(error: unknown, host: string): unknown {
   return error;
 }
 
-function renderCoverage(response: DomainCoverageResponse): string {
+function renderCoverage(response: StoreCoverageResponse): string {
   const count = response.catalogs.length;
   const lines = [
     `${response.host} is covered by ${String(count)} catalog${count === 1 ? "" : "s"}`,
@@ -110,8 +113,15 @@ function renderCoverage(response: DomainCoverageResponse): string {
 }
 
 function renderCatalog(catalog: CatalogCoverage): string[] {
-  const lines = [
+  return [
     `${catalog.catalogDisplayName} (${catalog.catalog})`,
+    ...renderSnapshot(catalog),
+  ];
+}
+
+/** Indented product count, price, freshness and best-covered fields. */
+export function renderSnapshot(catalog: CoverageSnapshot): string[] {
+  const lines = [
     `  products   ${formatCount(catalog.productCount)}`,
     `  price      ${formatPrice(catalog.price)}`,
     `  computed   ${catalog.computedAt}`,
@@ -176,7 +186,7 @@ function formatAmount(value: number): string {
 }
 
 /** Thousands separators without `Intl`, so the browser runtime prints the same. */
-function formatCount(value: number): string {
+export function formatCount(value: number): string {
   return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
@@ -190,7 +200,7 @@ export const storeCommand = {
     "Exit 6 means the server answered 404 domain_not_covered: no catalog serves",
     "that host. One host per call; there is no list of covered hosts.",
   ],
-  operations: ["getDomain"] as const,
+  operations: ["getStore"] as const,
   run: runStore,
   summary: "Show one store's coverage: catalogs, product counts, fields, prices",
   usage: "store <host|url>",

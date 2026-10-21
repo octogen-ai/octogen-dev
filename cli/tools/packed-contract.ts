@@ -131,10 +131,10 @@ const cases = [
   {
     // A GET with a path parameter: `body` is the parameter set, read back off
     // the path, since a GET carries no request body.
-    operation: "getDomain",
+    operation: "getStore",
     argv: ["store", "https://www.TheReformation.com/products/x"],
-    path: "/domains/thereformation.com",
-    body: { host: "thereformation.com" },
+    path: "/stores/thereformation.com",
+    body: { domain: "thereformation.com" },
     response: { host: "thereformation.com", catalogs: [] },
     exit: 0,
   },
@@ -164,10 +164,10 @@ for (const item of cases) {
       ).pathname;
       assert.equal(pathname, `/v1${item.path}`);
       let body: unknown;
-      if (item.operation === "getDomain") {
+      if (item.operation === "getStore") {
         assert.equal(init?.method, "GET");
         assert.equal(init.body, undefined);
-        body = { host: decodeURIComponent(pathname.split("/").at(-1) ?? "") };
+        body = { domain: decodeURIComponent(pathname.split("/").at(-1) ?? "") };
       } else {
         assert.equal(init?.method, "POST");
         assert.equal(typeof init.body, "string");
