@@ -85,11 +85,21 @@ function brandSummary(brand: SimilarBrandView): Record<string, unknown> {
   };
 }
 
+/** Descriptions run to paragraphs; a listing shows one line of each (`--json` has all). */
+const DESCRIPTION_CHARS = 100;
+
+function oneLine(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length <= DESCRIPTION_CHARS
+    ? flat
+    : `${flat.slice(0, DESCRIPTION_CHARS - 1).trimEnd()}…`;
+}
+
 function brandLines(results: readonly SimilarBrandView[]): string[] {
   return results.map(
     (brand) =>
       `  ${brand.brandName ?? "(unnamed)"}${brand.domain ? ` · ${brand.domain}` : ""}${
-        brand.brandDescription ? `\n    ${brand.brandDescription}` : ""
+        brand.brandDescription ? `\n    ${oneLine(brand.brandDescription)}` : ""
       }`,
   );
 }

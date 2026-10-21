@@ -262,3 +262,27 @@ describe("storerouter brands, the group", () => {
     );
   });
 });
+
+describe("brands listings on a terminal", () => {
+  it("show one line of each description", async () => {
+    const long = `${"Founded in Paris. ".repeat(10)}\n\nA second paragraph.`;
+    const result = await runCli({
+      argv: ["brands", "similar", "Everlane"],
+      env: KEYED,
+      isTty: true,
+      routes: {
+        "POST /brands/similar": {
+          body: {
+            results: [{ ...REFORMATION, brandDescription: long }],
+            totalFound: 1,
+          },
+        },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const lines = result.stdout.trimEnd().split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[2]?.length).toBeLessThanOrEqual(104);
+    expect(lines[2]?.endsWith("…")).toBe(true);
+  });
+});
