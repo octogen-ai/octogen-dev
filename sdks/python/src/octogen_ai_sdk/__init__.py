@@ -126,8 +126,22 @@ from octogen_ai_sdk.models import (
     VideoView,
 )
 from octogen_ai_sdk.operations import OPERATIONS, Operation, resolve_operation_path
+from octogen_ai_sdk.request_context import (
+    InvalidRequestContext,
+    RequestContext,
+    RequestContextDefaults,
+    RequestTrigger,
+    RequestVisitor,
+    VisitorClassification,
+)
 
 __all__ = [
+    "InvalidRequestContext",
+    "RequestContext",
+    "RequestContextDefaults",
+    "RequestTrigger",
+    "RequestVisitor",
+    "VisitorClassification",
     "API_KEY_ENV_VAR",
     "AgeGroup",
     "Attribute",

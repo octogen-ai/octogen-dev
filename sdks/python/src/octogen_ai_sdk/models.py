@@ -18,6 +18,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from octogen_ai_sdk.generated import models as _contract
 
+# Context lives outside generated request/response bodies.
+from octogen_ai_sdk.request_context import RequestContext as RequestContext
+from octogen_ai_sdk.request_context import (
+    RequestContextDefaults as RequestContextDefaults,
+)
+from octogen_ai_sdk.request_context import RequestVisitor as RequestVisitor
+
 # ── Contract mirror ─────────────────────────────────────────────────────────
 #
 # **Response** models come straight from the generated mirror of the published

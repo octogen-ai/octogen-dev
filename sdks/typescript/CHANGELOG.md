@@ -1,5 +1,19 @@
 # Changelog — `@octogen-ai/sdk`
 
+## 0.8.0 (unreleased)
+
+- Add typed per-call `RequestContext` on every API operation, with stable
+  application defaults, explicit override/clear semantics and isolated request
+  headers. IDs, original user agent and visitor metadata are per call only.
+- Validate the API's strict fields, vocabularies, Unicode character limits and
+  4,096-byte ASCII-safe compact JSON budget without exposing input in errors.
+- Refresh the deployed OpenAPI snapshot and generated mirrors for the context
+  header. Resolve shared header parameters in codegen without adding CLI inputs.
+- Preserve routes, bodies, transport/authentication, timeouts and retry policy.
+  Shared synthetic contract fixtures and concurrent transport tests cover parity.
+- Publication is a separate OCT-4518 step after merge; this change does not
+  publish a package or activate context collection.
+
 ## 0.7.0 (unreleased)
 
 **Breaking:** the covered-domain list is gone. The API no longer serves

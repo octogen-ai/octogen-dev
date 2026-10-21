@@ -1,3 +1,9 @@
+import type { RequestContextDefaults, RequestOptions } from "./request-context.js";
+import {
+  REQUEST_CONTEXT_HEADER,
+  contextHeader,
+  snapshotDefaults,
+} from "./request-context.js";
 import {
   MissingAPIKeyError,
   OctogenAPIError,
@@ -45,7 +51,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.7.0";
+export const SDK_VERSION = "0.8.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -94,6 +100,7 @@ export interface OctogenClientOptions {
    * something empty.
    */
   allowKeyless?: boolean;
+  defaultContext?: RequestContextDefaults;
 }
 
 export class OctogenClient {
@@ -101,6 +108,7 @@ export class OctogenClient {
   private readonly baseUrl: string;
   private readonly fetchFn: FetchLike;
   private readonly timeoutMs: number;
+  private readonly defaultContext: Record<string, unknown> | undefined;
 
   constructor(options: OctogenClientOptions = {}) {
     const resolvedApiKey = options.apiKey ?? readEnvApiKey();
@@ -108,6 +116,7 @@ export class OctogenClient {
       throw new MissingAPIKeyError();
     }
 
+    this.defaultContext = snapshotDefaults(options.defaultContext);
     this.apiKey = resolvedApiKey === "" ? undefined : resolvedApiKey;
     this.baseUrl = trimTrailingSlash(options.baseUrl ?? DEFAULT_BASE_URL);
     this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -139,7 +148,7 @@ export class OctogenClient {
     if (options.matchMode !== undefined) {
       body.matchMode = options.matchMode;
     }
-    const data = await this.json("lookupProduct", { body });
+    const data = await this.json("lookupProduct", { context: options.context, body });
     return data as MerchantProductUrlLookupResponse;
   }
 
@@ -164,7 +173,10 @@ export class OctogenClient {
     if (options.matchMode !== undefined) {
       body.matchMode = options.matchMode;
     }
-    const data = await this.json("parseProductAlias", { body });
+    const data = await this.json("parseProductAlias", {
+      context: options.context,
+      body,
+    });
     return data as MerchantProductUrlLookupResponse;
   }
 
@@ -177,6 +189,7 @@ export class OctogenClient {
    */
   async resolveProductFromHtml(
     params: ResolveProductFromHtmlParams,
+    options: RequestOptions = {},
   ): Promise<MerchantProductUrlLookupResponse> {
     assertNonEmptyString(params.html, "html");
     const body: ProgrammaticResolveFromHtmlRequest = { html: params.html };
@@ -184,7 +197,10 @@ export class OctogenClient {
       assertNonEmptyString(params.url, "url");
       body.url = params.url;
     }
-    const data = await this.json("resolveProductFromHtml", { body });
+    const data = await this.json("resolveProductFromHtml", {
+      context: options.context,
+      body,
+    });
     return data as MerchantProductUrlLookupResponse;
   }
 
@@ -195,8 +211,8 @@ export class OctogenClient {
    * Read-only and side-effect free: safe on startup and in CI. Never contains
    * key material — only the key id and its non-secret display prefix.
    */
-  async getMe(): Promise<MeResponse> {
-    const data = await this.json("getMe");
+  async getMe(options: RequestOptions = {}): Promise<MeResponse> {
+    const data = await this.json("getMe", { context: options.context });
     return data as MeResponse;
   }
 
@@ -211,12 +227,18 @@ export class OctogenClient {
    * catalog claims is a `404` with `detail.code` `domain_not_covered`. There is
    * deliberately no way to list hosts: ask about the one you have.
    */
-  async getDomain(urlOrHost: string): Promise<DomainCoverageResponse> {
+  async getDomain(
+    urlOrHost: string,
+    options: RequestOptions = {},
+  ): Promise<DomainCoverageResponse> {
     const host = normalizeHost(urlOrHost);
     if (host === undefined) {
       throw new TypeError(`getDomain: no host in ${JSON.stringify(urlOrHost)}`);
     }
-    const data = await this.json("getDomain", { pathParams: { host } });
+    const data = await this.json("getDomain", {
+      context: options.context,
+      pathParams: { host },
+    });
     return data as DomainCoverageResponse;
   }
 
@@ -230,9 +252,10 @@ export class OctogenClient {
    */
   async searchProducts(
     params: SearchProductsParams,
+    options: RequestOptions = {},
   ): Promise<ProgrammaticProductSearchPage> {
     const body = toSearchPayload(params);
-    const data = await this.json("searchProducts", { body });
+    const data = await this.json("searchProducts", { context: options.context, body });
     return data as ProgrammaticProductSearchPage;
   }
 
@@ -246,9 +269,13 @@ export class OctogenClient {
    */
   async countProductFacets(
     params: CountProductFacetsParams = {},
+    options: RequestOptions = {},
   ): Promise<ProgrammaticFacetCountsResponse> {
     const body = toFacetCountsPayload(params);
-    const data = await this.json("countProductFacets", { body });
+    const data = await this.json("countProductFacets", {
+      context: options.context,
+      body,
+    });
     return data as ProgrammaticFacetCountsResponse;
   }
 
@@ -259,8 +286,10 @@ export class OctogenClient {
    */
   async listTaxonomyCategories(
     params: ListTaxonomyCategoriesParams = {},
+    options: RequestOptions = {},
   ): Promise<TaxonomyCategoryPage> {
     const data = await this.json("listTaxonomyCategories", {
+      context: options.context,
       query: { parent: params.parent, offset: params.offset, limit: params.limit },
     });
     return data as TaxonomyCategoryPage;
@@ -273,9 +302,11 @@ export class OctogenClient {
   async listTaxonomyAttributes(
     category: string,
     params: TaxonomyPageParams = {},
+    options: RequestOptions = {},
   ): Promise<TaxonomyAttributePage> {
     assertNonEmptyString(category.trim(), "category");
     const data = await this.json("listTaxonomyAttributes", {
+      context: options.context,
       query: { category, offset: params.offset, limit: params.limit },
     });
     return data as TaxonomyAttributePage;
@@ -288,8 +319,10 @@ export class OctogenClient {
   async listTaxonomyAttributeValues(
     handle: string,
     params: TaxonomyPageParams = {},
+    options: RequestOptions = {},
   ): Promise<TaxonomyAttributeValuePage> {
     const data = await this.json("listTaxonomyAttributeValues", {
+      context: options.context,
       pathParams: { handle },
       query: { offset: params.offset, limit: params.limit },
     });
@@ -298,32 +331,50 @@ export class OctogenClient {
 
   async moreLikeThisProducts(
     params: MoreLikeThisProductsParams,
+    options: RequestOptions = {},
   ): Promise<MoreLikeThisProductsResponse> {
     const body = toMoreLikeThisPayload(params);
-    const data = await this.json("moreLikeThisProducts", { body });
+    const data = await this.json("moreLikeThisProducts", {
+      context: options.context,
+      body,
+    });
     return data as MoreLikeThisProductsResponse;
   }
 
   /** Create a coverage URL list (returned in `provisioning`). */
-  async createCoverageUrlList(name: string): Promise<CoverageUrlList> {
+  async createCoverageUrlList(
+    name: string,
+    options: RequestOptions = {},
+  ): Promise<CoverageUrlList> {
     assertNonEmptyString(name, "name");
-    const data = await this.json("createUrlList", { body: { name } });
+    const data = await this.json("createUrlList", {
+      context: options.context,
+      body: { name },
+    });
     return data as CoverageUrlList;
   }
 
   /** List your organization's coverage URL lists, newest first. */
   async listCoverageUrlLists(
     params: CoveragePaginationParams = {},
+    options: RequestOptions = {},
   ): Promise<CoverageUrlListPage> {
     const data = await this.json("listUrlLists", {
+      context: options.context,
       query: { cursor: params.cursor, limit: params.limit },
     });
     return data as CoverageUrlListPage;
   }
 
   /** Get one coverage URL list by id. */
-  async getCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
-    const data = await this.json("getUrlList", { pathParams: { urlListId } });
+  async getCoverageUrlList(
+    urlListId: string,
+    options: RequestOptions = {},
+  ): Promise<CoverageUrlList> {
+    const data = await this.json("getUrlList", {
+      context: options.context,
+      pathParams: { urlListId },
+    });
     return data as CoverageUrlList;
   }
 
@@ -331,8 +382,14 @@ export class OctogenClient {
    * Delete a coverage URL list (returned in `delete_pending`). Deletion is
    * asynchronous and permanent: there is no grace window and no restore.
    */
-  async deleteCoverageUrlList(urlListId: string): Promise<CoverageUrlList> {
-    const data = await this.json("deleteUrlList", { pathParams: { urlListId } });
+  async deleteCoverageUrlList(
+    urlListId: string,
+    options: RequestOptions = {},
+  ): Promise<CoverageUrlList> {
+    const data = await this.json("deleteUrlList", {
+      context: options.context,
+      pathParams: { urlListId },
+    });
     return data as CoverageUrlList;
   }
 
@@ -340,9 +397,11 @@ export class OctogenClient {
   async addCoverageUrlListUrls(
     urlListId: string,
     urls: string[],
+    options: RequestOptions = {},
   ): Promise<CoverageUrlMutationResponse> {
     assertUrlBatch(urls);
     const data = await this.json("addUrlListUrls", {
+      context: options.context,
       body: { urls },
       pathParams: { urlListId },
     });
@@ -353,9 +412,11 @@ export class OctogenClient {
   async removeCoverageUrlListUrls(
     urlListId: string,
     urls: string[],
+    options: RequestOptions = {},
   ): Promise<CoverageUrlMutationResponse> {
     assertUrlBatch(urls);
     const data = await this.json("removeUrlListUrls", {
+      context: options.context,
       body: { urls },
       pathParams: { urlListId },
     });
@@ -366,9 +427,11 @@ export class OctogenClient {
   async checkCoverageUrlListUrls(
     urlListId: string,
     urls: string[],
+    options: RequestOptions = {},
   ): Promise<CoverageContainsResponse> {
     assertUrlBatch(urls);
     const data = await this.json("checkUrlListUrls", {
+      context: options.context,
       body: { urls },
       pathParams: { urlListId },
     });
@@ -379,8 +442,10 @@ export class OctogenClient {
   async listCoverageUrlListUrls(
     urlListId: string,
     params: CoveragePaginationParams = {},
+    options: RequestOptions = {},
   ): Promise<CoverageUrlListUrlsPage> {
     const data = await this.json("listUrlListUrls", {
+      context: options.context,
       pathParams: { urlListId },
       query: { cursor: params.cursor, limit: params.limit },
     });
@@ -410,6 +475,7 @@ export class OctogenClient {
     method: HttpMethod,
     path: string,
     options: {
+      context?: RequestOptions["context"];
       body?: unknown;
       headers?: Record<string, string>;
       query?: Record<string, string | number | undefined>;
@@ -417,6 +483,7 @@ export class OctogenClient {
   ): Promise<RawResponse> {
     assertNonEmptyString(path.trim(), "path");
     const { data, response } = await this.send({
+      context: options.context,
       body: options.body,
       headers: options.headers,
       method,
@@ -441,6 +508,7 @@ export class OctogenClient {
   private request(
     operationId: OperationId,
     options: {
+      context?: RequestOptions["context"];
       body?: object;
       headers?: Record<string, string>;
       pathParams?: Record<string, string>;
@@ -449,6 +517,7 @@ export class OctogenClient {
   ): Promise<{ data: unknown; response: Response }> {
     const operation = OPERATIONS[operationId];
     return this.send({
+      context: options.context,
       body: options.body,
       headers: options.headers,
       method: operation.method,
@@ -459,12 +528,27 @@ export class OctogenClient {
 
   /** The one place a `/v1` request is actually issued. */
   private async send(options: {
+    context?: RequestOptions["context"];
     body?: unknown;
     headers?: Record<string, string> | undefined;
     method: HttpMethod;
     path: string;
     query?: Record<string, string | number | undefined> | undefined;
   }): Promise<{ data: unknown; response: Response }> {
+    const encodedContext = contextHeader(this.defaultContext, options.context);
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries({
+      ...this.headers(options.body !== undefined),
+      ...options.headers,
+    })) {
+      if (
+        (encodedContext !== undefined || options.context === null) &&
+        key.toLowerCase() === REQUEST_CONTEXT_HEADER.toLowerCase()
+      )
+        continue;
+      headers[key] = value;
+    }
+    if (encodedContext !== undefined) headers[REQUEST_CONTEXT_HEADER] = encodedContext;
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
@@ -472,7 +556,7 @@ export class OctogenClient {
 
     try {
       const init: RequestInit = {
-        headers: { ...this.headers(options.body !== undefined), ...options.headers },
+        headers,
         method: options.method,
         signal: controller.signal,
       };
@@ -511,6 +595,7 @@ export class OctogenClient {
   private async json(
     operationId: OperationId,
     options: {
+      context?: RequestOptions["context"];
       body?: object;
       pathParams?: Record<string, string>;
       query?: Record<string, string | number | undefined>;

@@ -67,6 +67,15 @@ from octogen_ai_sdk.models import (
     TaxonomyCategoryPage,
 )
 from octogen_ai_sdk.operations import OPERATIONS, resolve_operation_path
+from octogen_ai_sdk.request_context import (
+    _CONTEXT_UNSET,
+    REQUEST_CONTEXT_HEADER,
+    RequestContext,
+    RequestContextDefaults,
+    _context_header,
+    _ContextUnset,
+    _snapshot_defaults,
+)
 
 DEFAULT_BASE_URL = "https://api.octogen.ai/v1"
 DEFAULT_TIMEOUT = 30.0
@@ -110,7 +119,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.9.0"
+        return "0.10.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -135,6 +144,7 @@ class OctogenClient:
         base_url: str = DEFAULT_BASE_URL,
         timeout: float | httpx.Timeout = DEFAULT_TIMEOUT,
         http_client: httpx.AsyncClient | None = None,
+        default_context: RequestContextDefaults | None = None,
     ) -> None:
         resolved_api_key = api_key or _read_env_api_key()
         if not resolved_api_key:
@@ -142,6 +152,7 @@ class OctogenClient:
                 f"Octogen API key required. Set {API_KEY_ENV_VAR} or pass api_key."
             )
 
+        self._default_context = _snapshot_defaults(default_context)
         self._api_key = resolved_api_key
         self._base_url = base_url.rstrip("/")
         self._owns_client = http_client is None
@@ -171,6 +182,7 @@ class OctogenClient:
         resolution_mode: ProductLookupResolutionMode | str | None = None,
         on_demand_cache_policy: ProductLookupCachePolicy | str | None = None,
         request: ProgrammaticProductLookupRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> MerchantProductUrlLookupResponse:
         """Resolve a product URL from the index or on demand.
@@ -191,7 +203,9 @@ class OctogenClient:
             on_demand_cache_policy=on_demand_cache_policy,
             request=request,
         )
-        data = await self._json("lookupProduct", json=body, timeout=timeout)
+        data = await self._json(
+            "lookupProduct", json=body, context=context, timeout=timeout
+        )
         return MerchantProductUrlLookupResponse.model_validate(data)
 
     async def lookup_product_markdown(
@@ -202,6 +216,7 @@ class OctogenClient:
         resolution_mode: ProductLookupResolutionMode | str | None = None,
         on_demand_cache_policy: ProductLookupCachePolicy | str | None = None,
         request: ProgrammaticProductLookupRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> ProductMarkdownLookupResult:
         """:meth:`lookup_product`, with the product rendered as LLM-ready Markdown.
@@ -225,6 +240,7 @@ class OctogenClient:
             "lookupProduct",
             json=body,
             headers={"Accept": "text/markdown"},
+            context=context,
             timeout=timeout,
         )
         headers = response.headers
@@ -253,6 +269,7 @@ class OctogenClient:
         resolution_mode: ProductLookupResolutionMode | str | None = None,
         on_demand_cache_policy: ProductLookupCachePolicy | str | None = None,
         request: ProgrammaticProductLookupRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> MerchantProductUrlLookupResponse:
         """Exact alias of lookup_product, using POST /v1/products/parse.
@@ -268,7 +285,9 @@ class OctogenClient:
             on_demand_cache_policy=on_demand_cache_policy,
             request=request,
         )
-        data = await self._json("parseProductAlias", json=body, timeout=timeout)
+        data = await self._json(
+            "parseProductAlias", json=body, context=context, timeout=timeout
+        )
         return MerchantProductUrlLookupResponse.model_validate(data)
 
     async def resolve_product_from_html(
@@ -277,6 +296,7 @@ class OctogenClient:
         html: str | None = None,
         url: str | None = None,
         request: ProgrammaticResolveFromHtmlRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> MerchantProductUrlLookupResponse:
         """Resolve a product from page HTML you already have.
@@ -299,21 +319,33 @@ class OctogenClient:
         else:
             resolved = ProgrammaticResolveFromHtmlRequest(html=html, url=url)
         data = await self._json(
-            "resolveProductFromHtml", json=_body(resolved), timeout=timeout
+            "resolveProductFromHtml",
+            json=_body(resolved),
+            context=context,
+            timeout=timeout,
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
 
-    async def get_me(self, *, timeout: Timeout | None = None) -> MeResponse:
+    async def get_me(
+        self,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> MeResponse:
         """The calling organization, key, quotas, and rate-limit posture.
 
         Read-only and side-effect free: safe on startup and in CI. Never
         contains key material — only the key id and its non-secret prefix.
         """
-        data = await self._json("getMe", timeout=timeout)
+        data = await self._json("getMe", context=context, timeout=timeout)
         return MeResponse.model_validate(data)
 
     async def get_domain(
-        self, url_or_host: str, *, timeout: Timeout | None = None
+        self,
+        url_or_host: str,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
     ) -> DomainCoverageResponse:
         """One covered store's coverage snapshot (``GET /v1/domains/{host}``).
 
@@ -328,7 +360,7 @@ class OctogenClient:
         if host is None:
             raise ValueError(f"get_domain: no host in {url_or_host!r}")
         data = await self._json(
-            "getDomain", path_params={"host": host}, timeout=timeout
+            "getDomain", path_params={"host": host}, context=context, timeout=timeout
         )
         return DomainCoverageResponse.model_validate(data)
 
@@ -353,6 +385,7 @@ class OctogenClient:
         diversity: bool | None = None,
         debug: bool | None = None,
         request: ProgrammaticProductSearchRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> ProgrammaticProductSearchPage:
         """Search indexed products by free text, filters, or both.
@@ -438,7 +471,9 @@ class OctogenClient:
                 diversity=diversity,
                 debug=debug,
             )
-        data = await self._json("searchProducts", json=_body(resolved), timeout=timeout)
+        data = await self._json(
+            "searchProducts", json=_body(resolved), context=context, timeout=timeout
+        )
         return ProgrammaticProductSearchPage.model_validate(data)
 
     async def count_product_facets(
@@ -460,6 +495,7 @@ class OctogenClient:
         facet_names: Sequence[FacetCountName] | None = None,
         value_limit: int | None = None,
         request: ProgrammaticFacetCountsRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> ProgrammaticFacetCountsResponse:
         """Count the products :meth:`search_products` would filter to.
@@ -533,7 +569,7 @@ class OctogenClient:
                 value_limit=value_limit,
             )
         data = await self._json(
-            "countProductFacets", json=_body(resolved), timeout=timeout
+            "countProductFacets", json=_body(resolved), context=context, timeout=timeout
         )
         return ProgrammaticFacetCountsResponse.model_validate(data)
 
@@ -543,6 +579,7 @@ class OctogenClient:
         parent: str | None = None,
         offset: int | None = None,
         limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> TaxonomyCategoryPage:
         """Root taxonomy categories, or one category's direct children.
@@ -557,6 +594,7 @@ class OctogenClient:
         data = await self._json(
             "listTaxonomyCategories",
             params={"parent": parent, "offset": offset, "limit": limit},
+            context=context,
             timeout=timeout,
         )
         return TaxonomyCategoryPage.model_validate(data)
@@ -567,6 +605,7 @@ class OctogenClient:
         *,
         offset: int | None = None,
         limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> TaxonomyAttributePage:
         """The attributes a category carries, such as ``neckline`` for dresses.
@@ -579,6 +618,7 @@ class OctogenClient:
         data = await self._json(
             "listTaxonomyAttributes",
             params={"category": category, "offset": offset, "limit": limit},
+            context=context,
             timeout=timeout,
         )
         return TaxonomyAttributePage.model_validate(data)
@@ -589,6 +629,7 @@ class OctogenClient:
         *,
         offset: int | None = None,
         limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> TaxonomyAttributeValuePage:
         """An attribute's canonical values, such as ``neckline__halter``.
@@ -601,6 +642,7 @@ class OctogenClient:
             "listTaxonomyAttributeValues",
             params={"offset": offset, "limit": limit},
             path_params={"handle": handle},
+            context=context,
             timeout=timeout,
         )
         return TaxonomyAttributeValuePage.model_validate(data)
@@ -627,6 +669,7 @@ class OctogenClient:
         limit: int | None = None,
         debug: bool | None = None,
         request: ProgrammaticMoreLikeThisRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> ProgrammaticMoreLikeThisResponse:
         """Find products similar to a source product URL or UUID, or to a set.
@@ -731,7 +774,10 @@ class OctogenClient:
                 debug=bool(debug),
             )
         data = await self._json(
-            "moreLikeThisProducts", json=_body(resolved), timeout=timeout
+            "moreLikeThisProducts",
+            json=_body(resolved),
+            context=context,
+            timeout=timeout,
         )
         return ProgrammaticMoreLikeThisResponse.model_validate(data)
 
@@ -740,6 +786,7 @@ class OctogenClient:
         *,
         name: str | None = None,
         request: CoverageUrlListCreateRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageUrlList:
         """Create a coverage URL list (returns it in ``provisioning``)."""
@@ -752,7 +799,9 @@ class OctogenClient:
             raise TypeError("create_coverage_url_list() requires name or request")
         else:
             resolved = CoverageUrlListCreateRequest(name=name)
-        data = await self._json("createUrlList", json=_body(resolved), timeout=timeout)
+        data = await self._json(
+            "createUrlList", json=_body(resolved), context=context, timeout=timeout
+        )
         return CoverageUrlList.model_validate(data)
 
     async def list_coverage_url_lists(
@@ -760,29 +809,40 @@ class OctogenClient:
         *,
         cursor: str | None = None,
         limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageUrlListPage:
         """List your organization's coverage URL lists, newest first."""
         data = await self._json(
             "listUrlLists",
             params={"cursor": cursor, "limit": limit},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlListPage.model_validate(data)
 
     async def get_coverage_url_list(
-        self, url_list_id: str, *, timeout: Timeout | None = None
+        self,
+        url_list_id: str,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
     ) -> CoverageUrlList:
         """Get one coverage URL list by id."""
         data = await self._json(
             "getUrlList",
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlList.model_validate(data)
 
     async def delete_coverage_url_list(
-        self, url_list_id: str, *, timeout: Timeout | None = None
+        self,
+        url_list_id: str,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
     ) -> CoverageUrlList:
         """Delete a coverage URL list (returns it in ``delete_pending``).
 
@@ -792,6 +852,7 @@ class OctogenClient:
         data = await self._json(
             "deleteUrlList",
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlList.model_validate(data)
@@ -802,6 +863,7 @@ class OctogenClient:
         *,
         urls: Sequence[str] | None = None,
         request: CoverageUrlsRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageUrlMutationResponse:
         """Add URLs to a list — an idempotent set-add with per-URL outcomes."""
@@ -810,6 +872,7 @@ class OctogenClient:
             "addUrlListUrls",
             json=body,
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlMutationResponse.model_validate(data)
@@ -820,6 +883,7 @@ class OctogenClient:
         *,
         urls: Sequence[str] | None = None,
         request: CoverageUrlsRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageUrlMutationResponse:
         """Remove URLs from a list — an idempotent set-remove."""
@@ -828,6 +892,7 @@ class OctogenClient:
             "removeUrlListUrls",
             json=body,
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlMutationResponse.model_validate(data)
@@ -838,6 +903,7 @@ class OctogenClient:
         *,
         urls: Sequence[str] | None = None,
         request: CoverageUrlsRequest | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageContainsResponse:
         """Check which URLs are members of a list (normalized server-side)."""
@@ -846,6 +912,7 @@ class OctogenClient:
             "checkUrlListUrls",
             json=body,
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageContainsResponse.model_validate(data)
@@ -856,6 +923,7 @@ class OctogenClient:
         *,
         cursor: str | None = None,
         limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> CoverageUrlListUrlsPage:
         """Enumerate a list's URLs in stable insertion order."""
@@ -863,6 +931,7 @@ class OctogenClient:
             "listUrlListUrls",
             params={"cursor": cursor, "limit": limit},
             path_params={"urlListId": url_list_id},
+            context=context,
             timeout=timeout,
         )
         return CoverageUrlListUrlsPage.model_validate(data)
@@ -875,6 +944,7 @@ class OctogenClient:
         params: dict[str, Any] | None = None,
         path_params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> httpx.Response:
         """Issue one registry-declared operation and return the raw response.
@@ -893,6 +963,9 @@ class OctogenClient:
         request_headers = self._headers()
         if headers:
             request_headers.update(headers)
+        context_header = _context_header(self._default_context, context)
+        if context_header is not None:
+            request_headers[REQUEST_CONTEXT_HEADER] = context_header
         content: str | None = None
         if json is not None:
             request_headers["Content-Type"] = "application/json"
@@ -927,6 +1000,7 @@ class OctogenClient:
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         path_params: dict[str, str] | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> Any:
         """:meth:`_request` for the common case: return the decoded JSON body."""
@@ -935,6 +1009,7 @@ class OctogenClient:
             json=json,
             params=params,
             path_params=path_params,
+            context=context,
             timeout=timeout,
         )
         return _decode_json(response)
