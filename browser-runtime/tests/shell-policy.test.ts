@@ -230,45 +230,45 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     });
     expect(result.calls).toBe(1);
   });
-  it("raw api cannot list domains or smuggle a host through store's route", async () => {
+  it("raw api cannot list stores or smuggle a host through store's route", async () => {
     for (const line of [
-      "storerouter api GET /domains --no-retry",
-      "storerouter api GET /domains/ --no-retry",
-      "storerouter api GET /domains/example.com/extra --no-retry",
-      "storerouter api GET /domains/WWW.example.com --no-retry",
-      "storerouter api DELETE /domains/example.com --no-retry",
+      "storerouter api GET /stores --no-retry",
+      "storerouter api GET /stores/ --no-retry",
+      "storerouter api GET /stores/example.com/extra --no-retry",
+      "storerouter api GET /stores/WWW.example.com --no-retry",
+      "storerouter api DELETE /stores/example.com --no-retry",
     ]) {
       const result = await shell(line);
       expect(result.calls, line).toBe(0);
       expect(result.code, line).not.toBe(0);
     }
   });
-  it("allows getDomain for exactly one normalized host, GET only, no query or body", () => {
+  it("allows getStore for exactly one normalized host, GET only, no query or body", () => {
     expect(
       checkDemoRequest({
-        url: "https://api.storerouter.ai/v1/domains/thereformation.com",
+        url: "https://api.storerouter.ai/v1/stores/thereformation.com",
         method: "GET",
         headers: {},
       }),
-    ).toBe("getDomain");
+    ).toBe("getStore");
     for (const request of [
-      { url: "https://api.storerouter.ai/v1/domains", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/a.com/b.com", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/a.com,b.com", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/*", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/%2A", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/%2e%2e", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/example.com%2Fx", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/Example.com", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/www.example.com", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/example.com:443", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/localhost", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/example.com?all=1", method: "GET" },
-      { url: "https://api.storerouter.ai/v1/domains/example.com", method: "POST" },
-      { url: "https://evil.example/v1/domains/example.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/a.com/b.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/a.com,b.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/*", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/%2A", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/%2e%2e", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/example.com%2Fx", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/Example.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/www.example.com", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/example.com:443", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/localhost", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/example.com?all=1", method: "GET" },
+      { url: "https://api.storerouter.ai/v1/stores/example.com", method: "POST" },
+      { url: "https://evil.example/v1/stores/example.com", method: "GET" },
       {
-        url: "https://api.storerouter.ai/v1/domains/example.com",
+        url: "https://api.storerouter.ai/v1/stores/example.com",
         method: "GET",
         body: "{}",
       },

@@ -41,14 +41,14 @@ control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `getDomain`, `resolveProductFromHtml`, the six brand operations,
+SDK — `getMe`, `getStore`, `resolveProductFromHtml`, the six brand operations,
 the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
 | Operation                                  | What it is for                                                                        |
 | ------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `GET /me`                                  | Your organization, key id and provenance, quotas, rate-limit posture.                 |
-| `GET /domains/{host}`                      | One store's coverage: catalogs, product counts, populated facets, price histogram.    |
+| `GET /stores/{domain}`                     | One store's coverage: catalogs, product counts, populated facets, price histogram.    |
 | `POST /products/resolve-from-html`         | Resolve a product from HTML you already have. No index, no fetch.                     |
 | `GET /taxonomy/categories`                 | Root categories, or one category's children, with the facets that select each.        |
 | `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |
@@ -57,7 +57,7 @@ the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the e
 | `GET /brands/prefix`                       | Canonical brand names starting with a prefix, for autocomplete.                       |
 | `POST /brands/search`                      | Brands ranked against a plain-language description, optionally steered by brands.     |
 | `POST /brands/similar`                     | Brands similar to one or more source brands.                                          |
-| `GET /brands/{brand}`                      | One brand's public details: domain, origin, founding year, price tier.                |
+| `GET /brands/{brand}`                      | One brand: details plus coverage across catalogs and the catalogs carrying it.        |
 | `GET /brands/{brand}/products`             | One brand's active products within your key's catalogs, by offset.                    |
 | `GET /brands/{brand}/top-categories`       | A brand's top categories by product count.                                            |
 

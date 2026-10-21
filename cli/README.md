@@ -145,7 +145,7 @@ storerouter store thereformation.com
 storerouter store https://www.thereformation.com/products/some-dress --json
 ```
 
-One store's coverage snapshot from `GET /v1/domains/{host}`: every catalog
+One store's coverage snapshot from `GET /v1/stores/{domain}`: every catalog
 serving the host, with its product count, populated search fields and their
 most common values, and a price histogram. A URL is reduced to its host the way
 the API normalizes hosts (lowercased, port and leading `www.` dropped). `--json`

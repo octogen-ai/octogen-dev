@@ -2,6 +2,15 @@
 
 ## 0.11.0 (unreleased)
 
+- **Breaking:** `get_domain` is now `get_store` (`GET /v1/stores/{domain}`),
+  returning `StoreCoverageResponse`; `DomainCoverageResponse` and
+  `DomainCatalogCoverage` are now `StoreCoverageResponse` and
+  `StoreCatalogCoverage`.
+- **Breaking:** `get_brand_details` returns `BrandCoverageResponse` (was
+  `BrandDetailsView`): brand metadata plus a snapshot of the brand's products
+  across catalogs and `catalogs`, each a `BrandCatalog` with `hosts` for
+  `get_store`.
+
 Brand discovery, for the six `/v1/brands` operations the API now publishes.
 
 - Add `search_brand_prefix(prefix)` (`GET /v1/brands/prefix`), returning

@@ -19,6 +19,55 @@ const REFORMATION = {
   brandDescription: "Sustainable women's clothing.",
   directorySubheading: null,
 };
+const REFORMATION_DETAILS = {
+  ...REFORMATION,
+  foundedYear: 2009,
+  originCountry: "USA",
+  priceTier: "CONTEMPORARY",
+  productCount: 4556,
+  computedAt: "2026-10-21T19:40:00Z",
+  fields: [
+    {
+      name: "color",
+      displayName: "Color",
+      source: "product",
+      populated: 4529,
+      coverage: 0.994,
+      distinct: 40,
+      topValues: [
+        { value: "black", label: "Black", count: 900 },
+        { value: "white", label: "White", count: 700 },
+        { value: "blue", label: "Blue", count: 500 },
+      ],
+      truncated: true,
+    },
+  ],
+  price: {
+    populated: 4500,
+    median: 196.94,
+    buckets: [
+      { min: 50, max: 100, count: 400 },
+      { min: 100, max: 450, count: 3900 },
+    ],
+    below: 20,
+    above: 180,
+  },
+  catalogs: [
+    {
+      catalog: "thereformation",
+      catalogDisplayName: "Reformation",
+      hosts: ["thereformation.com"],
+      productCount: 3462,
+    },
+    {
+      catalog: "farfetch",
+      catalogDisplayName: "Farfetch",
+      hosts: ["farfetch.co.uk", "farfetch.com", "farfetch.de"],
+      productCount: 440,
+    },
+  ],
+  catalogsTruncated: true,
+};
 const BRANDS_BODY = { results: [REFORMATION], totalFound: 1 };
 const NOT_FOUND = { status: 404, body: { detail: "brand_not_found" } };
 
@@ -133,14 +182,48 @@ describe("storerouter brands show", () => {
     const result = await runCli({
       argv: ["brands", "show", "Free People", "--json"],
       env: KEYED,
-      routes: { "GET /brands/Free%20People": { body: REFORMATION } },
+      routes: { "GET /brands/Free%20People": { body: REFORMATION_DETAILS } },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     const request = result.requests[0];
     expect(request?.method).toBe("GET");
     expect(request?.url).toBe(`${API}/brands/Free%20People`);
     expect(request?.body).toBeUndefined();
-    expect(result.json()["brand"]).toEqual(REFORMATION);
+    expect(result.json()["brand"]).toEqual(REFORMATION_DETAILS);
+  });
+
+  it("prints the brand's coverage like a store catalog, then its catalogs", async () => {
+    const result = await runCli({
+      argv: ["brands", "show", "reformation"],
+      env: KEYED,
+      isTty: true,
+      routes: { "GET /brands/reformation": { body: REFORMATION_DETAILS } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.stdout).toBe(
+      [
+        "Reformation",
+        "  slug       reformation",
+        "  domain     thereformation.com",
+        "  founded    2009",
+        "  origin     USA",
+        "  tier       CONTEMPORARY",
+        "",
+        "  Sustainable women's clothing.",
+        "",
+        "Coverage across catalogs",
+        "  products   4,556",
+        "  price      median 196.94, 50–450 (4,500 priced)",
+        "  computed   2026-10-21T19:40:00Z",
+        "  fields     1 populated (product 1)",
+        "    color   99%  Black, White, Blue, …",
+        "  catalogs   2+",
+        "    Reformation (thereformation)  3,462  thereformation.com",
+        "    Farfetch (farfetch)             440  farfetch.co.uk, farfetch.com, …",
+        "    … more catalogs not listed",
+        "",
+      ].join("\n"),
+    );
   });
 
   it("exits 6 with brand_not_found for an unknown brand", async () => {

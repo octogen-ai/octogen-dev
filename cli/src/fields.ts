@@ -138,11 +138,11 @@ export const RESOLVE_FIELDS = {
   url: { flag: "--url" },
 } satisfies FieldMap<ResolveRequest>;
 
-// ── GET /domains/{host} ─────────────────────────────────────────────────────
+// ── GET /stores/{domain} ─────────────────────────────────────────────────────
 
 export const STORE_FIELDS = {
-  host: { flag: "<host|url> (positional)" },
-} satisfies FieldMap<{ host: string }>;
+  domain: { flag: "<host|url> (positional)" },
+} satisfies FieldMap<{ domain: string }>;
 
 // ── /brands ─────────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ export const FIELD_MAPS: Readonly<
   resolveProductFromHtml: RESOLVE_FIELDS,
   searchProducts: SEARCH_FIELDS,
   getMe: {},
-  getDomain: STORE_FIELDS,
+  getStore: STORE_FIELDS,
   searchBrandsFromText: BRAND_SEARCH_FIELDS,
   searchSimilarBrands: BRAND_SIMILAR_FIELDS,
   searchBrandPrefix: BRAND_PREFIX_FIELDS,

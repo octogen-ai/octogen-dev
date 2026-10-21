@@ -737,13 +737,13 @@ export interface CoverageUrlListUrlsPage {
   nextCursor?: string | null;
 }
 
-// ── One store's coverage (/v1/domains/{host}) ───────────────────────────────
+// ── One store's coverage (/v1/stores/{domain}) ───────────────────────────────
 
-/** Every catalog serving one host; `host` is the normalized host asked about. */
-export type DomainCoverageResponse = components["schemas"]["DomainCoverageResponse"];
+/** Every catalog serving one store domain; `host` is the normalized domain asked about. */
+export type StoreCoverageResponse = components["schemas"]["StoreCoverageResponse"];
 
 /** One catalog's snapshot: product count, populated facets, price histogram. */
-export type DomainCatalogCoverage = components["schemas"]["DomainCatalogCoverage"];
+export type StoreCatalogCoverage = components["schemas"]["StoreCatalogCoverage"];
 
 /** A public search facet populated for at least one of the catalog's products. */
 export type DomainField = components["schemas"]["DomainField"];
@@ -765,8 +765,15 @@ export type BrandFacet = components["schemas"]["BrandFacet"];
 /** Base facet keys of the brand index. */
 export type BrandFacetName = components["schemas"]["BrandFacetName"];
 
-/** Public-safe metadata for one resolved brand. */
-export type BrandDetailsView = components["schemas"]["BrandDetailsView"];
+/**
+ * One brand's public metadata plus coverage of its products across catalogs:
+ * product count, populated facets and a price histogram, shaped like one
+ * {@link StoreCatalogCoverage}, and the catalogs carrying the brand.
+ */
+export type BrandCoverageResponse = components["schemas"]["BrandCoverageResponse"];
+
+/** One catalog carrying a brand; pass one of its `hosts` to `getStore`. */
+export type BrandCatalog = components["schemas"]["BrandCatalog"];
 
 /** One ranked brand from a text or similar-brands search. */
 export type SimilarBrandView = components["schemas"]["SimilarBrandView"];

@@ -1424,13 +1424,13 @@ DOMAIN_COVERAGE_JSON = {
 
 
 @respx.mock
-async def test_get_domain_normalizes_a_url_to_one_host() -> None:
-    route = respx.get(f"{BASE_URL}/domains/thereformation.com").mock(
+async def test_get_store_normalizes_a_url_to_one_host() -> None:
+    route = respx.get(f"{BASE_URL}/stores/thereformation.com").mock(
         return_value=httpx.Response(200, json=DOMAIN_COVERAGE_JSON)
     )
 
     async with OctogenClient(api_key="key") as client:
-        coverage = await client.get_domain(
+        coverage = await client.get_store(
             "https://WWW.TheReformation.com:443/products/x?color=red"
         )
 
@@ -1444,21 +1444,21 @@ async def test_get_domain_normalizes_a_url_to_one_host() -> None:
 
 
 @pytest.mark.parametrize("value", ["", "   ", "not a host/with a path"])
-async def test_get_domain_rejects_input_with_no_host(value: str) -> None:
+async def test_get_store_rejects_input_with_no_host(value: str) -> None:
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(ValueError, match="no host"):
-            await client.get_domain(value)
+            await client.get_store(value)
 
 
 @respx.mock
-async def test_get_domain_not_covered_is_a_not_found_error() -> None:
-    respx.get(f"{BASE_URL}/domains/example.com").mock(
+async def test_get_store_not_covered_is_a_not_found_error() -> None:
+    respx.get(f"{BASE_URL}/stores/example.com").mock(
         return_value=httpx.Response(404, json={"detail": "domain_not_covered"})
     )
 
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(OctogenNotFoundError) as exc_info:
-            await client.get_domain("example.com")
+            await client.get_store("example.com")
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "domain_not_covered"

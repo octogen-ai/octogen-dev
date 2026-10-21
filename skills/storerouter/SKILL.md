@@ -44,7 +44,7 @@ conversation.
 | A store, and want its coverage and filters | `storerouter store <host>`                      |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
-| A brand, and want its details              | `storerouter brands show <brand>`               |
+| A brand, and want its details and coverage | `storerouter brands show <brand>`               |
 | A brand, and want its products             | `storerouter brands products <brand>`           |
 | A brand, and want what it mostly sells     | `storerouter brands categories <brand>`         |
 | Part of a brand name                       | `storerouter brands prefix <prefix>`            |

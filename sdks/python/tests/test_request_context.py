@@ -124,7 +124,7 @@ OPERATIONS: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = [
     ("parse_product_alias", ("https://example.test/p",), {}),
     ("resolve_product_from_html", (), {"html": "<html/>"}),
     ("get_me", (), {}),
-    ("get_domain", ("example.test",), {}),
+    ("get_store", ("example.test",), {}),
     ("search_products", (), {"q": "shirt"}),
     ("count_product_facets", (), {}),
     ("list_taxonomy_categories", (), {}),

@@ -2,6 +2,13 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- `brands show <brand>` also prints the brand's coverage across catalogs in the
+  same layout as one `store` catalog (product count, price histogram summary,
+  best-covered fields), then the catalogs carrying it with product counts and
+  hosts to pass to `store`. The price tier line is now labelled `tier`.
+  `--json` carries the full `BrandCoverageResponse`.
+- `store` reads `GET /v1/stores/{domain}` (was `GET /v1/domains/{host}`).
+
 - Add `storerouter brands` for the six `/v1/brands` operations: `brands search
 <description>` (`--like`, `--facet`, `--limit`), `brands similar <brand>…`
   (`--facet`, `--exclude-facet`, `--limit`), `brands prefix <prefix>`, `brands

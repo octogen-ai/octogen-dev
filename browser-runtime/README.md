@@ -132,7 +132,7 @@ or schema registry. It allows only search, lookup/parse, similar, store and the
 six brand reads on exact `https://api.storerouter.ai/v1` paths and methods; it denies arbitrary
 destinations, query smuggling, unknown body fields, mutation/admin routes and
 lookup auto/refresh. Lookup needs `--resolution-mode index_only`. Store is
-`GET /domains/{host}` for exactly one already-normalized host (lowercase, no
+`GET /stores/{domain}` for exactly one already-normalized host (lowercase, no
 `www.`, port, encoding or extra segment) with no body; `GET /domains`, the
 covered-host list, stays denied. Brand routes take one decoded `{brand}`
 segment with no separator or dot segment; a query string carries only the

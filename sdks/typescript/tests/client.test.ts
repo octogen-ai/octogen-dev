@@ -1166,7 +1166,7 @@ describe("OctogenClient coverage URL lists", () => {
   });
 });
 
-describe("OctogenClient getDomain", () => {
+describe("OctogenClient getStore", () => {
   const COVERAGE_JSON = {
     host: "thereformation.com",
     catalogs: [
@@ -1185,12 +1185,12 @@ describe("OctogenClient getDomain", () => {
     const { calls, fetchMock } = createFetchMock(COVERAGE_JSON);
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    const coverage = await client.getDomain(
+    const coverage = await client.getStore(
       "https://WWW.TheReformation.com:443/products/x?color=red",
     );
 
     const call = lastCall(calls);
-    expect(call.input).toBe(`${BASE_URL}/domains/thereformation.com`);
+    expect(call.input).toBe(`${BASE_URL}/stores/thereformation.com`);
     expect(call.init?.method).toBe("GET");
     expect(call.init?.body).toBeUndefined();
     expect(coverage.catalogs[0]?.productCount).toBe(1200);
@@ -1201,7 +1201,7 @@ describe("OctogenClient getDomain", () => {
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     for (const input of ["", "   ", "not a host/with a path"]) {
-      await expect(client.getDomain(input)).rejects.toThrow(TypeError);
+      await expect(client.getStore(input)).rejects.toThrow(TypeError);
     }
     expect(calls).toHaveLength(0);
   });
@@ -1213,11 +1213,11 @@ describe("OctogenClient getDomain", () => {
     );
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    await expect(client.getDomain("example.com")).rejects.toMatchObject({
+    await expect(client.getStore("example.com")).rejects.toMatchObject({
       detail: "domain_not_covered",
       statusCode: 404,
     });
-    await expect(client.getDomain("example.com")).rejects.toBeInstanceOf(
+    await expect(client.getStore("example.com")).rejects.toBeInstanceOf(
       OctogenNotFoundError,
     );
   });

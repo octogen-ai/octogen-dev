@@ -34,7 +34,7 @@ from octogen_ai_sdk.errors import (
 )
 from octogen_ai_sdk.hosts import normalize_host
 from octogen_ai_sdk.models import (
-    BrandDetailsView,
+    BrandCoverageResponse,
     BrandFacet,
     BrandProductsPage,
     BrandTopCategoriesPage,
@@ -45,7 +45,6 @@ from octogen_ai_sdk.models import (
     CoverageUrlListUrlsPage,
     CoverageUrlMutationResponse,
     CoverageUrlsRequest,
-    DomainCoverageResponse,
     EmbeddingColumn,
     Facet,
     FacetCountName,
@@ -67,6 +66,7 @@ from octogen_ai_sdk.models import (
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
     SimilarBrandsResponse,
+    StoreCoverageResponse,
     TaxonomyAttributePage,
     TaxonomyAttributeValuePage,
     TaxonomyCategoryPage,
@@ -352,16 +352,16 @@ class OctogenClient:
         data = await self._json("getMe", context=context, timeout=timeout)
         return MeResponse.model_validate(data)
 
-    async def get_domain(
+    async def get_store(
         self,
         url_or_host: str,
         *,
         context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
-    ) -> DomainCoverageResponse:
-        """One covered store's coverage snapshot (``GET /v1/domains/{host}``).
+    ) -> StoreCoverageResponse:
+        """One covered store's coverage snapshot (``GET /v1/stores/{domain}``).
 
-        Every catalog serving the host, with product counts, populated facets
+        Every catalog serving the domain, with product counts, populated facets
         and a price histogram. Takes a bare host or a URL and normalizes it the
         way the server does (lowercased, port and leading ``www.`` dropped). A
         host no catalog claims raises :class:`OctogenNotFoundError` with
@@ -370,11 +370,11 @@ class OctogenClient:
         """
         host = normalize_host(url_or_host)
         if host is None:
-            raise ValueError(f"get_domain: no host in {url_or_host!r}")
+            raise ValueError(f"get_store: no host in {url_or_host!r}")
         data = await self._json(
-            "getDomain", path_params={"host": host}, context=context, timeout=timeout
+            "getStore", path_params={"domain": host}, context=context, timeout=timeout
         )
-        return DomainCoverageResponse.model_validate(data)
+        return StoreCoverageResponse.model_validate(data)
 
     async def search_products(
         self,
@@ -756,9 +756,13 @@ class OctogenClient:
         *,
         context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
-    ) -> BrandDetailsView:
-        """One brand's profile (``GET /v1/brands/{brand}``).
+    ) -> BrandCoverageResponse:
+        """One brand's profile and coverage (``GET /v1/brands/{brand}``).
 
+        Public metadata plus a snapshot of the brand's products across
+        catalogs (product count, populated facets, price histogram, shaped
+        like one store catalog) and the catalogs carrying it, most products
+        first; pass one of a catalog's ``hosts`` to :meth:`get_store`.
         ``brand`` is a brand slug or a case-insensitive brand name. An unknown
         brand raises :class:`OctogenNotFoundError` with
         ``detail == "brand_not_found"``.
@@ -770,7 +774,7 @@ class OctogenClient:
             context=context,
             timeout=timeout,
         )
-        return BrandDetailsView.model_validate(data)
+        return BrandCoverageResponse.model_validate(data)
 
     async def browse_brand_products(
         self,

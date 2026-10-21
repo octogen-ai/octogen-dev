@@ -519,25 +519,6 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/brands/{brand}/top-categories"
     },
-    "getDomain": {
-      "body": {
-        "properties": {},
-        "type": "object"
-      },
-      "method": "GET",
-      "parameters": [
-        {
-          "in": "path",
-          "name": "host",
-          "required": true,
-          "schema": {
-            "title": "Host",
-            "type": "string"
-          }
-        }
-      ],
-      "path": "/domains/{host}"
-    },
     "getMe": {
       "body": {
         "properties": {},
@@ -546,6 +527,25 @@ export const PUBLIC_CONTRACT = {
       "method": "GET",
       "parameters": [],
       "path": "/me"
+    },
+    "getStore": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "domain",
+          "required": true,
+          "schema": {
+            "title": "Domain",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/stores/{domain}"
     },
     "getUrlList": {
       "body": {
@@ -1967,6 +1967,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/brands/similar"
     }
   },
-  "sha256": "965dcc0bd4ff8d803b9f3f54e86d385271c08f823eb07e85930135a87005d38f",
+  "sha256": "5017ca816a13ed498edf164ae0150556715760bb0eda2ecc5539ad16faa355fe",
   "version": "1.0.0"
 } as const;

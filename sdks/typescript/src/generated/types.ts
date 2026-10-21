@@ -14,11 +14,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get public-safe details for a brand
+         * Get a brand's details and coverage
          * @description Resolve a corpus-wide brand by slug or case-insensitive name.
          *
-         *     Returns display metadata only. The domain is the brand website, not a
-         *     promise that a store or seller is indexed.
+         *     Returns display metadata plus a coverage snapshot of the brand's products,
+         *     shaped like a ``GET /v1/stores/{domain}`` catalog: product count, populated
+         *     facets with top values, and a price histogram. ``catalogs`` lists the
+         *     catalogs carrying the brand by product count; pass a host to
+         *     ``GET /v1/stores/{domain}`` for a store's own coverage. The domain is the brand website,
+         *     not a promise that a store or seller is indexed. Unbilled; snapshots are
+         *     cached per brand for about a day.
          */
         get: operations["getBrandDetails"];
         put?: never;
@@ -273,30 +278,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/domains/{host}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a covered domain's coverage snapshot
-         * @description Coverage snapshot of every catalog serving one covered host.
-         *
-         *     ``host`` is a bare host (not a URL), lowercased with a leading ``www.`` removed.
-         *     Unbilled; snapshots are computed from Elasticsearch aggregations and
-         *     cached per catalog for about a day.
-         */
-        get: operations["getDomain"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me": {
         parameters: {
             query?: never;
@@ -463,6 +444,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stores/{domain}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a store's coverage and assortment profiles
+         * @description Inspect every catalog serving a covered store domain.
+         *
+         *     ``domain`` is a bare host (not a URL), lowercased with a leading ``www.``
+         *     removed. Unbilled; coverage snapshots are cached per catalog for about a day.
+         *     Each catalog's profile is null until precomputed profiles are published.
+         *     Profile counts describe observed assortment, not live product-query matches.
+         */
+        get: operations["getStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/taxonomy/attributes": {
         parameters: {
             query?: never;
@@ -568,10 +574,39 @@ export interface components {
             genders: string[];
         };
         /**
-         * BrandDetailsView
-         * @description Public-safe metadata for one resolved brand.
+         * BrandCatalog
+         * @description One catalog carrying the brand.
          */
-        BrandDetailsView: {
+        BrandCatalog: {
+            /**
+             * Catalog
+             * @description Catalog key.
+             */
+            catalog: string;
+            /**
+             * Catalogdisplayname
+             * @description Human-readable display name for the catalog.
+             */
+            catalogDisplayName: string;
+            /**
+             * Hosts
+             * @description Normalized hosts the catalog serves, each usable with `GET /v1/stores/{domain}`.
+             */
+            hosts: string[];
+            /**
+             * Productcount
+             * @description Indexed product groups of this brand in the catalog.
+             */
+            productCount: number;
+        };
+        /**
+         * BrandCoverageResponse
+         * @description Brand metadata plus coverage of the brand's products across catalogs.
+         *
+         *     Counts are approximate (Elasticsearch aggregations) and refreshed about
+         *     daily. The same product sold by several stores is counted once per catalog.
+         */
+        BrandCoverageResponse: {
             /**
              * Branddescription
              * @description Short description of the brand.
@@ -593,6 +628,21 @@ export interface components {
              */
             brandUuid: string;
             /**
+             * Catalogs
+             * @description Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.
+             */
+            catalogs: components["schemas"]["BrandCatalog"][];
+            /**
+             * Catalogstruncated
+             * @description Whether the brand is carried by more catalogs than listed.
+             */
+            catalogsTruncated: boolean;
+            /**
+             * Computedat
+             * @description When the coverage was computed (UTC ISO 8601).
+             */
+            computedAt: string;
+            /**
              * Directorysubheading
              * @description Brand subheading for directory display.
              */
@@ -603,6 +653,11 @@ export interface components {
              */
             domain?: string | null;
             /**
+             * Fields
+             * @description Populated public facets of the brand's products, ordered by `source` then coverage.
+             */
+            fields: components["schemas"]["DomainField"][];
+            /**
              * Foundedyear
              * @description Year the brand was founded.
              */
@@ -612,11 +667,18 @@ export interface components {
              * @description Country of origin for the brand.
              */
             originCountry?: string | null;
+            /** @description Current-price histogram; null when nothing is priced. */
+            price?: components["schemas"]["PriceDistribution"] | null;
             /**
              * Pricetier
              * @description Price positioning for the brand.
              */
             priceTier?: string | null;
+            /**
+             * Productcount
+             * @description Indexed product groups of the brand across catalogs.
+             */
+            productCount: number;
         };
         /**
          * BrandFacet
@@ -1046,58 +1108,6 @@ export interface components {
              * @description Product URLs, each at most 2,048 characters. Each entry must be an http(s) URL with a dotted hostname; invalid entries are rejected per-URL, not as a request error.
              */
             urls: string[];
-        };
-        /**
-         * DomainCatalogCoverage
-         * @description A catalog serving the host, with its coverage snapshot.
-         */
-        DomainCatalogCoverage: {
-            /**
-             * Catalog
-             * @description Catalog key.
-             */
-            catalog: string;
-            /**
-             * Catalogdisplayname
-             * @description Human-readable display name for the catalog.
-             */
-            catalogDisplayName: string;
-            /**
-             * Computedat
-             * @description When the snapshot was computed (UTC ISO 8601).
-             */
-            computedAt: string;
-            /**
-             * Fields
-             * @description Populated public facets, ordered by `source` then coverage.
-             */
-            fields: components["schemas"]["DomainField"][];
-            /** @description Current-price histogram; null when nothing is priced. */
-            price?: components["schemas"]["PriceDistribution"] | null;
-            /**
-             * Productcount
-             * @description Indexed product groups in the catalog.
-             */
-            productCount: number;
-        };
-        /**
-         * DomainCoverageResponse
-         * @description Coverage snapshots for every catalog serving one host.
-         *
-         *     Counts are approximate (Elasticsearch aggregations) and refreshed about
-         *     daily.
-         */
-        DomainCoverageResponse: {
-            /**
-             * Catalogs
-             * @description One snapshot per catalog serving the host, sorted by catalog.
-             */
-            catalogs: components["schemas"]["DomainCatalogCoverage"][];
-            /**
-             * Host
-             * @description The normalized host.
-             */
-            host: string;
         };
         /**
          * DomainField
@@ -2743,6 +2753,223 @@ export interface components {
              */
             domain?: string | null;
         };
+        /** StoreAssortmentProfile */
+        StoreAssortmentProfile: {
+            /** Distributions */
+            distributions: components["schemas"]["StoreProfileDistribution"][];
+            /**
+             * Productcount
+             * @description Observed indexed products in this scope.
+             */
+            productCount: number;
+            /**
+             * Summary
+             * @description Description derived from this population.
+             */
+            summary: string;
+        };
+        /** StoreCatalogCoverage */
+        StoreCatalogCoverage: {
+            /**
+             * Catalog
+             * @description Catalog key.
+             */
+            catalog: string;
+            /**
+             * Catalogdisplayname
+             * @description Human-readable display name for the catalog.
+             */
+            catalogDisplayName: string;
+            /**
+             * Computedat
+             * @description When the snapshot was computed (UTC ISO 8601).
+             */
+            computedAt: string;
+            /**
+             * Fields
+             * @description Populated public facets, ordered by `source` then coverage.
+             */
+            fields: components["schemas"]["DomainField"][];
+            /** @description Current-price histogram; null when nothing is priced. */
+            price?: components["schemas"]["PriceDistribution"] | null;
+            /**
+             * Productcount
+             * @description Indexed product groups in the catalog.
+             */
+            productCount: number;
+            /** @description Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation. */
+            profile?: components["schemas"]["StoreProfile"] | null;
+        };
+        /**
+         * StoreCoverageResponse
+         * @description Coverage and optional profiles for catalogs serving the requested domain.
+         */
+        StoreCoverageResponse: {
+            /**
+             * Catalogs
+             * @description One entry per catalog serving the domain, sorted by catalog. A shared domain does not imply that catalogs are the same store.
+             */
+            catalogs: components["schemas"]["StoreCatalogCoverage"][];
+            /**
+             * Host
+             * @description Normalized requested domain; retained for compatibility.
+             */
+            host: string;
+        };
+        /** StoreDepartmentProfile */
+        StoreDepartmentProfile: {
+            /**
+             * Categorypath
+             * @description Canonical category path, root first.
+             */
+            categoryPath: string[];
+            /** Departmentid */
+            departmentId: string;
+            /** Distributions */
+            distributions: components["schemas"]["StoreProfileDistribution"][];
+            /**
+             * Productcount
+             * @description Observed indexed products in this scope.
+             */
+            productCount: number;
+            /**
+             * Summary
+             * @description Description derived from this population.
+             */
+            summary: string;
+        };
+        /**
+         * StoreIdentity
+         * @description One catalog is the initial store boundary; domains are aliases.
+         */
+        StoreIdentity: {
+            /**
+             * Catalog
+             * @description Catalog key to pass in products/search's catalogs filter.
+             */
+            catalog: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Domains
+             * @description Normalized bare hosts, including primaryDomain.
+             */
+            domains: string[];
+            /**
+             * Primarydomain
+             * @description Normalized bare primary host.
+             */
+            primaryDomain: string;
+            /**
+             * Storeid
+             * @description Stable store identifier.
+             */
+            storeId: string;
+        };
+        /**
+         * StoreProfile
+         * @description One published profile generation, including its department evidence.
+         */
+        StoreProfile: {
+            /**
+             * Computedat
+             * Format: date-time
+             * @description Profile computation time, with timezone.
+             */
+            computedAt: string;
+            /** Departments */
+            departments: components["schemas"]["StoreDepartmentProfile"][];
+            overall: components["schemas"]["StoreAssortmentProfile"];
+            /**
+             * Profileversion
+             * @description Opaque published generation ID.
+             */
+            profileVersion: string;
+            provenance: components["schemas"]["StoreProfileProvenance"];
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: "1";
+            store: components["schemas"]["StoreIdentity"];
+        };
+        /**
+         * StoreProfileDistribution
+         * @description A field's distribution within one overall or department population.
+         */
+        StoreProfileDistribution: {
+            /**
+             * Approximate
+             * @description Whether counts are approximate.
+             */
+            approximate: boolean;
+            /**
+             * Name
+             * @description Canonical profile field name.
+             */
+            name: string;
+            /**
+             * Populatedcount
+             * @description Products with a known value; others are unknown, not absent.
+             */
+            populatedCount: number;
+            /**
+             * Populationcount
+             * @description Denominator for value shares.
+             */
+            populationCount: number;
+            /**
+             * Source
+             * @description Brand-derived values describe stocked brands, not store policies.
+             * @enum {string}
+             */
+            source: "product" | "enrichment" | "brands";
+            /**
+             * Truncated
+             * @description True when additional values were omitted.
+             */
+            truncated: boolean;
+            /**
+             * Values
+             * @description Value shares are count / populationCount (undefined for an empty population). Multi-valued field shares can sum to more than 100%.
+             */
+            values: components["schemas"]["StoreProfileValue"][];
+        };
+        /** StoreProfileProvenance */
+        StoreProfileProvenance: {
+            /**
+             * Countingunit
+             * @description One source product document; not necessarily a distinct style.
+             * @constant
+             */
+            countingUnit: "indexed_product";
+            /**
+             * Observedat
+             * Format: date-time
+             * @description Source observation time, with timezone.
+             */
+            observedAt: string;
+            /**
+             * Taxonomyversion
+             * @description Taxonomy version when known.
+             */
+            taxonomyVersion?: string | null;
+        };
+        /** StoreProfileValue */
+        StoreProfileValue: {
+            /**
+             * Count
+             * @description Products containing this value, once each.
+             */
+            count: number;
+            /** Label */
+            label: string;
+            /**
+             * Value
+             * @description Canonical value identifier.
+             */
+            value: string;
+        };
         /**
          * TaxonomyAttribute
          * @description One taxonomy attribute definition.
@@ -2956,7 +3183,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BrandDetailsView"];
+                    "application/json": components["schemas"]["BrandCoverageResponse"];
                 };
             };
             /** @description Invalid X-Octogen-Request-Context header */
@@ -4128,47 +4355,6 @@ export interface operations {
             };
         };
     };
-    getDomain: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
-                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
-            };
-            path: {
-                host: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DomainCoverageResponse"];
-                };
-            };
-            /** @description Invalid X-Octogen-Request-Context header */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     getMe: {
         parameters: {
             query?: never;
@@ -4834,6 +5020,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getStore: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path: {
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreCoverageResponse"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

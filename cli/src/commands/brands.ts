@@ -12,7 +12,7 @@
  */
 
 import type {
-  BrandDetailsView,
+  BrandCoverageResponse,
   BrandProductsPage,
   BrandTopCategoriesPage,
   SearchBrandsFromTextParams,
@@ -36,6 +36,7 @@ import {
 } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 import { parseFacets } from "./search.js";
+import { formatCount, renderSnapshot } from "./store.js";
 
 /** The one positional brand, or a usage error naming the command. */
 function brandArgument(context: CommandContext): string {
@@ -309,12 +310,39 @@ function detailLine(
     : [`  ${label.padEnd(10)} ${String(value)}`];
 }
 
+/** Catalogs carrying the brand, most products first, with hosts for `store`. */
+function renderBrandCatalogs(details: BrandCoverageResponse): string[] {
+  const { catalogs } = details;
+  if (catalogs.length === 0) return ["  catalogs   —"];
+  const names = catalogs.map((c) => `${c.catalogDisplayName} (${c.catalog})`);
+  const counts = catalogs.map((c) => formatCount(c.productCount));
+  const nameWidth = Math.max(...names.map((name) => name.length));
+  const countWidth = Math.max(...counts.map((count) => count.length));
+  const lines = [
+    `  catalogs   ${String(catalogs.length)}${details.catalogsTruncated ? "+" : ""}`,
+  ];
+  catalogs.forEach((catalog, i) => {
+    const hosts = catalog.hosts.slice(0, HOSTS_PER_CATALOG).join(", ");
+    const more = catalog.hosts.length > HOSTS_PER_CATALOG ? ", …" : "";
+    lines.push(
+      `    ${(names[i] ?? "").padEnd(nameWidth)}  ${(counts[i] ?? "").padStart(countWidth)}  ${hosts}${more}`.trimEnd(),
+    );
+  });
+  if (details.catalogsTruncated) {
+    lines.push("    … more catalogs not listed");
+  }
+  return lines;
+}
+
+/** Hosts shown per catalog; any one of them works with `storerouter store`. */
+const HOSTS_PER_CATALOG = 2;
+
 async function runShow(context: CommandContext): Promise<ExitCode> {
   const brand = brandArgument(context);
   contractRequest("getBrandDetails", BRAND_SHOW_FIELDS, context.args, { brand });
 
   const api = context.api();
-  let details: BrandDetailsView;
+  let details: BrandCoverageResponse;
   try {
     details = await call(api, `GET /brands/${encodeURIComponent(brand)}`, () =>
       api.client.getBrandDetails(brand),
@@ -333,8 +361,12 @@ async function runShow(context: CommandContext): Promise<ExitCode> {
         ...detailLine("domain", details.domain),
         ...detailLine("founded", details.foundedYear),
         ...detailLine("origin", details.originCountry),
-        ...detailLine("price", details.priceTier),
+        ...detailLine("tier", details.priceTier),
         ...(details.brandDescription ? ["", `  ${details.brandDescription}`] : []),
+        "",
+        "Coverage across catalogs",
+        ...renderSnapshot(details),
+        ...renderBrandCatalogs(details),
       ].join("\n"),
     ok: true,
   });
@@ -346,10 +378,13 @@ export const brandsShowCommand = {
   notes: [
     "<brand> is a slug or a case-insensitive name. Exit 6 means the server",
     "answered 404 brand_not_found.",
+    "",
+    "Coverage counts the brand's products in every catalog, shaped like one",
+    "`store` catalog. Pass a listed host to `store` for that store's coverage.",
   ],
   operations: ["getBrandDetails"] as const,
   run: runShow,
-  summary: "Show one brand's details: domain, origin, founding year, price tier",
+  summary: "Show one brand's details and coverage: facets, prices, catalogs",
   usage: "brands show <brand>",
 } satisfies CommandSpec;
 

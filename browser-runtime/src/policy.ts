@@ -8,7 +8,7 @@ export const DEMO_OPERATIONS = [
   "lookupProduct",
   "parseProductAlias",
   "moreLikeThisProducts",
-  "getDomain",
+  "getStore",
   // `/brands/prefix` before `/brands/{brand}`, which would also match it.
   "searchBrandPrefix",
   "searchBrandsFromText",
@@ -101,9 +101,9 @@ export function checkDemoRequest(request: TransportRequest): OperationId {
   // Only the query parameters the operation declares, so nothing is smuggled
   // through raw api.
   const query = queryParams(operation, url);
-  if (operation === "getDomain") {
+  if (operation === "getStore") {
     // One store's snapshot, by exactly one normalized host; never a list.
-    if (!NORMALIZED_HOST.test(params["host"] ?? ""))
+    if (!NORMALIZED_HOST.test(params["domain"] ?? ""))
       throw new Error("Browser policy: host denied");
   }
   if (request.method === "GET") {

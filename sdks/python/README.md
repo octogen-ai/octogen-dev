@@ -58,8 +58,8 @@ if that stops being true — see
 - `get_me()` returns the calling organization, key id and provenance, quotas,
   and rate-limit posture. Read-only and side-effect free: safe on startup and
   in CI.
-- `get_domain(url_or_host)` returns one store's coverage snapshot
-  (`GET /v1/domains/{host}`): every catalog serving the host, with product
+- `get_store(url_or_host)` returns one store's coverage snapshot
+  (`GET /v1/stores/{domain}`): every catalog serving the host, with product
   counts, populated facets and a price histogram. A URL is normalized to its
   host first. An uncovered host raises `OctogenNotFoundError` with
   `detail == "domain_not_covered"`. There is no list of covered hosts.

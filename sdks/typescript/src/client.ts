@@ -17,7 +17,7 @@ import { normalizeHost } from "./hosts.js";
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
-  BrandDetailsView,
+  BrandCoverageResponse,
   BrandProductsPage,
   BrandTextSearchRequest,
   BrandTopCategoriesPage,
@@ -29,7 +29,7 @@ import type {
   CoverageUrlListPage,
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
-  DomainCoverageResponse,
+  StoreCoverageResponse,
   GetBrandTopCategoriesParams,
   ListTaxonomyCategoriesParams,
   MeResponse,
@@ -228,8 +228,8 @@ export class OctogenClient {
   }
 
   /**
-   * One covered store's coverage snapshot (`GET /v1/domains/{host}`): every
-   * catalog serving the host, with product counts, populated facets and a
+   * One covered store's coverage snapshot (`GET /v1/stores/{domain}`): every
+   * catalog serving the domain, with product counts, populated facets and a
    * price histogram.
    *
    * Takes a bare host or a URL and normalizes it the way the server does
@@ -238,19 +238,19 @@ export class OctogenClient {
    * catalog claims is a `404` with `detail.code` `domain_not_covered`. There is
    * deliberately no way to list hosts: ask about the one you have.
    */
-  async getDomain(
+  async getStore(
     urlOrHost: string,
     options: RequestOptions = {},
-  ): Promise<DomainCoverageResponse> {
+  ): Promise<StoreCoverageResponse> {
     const host = normalizeHost(urlOrHost);
     if (host === undefined) {
-      throw new TypeError(`getDomain: no host in ${JSON.stringify(urlOrHost)}`);
+      throw new TypeError(`getStore: no host in ${JSON.stringify(urlOrHost)}`);
     }
-    const data = await this.json("getDomain", {
+    const data = await this.json("getStore", {
       context: options.context,
-      pathParams: { host },
+      pathParams: { domain: host },
     });
-    return data as DomainCoverageResponse;
+    return data as StoreCoverageResponse;
   }
 
   /**
@@ -318,19 +318,23 @@ export class OctogenClient {
   }
 
   /**
-   * Public-safe details for one brand (`GET /v1/brands/{brand}`). `brand` is a
-   * slug or a case-insensitive name; an unknown one is a `404` with `detail`
+   * One brand's profile and coverage (`GET /v1/brands/{brand}`): public
+   * metadata plus a snapshot of the brand's products across catalogs (product
+   * count, populated facets, price histogram, shaped like one store catalog)
+   * and the catalogs carrying it, most products first; pass one of a
+   * catalog's `hosts` to {@link getStore}. `brand` is a slug or a
+   * case-insensitive name; an unknown one is a `404` with `detail`
    * `brand_not_found`.
    */
   async getBrandDetails(
     brand: string,
     options: RequestOptions = {},
-  ): Promise<BrandDetailsView> {
+  ): Promise<BrandCoverageResponse> {
     const data = await this.json("getBrandDetails", {
       context: options.context,
       pathParams: { brand },
     });
-    return data as BrandDetailsView;
+    return data as BrandCoverageResponse;
   }
 
   /**
