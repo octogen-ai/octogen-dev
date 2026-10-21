@@ -134,7 +134,7 @@ const cases = [
     operation: "getStore",
     argv: ["store", "https://www.TheReformation.com/products/x"],
     path: "/stores/thereformation.com",
-    body: { host: "thereformation.com" },
+    body: { domain: "thereformation.com" },
     response: { host: "thereformation.com", catalogs: [] },
     exit: 0,
   },
@@ -167,7 +167,7 @@ for (const item of cases) {
       if (item.operation === "getStore") {
         assert.equal(init?.method, "GET");
         assert.equal(init.body, undefined);
-        body = { host: decodeURIComponent(pathname.split("/").at(-1) ?? "") };
+        body = { domain: decodeURIComponent(pathname.split("/").at(-1) ?? "") };
       } else {
         assert.equal(init?.method, "POST");
         assert.equal(typeof init.body, "string");
