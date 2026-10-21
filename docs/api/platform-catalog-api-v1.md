@@ -41,8 +41,8 @@ control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `getDomain`, `resolveProductFromHtml`, the
-[taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
+SDK — `getMe`, `getDomain`, `resolveProductFromHtml`, the six brand operations,
+the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
 | Operation                                  | What it is for                                                                        |
@@ -54,6 +54,12 @@ SDK — `getMe`, `getDomain`, `resolveProductFromHtml`, the
 | `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |
 | `GET /taxonomy/attributes/{handle}/values` | An attribute's canonical value handles, such as `neckline__halter`.                   |
 | `POST /products/facet-counts`              | Product counts by category, attribute value and colour family under search's filters. |
+| `GET /brands/prefix`                       | Canonical brand names starting with a prefix, for autocomplete.                       |
+| `POST /brands/search`                      | Brands ranked against a plain-language description, optionally steered by brands.     |
+| `POST /brands/similar`                     | Brands similar to one or more source brands.                                          |
+| `GET /brands/{brand}`                      | One brand's public details: domain, origin, founding year, price tier.                |
+| `GET /brands/{brand}/products`             | One brand's active products within your key's catalogs, by offset.                    |
+| `GET /brands/{brand}/top-categories`       | A brand's top categories by product count.                                            |
 
 ### `POST /products/lookup` — lookup product by URL
 

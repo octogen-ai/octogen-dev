@@ -278,6 +278,85 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
         `${request.method} ${request.url}`,
       ).toThrow();
   });
+  it("brands subcommands run through the policy with one request each", async () => {
+    for (const [line, expected] of [
+      [
+        "storerouter brands search 'linen basics' --json | jq -r '.brands[0].name'",
+        "Example",
+      ],
+      [
+        "storerouter brands similar Example --json | jq -r '.brands[0].name'",
+        "Example",
+      ],
+      ["storerouter brands prefix Ex --json | jq -r '.brands[0]'", "Example"],
+      [
+        "storerouter brands show 'Example Studio' --json | jq -r '.brand.brandName'",
+        "Example",
+      ],
+      [
+        "storerouter brands products example --limit 12 --json | jq -r '.items[0].title'",
+        "Linen dress (fixture)",
+      ],
+      [
+        "storerouter brands categories example --json | jq -r '.categories[0].name'",
+        "Dresses",
+      ],
+    ] as const) {
+      const result = await shell(line);
+      expect(result.code, line).toBe(0);
+      expect(result.stdout.trim(), line).toBe(expected);
+      expect(result.calls, line).toBe(1);
+    }
+  });
+  it("allows brand reads with only their declared, in-range query", () => {
+    const base = "https://api.storerouter.ai/v1/brands";
+    for (const [url, operation] of [
+      [`${base}/prefix?prefix=Re&limit=20`, "searchBrandPrefix"],
+      [`${base}/Free%20People`, "getBrandDetails"],
+      [`${base}/reformation/products?limit=24&offset=48`, "browseBrandProducts"],
+      [
+        `${base}/reformation/top-categories?minLevel=2&limit=3`,
+        "getBrandTopCategories",
+      ],
+    ] as const)
+      expect(checkDemoRequest({ url, method: "GET", headers: {} }), url).toBe(
+        operation,
+      );
+    expect(
+      checkDemoRequest({
+        url: `${base}/similar`,
+        method: "POST",
+        headers: {},
+        body: JSON.stringify({ brands: ["Reformation"], limit: 24 }),
+      }),
+    ).toBe("searchSimilarBrands");
+    for (const request of [
+      { url: `${base}/prefix`, method: "GET" },
+      { url: `${base}/prefix?prefix=Re&prefix=Ab`, method: "GET" },
+      { url: `${base}/prefix?prefix=Re&all=1`, method: "GET" },
+      { url: `${base}/prefix?prefix=Re&limit=51`, method: "GET" },
+      { url: `${base}/prefix?prefix=Re&limit=1e1`, method: "GET" },
+      { url: `${base}/prefix?prefix=Re&`, method: "GET" },
+      { url: `${base}/reformation/products?offset=10001`, method: "GET" },
+      { url: `${base}/reformation/products?limit=-1`, method: "GET" },
+      { url: `${base}/reformation?limit=1`, method: "GET" },
+      { url: `${base}/a%2Fproducts`, method: "GET" },
+      { url: `${base}/..`, method: "GET" },
+      { url: `${base}/%2e%2e`, method: "GET" },
+      { url: `${base}/%E0%A4%A`, method: "GET" },
+      { url: `${base}/reformation/extra`, method: "GET" },
+      { url: `${base}/reformation`, method: "DELETE" },
+      { url: `${base}/reformation`, method: "GET", body: "{}" },
+      { url: base, method: "GET" },
+      { url: `${base}/search?limit=1`, method: "POST", body: '{"text":"x"}' },
+      { url: `${base}/search`, method: "POST", body: '{"text":"x","debug":true}' },
+      { url: `${base}/similar`, method: "POST", body: '{"brands":[]}' },
+    ])
+      expect(
+        () => checkDemoRequest({ ...request, headers: {} }),
+        `${request.method} ${request.url}`,
+      ).toThrow();
+  });
   it("drops browser credentials at host seam", async () => {
     let seen: TransportRequest | undefined;
     const transport = withDemoPolicy((request, signal) => {

@@ -2,6 +2,13 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- Add `storerouter brands` for the six `/v1/brands` operations: `brands search
+<description>` (`--like`, `--facet`, `--limit`), `brands similar <brand>…`
+  (`--facet`, `--exclude-facet`, `--limit`), `brands prefix <prefix>`, `brands
+show <brand>`, `brands products <brand>` (`--limit`, `--offset`) and `brands
+categories <brand>` (`--min-level`, `--limit`). `404 brand_not_found` and empty
+  results exit `6`. Requires `@octogen-ai/sdk` 0.9.0.
+
 - Add `storerouter skill [<reference>]`: prints the agent skill bundled with
   this version (`skills/storerouter/SKILL.md`), covering when to use
   StoreRouter, which command fits a task, what each exit code means, and how to

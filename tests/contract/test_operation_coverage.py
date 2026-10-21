@@ -9,8 +9,8 @@ same committed snapshot. Failing in either direction is a hard failure, with
 * an SDK method calling a path the contract does not define is a guaranteed 404
   at runtime.
 
-Brands were deferred from CLI v1 on 2026-08-20, so there is no unpublished
-surface left for an SDK method to legitimately call. This test is what makes
+Brands, deferred from CLI v1 on 2026-08-20, were published on 2026-10-21, so
+there is no unpublished surface left for an SDK method to legitimately call. This test is what makes
 ``POST /products/recrawl`` — shipped in both SDKs, never a real route —
 impossible to reintroduce.
 

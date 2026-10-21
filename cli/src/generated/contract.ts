@@ -38,6 +38,54 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}/urls"
     },
+    "browseBrandProducts": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Brand slug or case-insensitive name.",
+          "in": "path",
+          "name": "brand",
+          "required": true,
+          "schema": {
+            "description": "Brand slug or case-insensitive name.",
+            "minLength": 1,
+            "title": "Brand",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 24,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        {
+          "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+            "maximum": 10000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/brands/{brand}/products"
+    },
     "checkUrlListUrls": {
       "body": {
         "additionalProperties": false,
@@ -402,6 +450,74 @@ export const PUBLIC_CONTRACT = {
         }
       ],
       "path": "/coverage/url-lists/{urlListId}"
+    },
+    "getBrandDetails": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Brand slug or case-insensitive name.",
+          "in": "path",
+          "name": "brand",
+          "required": true,
+          "schema": {
+            "description": "Brand slug or case-insensitive name.",
+            "minLength": 1,
+            "title": "Brand",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/brands/{brand}"
+    },
+    "getBrandTopCategories": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Brand slug or case-insensitive name.",
+          "in": "path",
+          "name": "brand",
+          "required": true,
+          "schema": {
+            "description": "Brand slug or case-insensitive name.",
+            "minLength": 1,
+            "title": "Brand",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "minLevel",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "maximum": 10,
+            "minimum": 0,
+            "title": "Minlevel",
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 3,
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/brands/{brand}/top-categories"
     },
     "getDomain": {
       "body": {
@@ -1252,6 +1368,161 @@ export const PUBLIC_CONTRACT = {
       "parameters": [],
       "path": "/products/resolve-from-html"
     },
+    "searchBrandPrefix": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Canonical brand name prefix.",
+          "in": "query",
+          "name": "prefix",
+          "required": true,
+          "schema": {
+            "description": "Canonical brand name prefix.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Prefix",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/brands/prefix"
+    },
+    "searchBrandsFromText": {
+      "body": {
+        "additionalProperties": false,
+        "description": "Generate and execute a brand search from text and optional references.",
+        "properties": {
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
+                  "properties": {
+                    "name": {
+                      "anyOf": [
+                        {
+                          "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
+                          "enum": [
+                            "facet_types",
+                            "facet_tags",
+                            "facet_styles",
+                            "facet_style_identity",
+                            "facet_genders",
+                            "facet_age_groups",
+                            "facet_categories",
+                            "facet_origin_country",
+                            "facet_price_tier",
+                            "facet_target_audience",
+                            "facet_sustainability",
+                            "facet_brand_ethics",
+                            "facet_brand_inclusivity",
+                            "facet_brand_cultural_anchors",
+                            "facet_key_people_names",
+                            "facet_key_people_nationalities",
+                            "facet_brand_hype_cycle_stage",
+                            "facet_category_path.depth_0",
+                            "facet_category_path.depth_1",
+                            "facet_category_path.depth_2",
+                            "facet_category_path.depth_3",
+                            "facet_category_path.depth_4",
+                            "facet_category_path.depth_5",
+                            "facet_category_path.depth_6"
+                          ],
+                          "title": "BrandFacetName",
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+                      "title": "Name"
+                    },
+                    "values": {
+                      "description": "List of values to filter by. They should be lowercase; phrases allowed.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "BrandFacet",
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "title": "Facets"
+          },
+          "limit": {
+            "default": 24,
+            "description": "Maximum number of matching brands.",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "referenceBrands": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical source brands whose averaged embeddings guide the search.",
+            "title": "Referencebrands"
+          },
+          "text": {
+            "description": "Natural-language brand discovery query.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "BrandTextSearchRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/brands/search"
+    },
     "searchProducts": {
       "body": {
         "additionalProperties": false,
@@ -1516,8 +1787,186 @@ export const PUBLIC_CONTRACT = {
       "method": "POST",
       "parameters": [],
       "path": "/products/search"
+    },
+    "searchSimilarBrands": {
+      "body": {
+        "additionalProperties": false,
+        "description": "Find brands similar to a set of source brands.",
+        "properties": {
+          "brands": {
+            "description": "Source brand names (case-insensitive) to find similar brands for.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Brands",
+            "type": "array"
+          },
+          "exclusionFacets": {
+            "anyOf": [
+              {
+                "items": {
+                  "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
+                  "properties": {
+                    "name": {
+                      "anyOf": [
+                        {
+                          "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
+                          "enum": [
+                            "facet_types",
+                            "facet_tags",
+                            "facet_styles",
+                            "facet_style_identity",
+                            "facet_genders",
+                            "facet_age_groups",
+                            "facet_categories",
+                            "facet_origin_country",
+                            "facet_price_tier",
+                            "facet_target_audience",
+                            "facet_sustainability",
+                            "facet_brand_ethics",
+                            "facet_brand_inclusivity",
+                            "facet_brand_cultural_anchors",
+                            "facet_key_people_names",
+                            "facet_key_people_nationalities",
+                            "facet_brand_hype_cycle_stage",
+                            "facet_category_path.depth_0",
+                            "facet_category_path.depth_1",
+                            "facet_category_path.depth_2",
+                            "facet_category_path.depth_3",
+                            "facet_category_path.depth_4",
+                            "facet_category_path.depth_5",
+                            "facet_category_path.depth_6"
+                          ],
+                          "title": "BrandFacetName",
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+                      "title": "Name"
+                    },
+                    "values": {
+                      "description": "List of values to filter by. They should be lowercase; phrases allowed.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "BrandFacet",
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 exclusion filters, with the same names and value bounds as facets.",
+            "title": "Exclusionfacets"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
+                  "properties": {
+                    "name": {
+                      "anyOf": [
+                        {
+                          "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
+                          "enum": [
+                            "facet_types",
+                            "facet_tags",
+                            "facet_styles",
+                            "facet_style_identity",
+                            "facet_genders",
+                            "facet_age_groups",
+                            "facet_categories",
+                            "facet_origin_country",
+                            "facet_price_tier",
+                            "facet_target_audience",
+                            "facet_sustainability",
+                            "facet_brand_ethics",
+                            "facet_brand_inclusivity",
+                            "facet_brand_cultural_anchors",
+                            "facet_key_people_names",
+                            "facet_key_people_nationalities",
+                            "facet_brand_hype_cycle_stage",
+                            "facet_category_path.depth_0",
+                            "facet_category_path.depth_1",
+                            "facet_category_path.depth_2",
+                            "facet_category_path.depth_3",
+                            "facet_category_path.depth_4",
+                            "facet_category_path.depth_5",
+                            "facet_category_path.depth_6"
+                          ],
+                          "title": "BrandFacetName",
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+                      "title": "Name"
+                    },
+                    "values": {
+                      "description": "List of values to filter by. They should be lowercase; phrases allowed.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "BrandFacet",
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 inclusion filters. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "title": "Facets"
+          },
+          "limit": {
+            "default": 24,
+            "description": "Maximum number of similar brands.",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "brands"
+        ],
+        "title": "SimilarBrandsRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/brands/similar"
     }
   },
-  "sha256": "c010c04db0b90322c088317076c790f0654b2492850f739faddd53f52b45374f",
+  "sha256": "965dcc0bd4ff8d803b9f3f54e86d385271c08f823eb07e85930135a87005d38f",
   "version": "1.0.0"
 } as const;

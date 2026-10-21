@@ -6,6 +6,141 @@
  * method layer in `../client.ts` is hand-written.
  */
 export interface paths {
+    "/brands/{brand}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get public-safe details for a brand
+         * @description Resolve a corpus-wide brand by slug or case-insensitive name.
+         *
+         *     Returns display metadata only. The domain is the brand website, not a
+         *     promise that a store or seller is indexed.
+         */
+        get: operations["getBrandDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/{brand}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Browse products for a brand
+         * @description Paginated active products for a brand, within the caller's scope.
+         */
+        get: operations["browseBrandProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/{brand}/top-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Top categories for a brand by product count
+         * @description A brand's top categories by active-product count.
+         *
+         *     Resolves ``{brand}`` as slug or case-insensitive name and returns
+         *     precomputed, corpus-wide category names. These are not scoped inventory
+         *     counts and do not promise products within your catalog scope.
+         */
+        get: operations["getBrandTopCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/prefix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find canonical brand names by prefix
+         * @description Find corpus-wide canonical brand names by raw or punctuation-free prefix.
+         *
+         *     Brand matches do not promise products within your catalog scope.
+         */
+        get: operations["searchBrandPrefix"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find brands from a natural-language query
+         * @description Discover brands from text and optional reference brands.
+         *
+         *     Searches corpus-wide brand identities, not stores or sellers. Brand matches
+         *     do not promise products in your catalog scope. Returns 400 for an unusable
+         *     generated query or reference brands without embeddings.
+         */
+        post: operations["searchBrandsFromText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find brands similar to a set of brands
+         * @description Find corpus-wide brands by averaged source-brand embedding similarity.
+         *
+         *     Brand matches do not promise products within your catalog scope.
+         */
+        post: operations["searchSimilarBrands"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coverage/url-lists": {
         parameters: {
             query?: never;
@@ -431,6 +566,196 @@ export interface components {
              * @default []
              */
             genders: string[];
+        };
+        /**
+         * BrandDetailsView
+         * @description Public-safe metadata for one resolved brand.
+         */
+        BrandDetailsView: {
+            /**
+             * Branddescription
+             * @description Short description of the brand.
+             */
+            brandDescription?: string | null;
+            /**
+             * Brandname
+             * @description Canonical name of the brand.
+             */
+            brandName: string;
+            /**
+             * Brandslug
+             * @description Canonical slug for the brand.
+             */
+            brandSlug?: string | null;
+            /**
+             * Branduuid
+             * @description Unique identifier for the brand.
+             */
+            brandUuid: string;
+            /**
+             * Directorysubheading
+             * @description Brand subheading for directory display.
+             */
+            directorySubheading?: string | null;
+            /**
+             * Domain
+             * @description Primary website domain for the brand.
+             */
+            domain?: string | null;
+            /**
+             * Foundedyear
+             * @description Year the brand was founded.
+             */
+            foundedYear?: number | null;
+            /**
+             * Origincountry
+             * @description Country of origin for the brand.
+             */
+            originCountry?: string | null;
+            /**
+             * Pricetier
+             * @description Price positioning for the brand.
+             */
+            priceTier?: string | null;
+        };
+        /**
+         * BrandFacet
+         * @description Brand-focused facet filter.
+         *
+         *     Accepts either a BrandFacetName or a string. Strings may be:
+         *     - A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be
+         *       interpreted as facet_attributes.<key> later in the request builder)
+         *     - A fully qualified attribute key: "facet_attributes.<key>"
+         *     - Backwards-compatible forms from product search:
+         *         - "attribute_facets.<key>"
+         *         - "gender", "product_type", "age_groups"
+         *         - "category_path.depth_i" for i in 0..6
+         *         - "color", "color_family", "is_activewear" (recognized by this shared
+         *           compatibility model, but rejected by public brand request validation)
+         *
+         *     Public brand requests also reject "brand_quality_score". Each public facet
+         *     needs 1..100 nonblank values, each at most 256 characters.
+         */
+        BrandFacet: {
+            /**
+             * Name
+             * @description Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.
+             */
+            name: components["schemas"]["BrandFacetName"] | string;
+            /**
+             * Values
+             * @description List of values to filter by. They should be lowercase; phrases allowed.
+             */
+            values: string[];
+        };
+        /**
+         * BrandFacetName
+         * @description Facet keys supported by the brand index.
+         *
+         *     These correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience
+         *     aliases for depth-based category paths.
+         * @enum {string}
+         */
+        BrandFacetName: "facet_types" | "facet_tags" | "facet_styles" | "facet_style_identity" | "facet_genders" | "facet_age_groups" | "facet_categories" | "facet_origin_country" | "facet_price_tier" | "facet_target_audience" | "facet_sustainability" | "facet_brand_ethics" | "facet_brand_inclusivity" | "facet_brand_cultural_anchors" | "facet_key_people_names" | "facet_key_people_nationalities" | "facet_brand_hype_cycle_stage" | "facet_category_path.depth_0" | "facet_category_path.depth_1" | "facet_category_path.depth_2" | "facet_category_path.depth_3" | "facet_category_path.depth_4" | "facet_category_path.depth_5" | "facet_category_path.depth_6";
+        /**
+         * BrandProductsPage
+         * @description One page of a brand's active indexed products.
+         */
+        BrandProductsPage: {
+            /**
+             * Brandname
+             * @description Canonical brand name used for the query.
+             */
+            brandName: string;
+            /**
+             * Brandslug
+             * @description Canonical brand slug used for the query.
+             */
+            brandSlug?: string | null;
+            /**
+             * Hasmore
+             * @description Whether another fetchable page exists. False once pagination reaches the offset ceiling (10000), even if `total` is larger.
+             */
+            hasMore: boolean;
+            /**
+             * Limit
+             * @description Maximum number of products per page.
+             */
+            limit: number;
+            /**
+             * Offset
+             * @description Number of products skipped.
+             */
+            offset: number;
+            /**
+             * Products
+             * @description Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.
+             */
+            products: components["schemas"]["MerchantProductListItem"][];
+            /**
+             * Total
+             * @description Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.
+             */
+            total: number;
+        };
+        /**
+         * BrandTextSearchRequest
+         * @description Generate and execute a brand search from text and optional references.
+         */
+        BrandTextSearchRequest: {
+            /**
+             * Facets
+             * @description Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
+             */
+            facets?: components["schemas"]["BrandFacet"][] | null;
+            /**
+             * Limit
+             * @description Maximum number of matching brands.
+             * @default 24
+             */
+            limit: number;
+            /**
+             * Referencebrands
+             * @description Canonical source brands whose averaged embeddings guide the search.
+             */
+            referenceBrands?: string[] | null;
+            /**
+             * Text
+             * @description Natural-language brand discovery query.
+             */
+            text: string;
+        };
+        /**
+         * BrandTopCategoriesPage
+         * @description A brand's top categories by product count.
+         */
+        BrandTopCategoriesPage: {
+            /**
+             * Brandname
+             * @description Canonical brand name used for the query.
+             */
+            brandName: string;
+            /**
+             * Topcategories
+             * @description Top categories sorted by product count, descending.
+             */
+            topCategories: components["schemas"]["BrandTopCategoryView"][];
+        };
+        /**
+         * BrandTopCategoryView
+         * @description A top category for a brand based on product count.
+         */
+        BrandTopCategoryView: {
+            /**
+             * Categorylevel
+             * @description Depth level of the category in the taxonomy.
+             */
+            categoryLevel: number;
+            /**
+             * Categoryname
+             * @description Name of the category.
+             */
+            categoryName: string;
         };
         /** BrandView */
         BrandView: {
@@ -2340,6 +2665,85 @@ export interface components {
             rating?: number | null;
         };
         /**
+         * SimilarBrandsRequest
+         * @description Find brands similar to a set of source brands.
+         */
+        SimilarBrandsRequest: {
+            /**
+             * Brands
+             * @description Source brand names (case-insensitive) to find similar brands for.
+             */
+            brands: string[];
+            /**
+             * Exclusionfacets
+             * @description Up to 20 exclusion filters, with the same names and value bounds as facets.
+             */
+            exclusionFacets?: components["schemas"]["BrandFacet"][] | null;
+            /**
+             * Facets
+             * @description Up to 20 inclusion filters. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
+             */
+            facets?: components["schemas"]["BrandFacet"][] | null;
+            /**
+             * Limit
+             * @description Maximum number of similar brands.
+             * @default 24
+             */
+            limit: number;
+        };
+        /**
+         * SimilarBrandsResponse
+         * @description Brands ranked by text-query relevance or source-brand similarity.
+         */
+        SimilarBrandsResponse: {
+            /**
+             * Results
+             * @description Matching brands, highest-ranked first.
+             */
+            results: components["schemas"]["SimilarBrandView"][];
+            /**
+             * Totalfound
+             * @description Total number of matching brands found.
+             */
+            totalFound: number;
+        };
+        /**
+         * SimilarBrandView
+         * @description One similar brand.
+         */
+        SimilarBrandView: {
+            /**
+             * Branddescription
+             * @description Short description of the brand.
+             */
+            brandDescription?: string | null;
+            /**
+             * Brandname
+             * @description Name of the brand.
+             */
+            brandName?: string | null;
+            /**
+             * Brandslug
+             * @description Canonical slug for the brand.
+             */
+            brandSlug?: string | null;
+            /**
+             * Branduuid
+             * @description Unique identifier for the brand.
+             */
+            brandUuid: string;
+            /**
+             * Directorysubheading
+             * @description Brand subheading for directory display.
+             */
+            directorySubheading?: string | null;
+            /**
+             * Domain
+             * @description Primary website domain for the brand.
+             */
+            domain?: string | null;
+        };
+        /**
          * TaxonomyAttribute
          * @description One taxonomy attribute definition.
          */
@@ -2531,6 +2935,515 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getBrandDetails: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path: {
+                /** @description Brand slug or case-insensitive name. */
+                brand: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetailsView"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    browseBrandProducts: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist. */
+                offset?: number;
+            };
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path: {
+                /** @description Brand slug or case-insensitive name. */
+                brand: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProductsPage"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    getBrandTopCategories: {
+        parameters: {
+            query?: {
+                limit?: number;
+                minLevel?: number;
+            };
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path: {
+                /** @description Brand slug or case-insensitive name. */
+                brand: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandTopCategoriesPage"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    searchBrandPrefix: {
+        parameters: {
+            query: {
+                limit?: number;
+                /** @description Canonical brand name prefix. */
+                prefix: string;
+            };
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Brand search backend unavailable (safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    searchBrandsFromText: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandTextSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarBrandsResponse"];
+                };
+            };
+            /** @description Unusable generated query or reference brands without embeddings. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Brand search backend unavailable (safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    searchSimilarBrands: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimilarBrandsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarBrandsResponse"];
+                };
+            };
+            /** @description None of the requested brands have embeddings. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but its organization may not use `/v1`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The brand could not be resolved. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Brand search backend unavailable (safe to retry). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     listUrlLists: {
         parameters: {
             query?: {

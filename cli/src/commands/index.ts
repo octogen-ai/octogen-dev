@@ -16,6 +16,14 @@ import type { OperationId } from "@octogen-ai/sdk";
 
 import { commandTable, EXCLUDED_OPERATIONS, type CommandSpec } from "../registry.js";
 import { apiCommand } from "./api.js";
+import {
+  brandsCategoriesCommand,
+  brandsPrefixCommand,
+  brandsProductsCommand,
+  brandsSearchCommand,
+  brandsShowCommand,
+  brandsSimilarCommand,
+} from "./brands.js";
 import { lookupCommand } from "./lookup.js";
 import { resolveCommand } from "./resolve.js";
 import { searchCommand } from "./search.js";
@@ -36,6 +44,12 @@ export const ALL_COMMANDS = [
   searchCommand,
   similarCommand,
   storeCommand,
+  brandsSearchCommand,
+  brandsSimilarCommand,
+  brandsShowCommand,
+  brandsProductsCommand,
+  brandsCategoriesCommand,
+  brandsPrefixCommand,
   resolveCommand,
   apiCommand,
 ] as const;

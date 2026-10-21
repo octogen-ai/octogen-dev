@@ -28,12 +28,15 @@ class Operation(NamedTuple):
 
 OPERATIONS: Final[dict[str, Operation]] = {
     "addUrlListUrls": Operation("POST", "/coverage/url-lists/{urlListId}/urls"),
+    "browseBrandProducts": Operation("GET", "/brands/{brand}/products"),
     "checkUrlListUrls": Operation(
         "POST", "/coverage/url-lists/{urlListId}/urls/contains"
     ),
     "countProductFacets": Operation("POST", "/products/facet-counts"),
     "createUrlList": Operation("POST", "/coverage/url-lists"),
     "deleteUrlList": Operation("DELETE", "/coverage/url-lists/{urlListId}"),
+    "getBrandDetails": Operation("GET", "/brands/{brand}"),
+    "getBrandTopCategories": Operation("GET", "/brands/{brand}/top-categories"),
     "getDomain": Operation("GET", "/domains/{host}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
@@ -51,7 +54,10 @@ OPERATIONS: Final[dict[str, Operation]] = {
         "POST", "/coverage/url-lists/{urlListId}/urls/remove"
     ),
     "resolveProductFromHtml": Operation("POST", "/products/resolve-from-html"),
+    "searchBrandPrefix": Operation("GET", "/brands/prefix"),
+    "searchBrandsFromText": Operation("POST", "/brands/search"),
     "searchProducts": Operation("POST", "/products/search"),
+    "searchSimilarBrands": Operation("POST", "/brands/similar"),
 }
 
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")

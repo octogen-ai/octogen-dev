@@ -31,6 +31,83 @@ class AudienceView(BaseModel):
     genders: list[str] | None = Field([], title="Genders")
 
 
+class BrandDetailsView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_description: str | None = Field(
+        None,
+        alias="brandDescription",
+        description="Short description of the brand.",
+        title="Branddescription",
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical name of the brand.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical slug for the brand.",
+        title="Brandslug",
+    )
+    brand_uuid: str = Field(
+        ...,
+        alias="brandUuid",
+        description="Unique identifier for the brand.",
+        title="Branduuid",
+    )
+    directory_subheading: str | None = Field(
+        None,
+        alias="directorySubheading",
+        description="Brand subheading for directory display.",
+        title="Directorysubheading",
+    )
+    domain: str | None = Field(
+        None, description="Primary website domain for the brand.", title="Domain"
+    )
+    founded_year: int | None = Field(
+        None,
+        alias="foundedYear",
+        description="Year the brand was founded.",
+        title="Foundedyear",
+    )
+    origin_country: str | None = Field(
+        None,
+        alias="originCountry",
+        description="Country of origin for the brand.",
+        title="Origincountry",
+    )
+    price_tier: str | None = Field(
+        None,
+        alias="priceTier",
+        description="Price positioning for the brand.",
+        title="Pricetier",
+    )
+
+
+class BrandTopCategoryView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    category_level: int = Field(
+        ...,
+        alias="categoryLevel",
+        description="Depth level of the category in the taxonomy.",
+        title="Categorylevel",
+    )
+    category_name: str = Field(
+        ...,
+        alias="categoryName",
+        description="Name of the category.",
+        title="Categoryname",
+    )
+
+
 class BrandView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -885,6 +962,59 @@ class ReviewView(BaseModel):
     rating: float | None = Field(None, title="Rating")
 
 
+class SimilarBrandView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_description: str | None = Field(
+        None,
+        alias="brandDescription",
+        description="Short description of the brand.",
+        title="Branddescription",
+    )
+    brand_name: str | None = Field(
+        None, alias="brandName", description="Name of the brand.", title="Brandname"
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical slug for the brand.",
+        title="Brandslug",
+    )
+    brand_uuid: str = Field(
+        ...,
+        alias="brandUuid",
+        description="Unique identifier for the brand.",
+        title="Branduuid",
+    )
+    directory_subheading: str | None = Field(
+        None,
+        alias="directorySubheading",
+        description="Brand subheading for directory display.",
+        title="Directorysubheading",
+    )
+    domain: str | None = Field(
+        None, description="Primary website domain for the brand.", title="Domain"
+    )
+
+
+class SimilarBrandsResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    results: list[SimilarBrandView] = Field(
+        ..., description="Matching brands, highest-ranked first.", title="Results"
+    )
+    total_found: int = Field(
+        ...,
+        alias="totalFound",
+        description="Total number of matching brands found.",
+        title="Totalfound",
+    )
+
+
 class TaxonomyAttribute(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1037,6 +1167,93 @@ class Attribute(BaseModel):
     handle: str = Field(..., title="Handle")
     name: str = Field(..., title="Name")
     values: list[AttributeValue] | None = Field(None, title="Values")
+
+
+class BrandFacet(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    name: (
+        str
+        | Literal[
+            "facet_types",
+            "facet_tags",
+            "facet_styles",
+            "facet_style_identity",
+            "facet_genders",
+            "facet_age_groups",
+            "facet_categories",
+            "facet_origin_country",
+            "facet_price_tier",
+            "facet_target_audience",
+            "facet_sustainability",
+            "facet_brand_ethics",
+            "facet_brand_inclusivity",
+            "facet_brand_cultural_anchors",
+            "facet_key_people_names",
+            "facet_key_people_nationalities",
+            "facet_brand_hype_cycle_stage",
+            "facet_category_path.depth_0",
+            "facet_category_path.depth_1",
+            "facet_category_path.depth_2",
+            "facet_category_path.depth_3",
+            "facet_category_path.depth_4",
+            "facet_category_path.depth_5",
+            "facet_category_path.depth_6",
+        ]
+    ) = Field(
+        ...,
+        description="Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+        title="Name",
+    )
+    values: list[str] = Field(
+        ...,
+        description="List of values to filter by. They should be lowercase; phrases allowed.",
+        title="Values",
+    )
+
+
+class BrandTextSearchRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    facets: list[BrandFacet] | None = Field(
+        None,
+        description="Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+        title="Facets",
+    )
+    limit: int | None = Field(
+        24, description="Maximum number of matching brands.", title="Limit"
+    )
+    reference_brands: list[str] | None = Field(
+        None,
+        alias="referenceBrands",
+        description="Canonical source brands whose averaged embeddings guide the search.",
+        title="Referencebrands",
+    )
+    text: str = Field(
+        ..., description="Natural-language brand discovery query.", title="Text"
+    )
+
+
+class BrandTopCategoriesPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical brand name used for the query.",
+        title="Brandname",
+    )
+    top_categories: list[BrandTopCategoryView] = Field(
+        ...,
+        alias="topCategories",
+        description="Top categories sorted by product count, descending.",
+        title="Topcategories",
+    )
 
 
 class CanonicalBrand(BaseModel):
@@ -1781,6 +1998,32 @@ class RequestContext(BaseModel):
     visitor: RequestVisitor | None = None
 
 
+class SimilarBrandsRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    brands: list[str] = Field(
+        ...,
+        description="Source brand names (case-insensitive) to find similar brands for.",
+        title="Brands",
+    )
+    exclusion_facets: list[BrandFacet] | None = Field(
+        None,
+        alias="exclusionFacets",
+        description="Up to 20 exclusion filters, with the same names and value bounds as facets.",
+        title="Exclusionfacets",
+    )
+    facets: list[BrandFacet] | None = Field(
+        None,
+        description="Up to 20 inclusion filters. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+        title="Facets",
+    )
+    limit: int | None = Field(
+        24, description="Maximum number of similar brands.", title="Limit"
+    )
+
+
 class TaxonomyAttributePage(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1802,6 +2045,45 @@ class TaxonomyAttributePage(BaseModel):
     )
     total: int = Field(
         ..., description="Number of attributes across all pages.", title="Total"
+    )
+
+
+class BrandProductsPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical brand name used for the query.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical brand slug used for the query.",
+        title="Brandslug",
+    )
+    has_more: bool = Field(
+        ...,
+        alias="hasMore",
+        description="Whether another fetchable page exists. False once pagination reaches the offset ceiling (10000), even if `total` is larger.",
+        title="Hasmore",
+    )
+    limit: int = Field(
+        ..., description="Maximum number of products per page.", title="Limit"
+    )
+    offset: int = Field(..., description="Number of products skipped.", title="Offset")
+    products: list[MerchantProductListItem] = Field(
+        ...,
+        description="Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.",
+        title="Products",
+    )
+    total: int = Field(
+        ...,
+        description="Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.",
+        title="Total",
     )
 
 
