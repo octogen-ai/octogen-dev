@@ -148,7 +148,7 @@ export const PUBLIC_CONTRACT = {
                         "type": "string"
                       },
                       "values": {
-                        "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                        "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                         "items": {
                           "type": "string"
                         },
@@ -199,7 +199,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -249,7 +249,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -827,7 +827,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -864,7 +864,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -1337,7 +1337,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -1374,7 +1374,7 @@ export const PUBLIC_CONTRACT = {
                       "type": "string"
                     },
                     "values": {
-                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
                       "items": {
                         "type": "string"
                       },
@@ -1518,6 +1518,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/products/search"
     }
   },
-  "sha256": "6148345139e68a8a7b61085518d623b9d1cf9c2b28c32dddc57bbbe27eec7913",
+  "sha256": "c010c04db0b90322c088317076c790f0654b2492850f739faddd53f52b45374f",
   "version": "1.0.0"
 } as const;

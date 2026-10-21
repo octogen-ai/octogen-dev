@@ -248,7 +248,7 @@ class Facet(BaseModel):
     )
     values: list[str] = Field(
         ...,
-        description="Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+        description="Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
         title="Values",
     )
 
@@ -858,6 +858,18 @@ class RatingView(BaseModel):
     )
     average: float | None = Field(None, title="Average")
     count: int | None = Field(None, title="Count")
+
+
+class RequestVisitor(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    bot_name: str | None = Field(None, title="Bot Name")
+    classification: (
+        Literal["likely_human", "verified_bot", "suspected_bot", "unknown"] | None
+    ) = Field(None, title="Classification")
+    provider: str | None = Field(None, title="Provider")
 
 
 class ReviewView(BaseModel):
@@ -1736,6 +1748,37 @@ class ProgrammaticProductSearchPage(BaseModel):
         description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
         title="Requestid",
     )
+
+
+class RequestContext(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    application: str | None = Field(None, title="Application")
+    feature: str | None = Field(None, title="Feature")
+    page_view_id: str | None = Field(None, title="Page View Id")
+    session_id: str | None = Field(None, title="Session Id")
+    trigger: (
+        Literal[
+            "user_search",
+            "page_load",
+            "filter_change",
+            "pagination",
+            "autoplay",
+            "prefetch",
+            "isr_refresh",
+            "background",
+        ]
+        | None
+    ) = Field(None, title="Trigger")
+    user_agent: str | None = Field(
+        None,
+        description="Reported original-client User-Agent, separate from observed HTTP User-Agent.",
+        title="User Agent",
+    )
+    user_id: str | None = Field(None, title="User Id")
+    visitor: RequestVisitor | None = None
 
 
 class TaxonomyAttributePage(BaseModel):

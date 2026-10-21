@@ -1,3 +1,4 @@
+import type { RequestOptions } from "./request-context.js";
 import type { components } from "./generated/types.js";
 
 export const AgeGroup = {
@@ -75,7 +76,7 @@ export const ProductLookupMatchMode = {
 export type ProductLookupMatchMode =
   (typeof ProductLookupMatchMode)[keyof typeof ProductLookupMatchMode];
 
-export interface LookupProductOptions {
+export interface LookupProductOptions extends RequestOptions {
   /**
    * Index match strictness. `loose` (the server default) also resolves URLs
    * that differ from the indexed product only by path case, a non-indexed

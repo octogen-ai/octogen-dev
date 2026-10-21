@@ -89,7 +89,19 @@ def render(spec: dict) -> str:
             name = operation["operationId"]
             if name in operations:
                 raise ValueError(f"Duplicate public operation: {name}")
-            parameters = item.get("parameters", []) + operation.get("parameters", [])
+            parameters = []
+            for parameter in item.get("parameters", []) + operation.get(
+                "parameters", []
+            ):
+                if "$ref" in parameter:
+                    ref = parameter["$ref"]
+                    if not ref.startswith("#/components/parameters/"):
+                        raise ValueError(f"Unsupported parameter reference: {ref}")
+                    parameter = spec["components"]["parameters"][ref.rsplit("/", 1)[1]]
+                # Header metadata (including JSON-content RequestContext) is
+                # handled by SDK request options, not CLI body/query arguments.
+                if parameter["in"] in {"path", "query"}:
+                    parameters.append(parameter)
             body = (
                 operation.get("requestBody", {})
                 .get("content", {})

@@ -1,5 +1,20 @@
 {
   "components": {
+    "parameters": {
+      "RequestContext": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RequestContext"
+            }
+          }
+        },
+        "description": "Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status.",
+        "in": "header",
+        "name": "X-Octogen-Request-Context",
+        "required": false
+      }
+    },
     "schemas": {
       "AgeGroup": {
         "enum": [
@@ -1291,7 +1306,7 @@
             "type": "string"
           },
           "values": {
-            "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.",
+            "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
             "items": {
               "type": "string"
             },
@@ -4690,6 +4705,178 @@
         "title": "RatingView",
         "type": "object"
       },
+      "RequestContext": {
+        "additionalProperties": false,
+        "description": "Immutable observational metadata; never auth, query, or cache input.",
+        "properties": {
+          "application": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Application"
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feature"
+          },
+          "page_view_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page View Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "enum": [
+                  "user_search",
+                  "page_load",
+                  "filter_change",
+                  "pagination",
+                  "autoplay",
+                  "prefetch",
+                  "isr_refresh",
+                  "background"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trigger"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Reported original-client User-Agent, separate from observed HTTP User-Agent.",
+            "title": "User Agent"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "User Id"
+          },
+          "visitor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestVisitor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "title": "RequestContext",
+        "type": "object"
+      },
+      "RequestVisitor": {
+        "additionalProperties": false,
+        "description": "The caller's assessment; even 'verified_bot' is an untrusted report.",
+        "properties": {
+          "bot_name": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bot Name"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "enum": [
+                  "likely_human",
+                  "verified_bot",
+                  "suspected_bot",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Classification"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider"
+          }
+        },
+        "title": "RequestVisitor",
+        "type": "object"
+      },
       "ReviewView": {
         "properties": {
           "author": {
@@ -5158,6 +5345,9 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -5170,6 +5360,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5253,7 +5446,11 @@
       "post": {
         "description": "Create a URL list.\n\nReturns `201` with the list in `provisioning`: the list exists\nsynchronously — a stable `urlListId` you can immediately `GET` and add\nURLs to — while its BigQuery resources are provisioned asynchronously\n(`status` flips to `active` when they exist).",
         "operationId": "createUrlList",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -5274,6 +5471,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5404,6 +5604,9 @@
               "title": "Urllistid",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -5416,6 +5619,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5523,6 +5729,9 @@
               "title": "Urllistid",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -5535,6 +5744,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5674,6 +5886,9 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -5686,6 +5901,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5798,6 +6016,9 @@
               "title": "Urllistid",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "requestBody": {
@@ -5820,6 +6041,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -5959,6 +6183,9 @@
               "title": "Urllistid",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "requestBody": {
@@ -5981,6 +6208,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -6120,6 +6350,9 @@
               "title": "Urllistid",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "requestBody": {
@@ -6142,6 +6375,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -6281,6 +6517,9 @@
               "title": "Host",
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -6293,6 +6532,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "422": {
             "content": {
@@ -6321,7 +6563,11 @@
       "get": {
         "description": "Return the caller's own organization, key, quotas, and rate limit.\n\nRead-only and side-effect free: safe to call on startup, in CI, and in a\nhealth loop (subject to the ``/v1`` rate limit it reports). Never includes\nkey material — only the key id and its non-secret display prefix.",
         "operationId": "getMe",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -6367,6 +6613,9 @@
               }
             },
             "description": "The caller's own identity, quotas, and rate-limit posture."
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -6458,7 +6707,11 @@
       "post": {
         "description": "Count the products `POST /products/search` would filter to.\n\nCounts span every catalog your key can access unless `catalogs` narrows\nthem, and apply the same filters, bounds and understood facets as a\nsearch with the same fields.",
         "operationId": "countProductFacets",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -6479,6 +6732,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -6563,7 +6819,11 @@
       "post": {
         "description": "Resolve a product by URL: index first, then configured-catalog JIT or shallow resolution. One 45-second deadline bounds all tiers; no background indexing is dispatched. `POST /products/parse` is an exact alias. The response defaults to the structured JSON envelope; set `format` to `md` or `markdown` for the Python-rendered Markdown representation used by Cosimo.",
         "operationId": "lookupProduct",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -6598,6 +6858,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -6799,7 +7062,11 @@
       "post": {
         "description": "Find products similar to a source product with a Catalog partner API key.\n\nFull corpus by default: a ``catalogs`` allowlist in the request restricts\nthe RETRIEVAL to those catalogs, while source resolution always spans\nevery catalog the caller's resolved scope permits (the source may live\noutside the allowlist). Every branch carries the scope, so a\n``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``.",
         "operationId": "moreLikeThisProducts",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -6994,7 +7261,11 @@
       "post": {
         "description": "Alias for `POST /products/lookup`. It accepts the identical request body, runs the identical lookup and optional on-demand resolution flow, and returns the identical response. Use `format: \"md\"` or `format: \"markdown\"` on either path for the Python-rendered Markdown representation; `format: \"json\"` is the default.",
         "operationId": "parseProductAlias",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7029,6 +7300,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -7230,7 +7504,11 @@
       "post": {
         "description": "Resolve a product from caller-supplied page HTML — no index or fetch.\n\nSame shallow deterministic extraction as lookup's on-demand path\n(JSON-LD → Open Graph → HTML meta), run over the submitted document\ninstead of a fetched one. Nothing is written to the product index or\nresolver cache. A uniformly sampled subset of authenticated submissions,\nincluding the supplied HTML and URL, may be retained for bounded internal\nanalysis.",
         "operationId": "resolveProductFromHtml",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7251,6 +7529,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -7353,7 +7634,11 @@
       "post": {
         "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. Page 1 is ranked by relevance; later pages continue in quality-score\norder from page 1's last result, so a product can repeat across pages —\nde-duplicate by `uuid`.",
         "operationId": "searchProducts",
-        "parameters": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7607,6 +7892,9 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -7619,6 +7907,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -7747,6 +8038,9 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -7759,6 +8053,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {
@@ -7895,6 +8192,9 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
           }
         ],
         "responses": {
@@ -7907,6 +8207,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
           },
           "401": {
             "content": {

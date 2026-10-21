@@ -856,7 +856,7 @@ export interface components {
             name: string;
             /**
              * Values
-             * @description Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces.
+             * @description Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.
              */
             values: string[];
         };
@@ -2263,6 +2263,71 @@ export interface components {
             /** Count */
             count?: number | null;
         };
+        /**
+         * RequestContext
+         * @description Immutable observational metadata; never auth, query, or cache input.
+         */
+        RequestContext: {
+            /**
+             * Application
+             * @default null
+             */
+            application: string | null;
+            /**
+             * Feature
+             * @default null
+             */
+            feature: string | null;
+            /**
+             * Page View Id
+             * @default null
+             */
+            page_view_id: string | null;
+            /**
+             * Session Id
+             * @default null
+             */
+            session_id: string | null;
+            /**
+             * Trigger
+             * @default null
+             */
+            trigger: ("user_search" | "page_load" | "filter_change" | "pagination" | "autoplay" | "prefetch" | "isr_refresh" | "background") | null;
+            /**
+             * User Agent
+             * @description Reported original-client User-Agent, separate from observed HTTP User-Agent.
+             * @default null
+             */
+            user_agent: string | null;
+            /**
+             * User Id
+             * @default null
+             */
+            user_id: string | null;
+            /** @default null */
+            visitor: components["schemas"]["RequestVisitor"] | null;
+        };
+        /**
+         * RequestVisitor
+         * @description The caller's assessment; even 'verified_bot' is an untrusted report.
+         */
+        RequestVisitor: {
+            /**
+             * Bot Name
+             * @default null
+             */
+            bot_name: string | null;
+            /**
+             * Classification
+             * @default null
+             */
+            classification: ("likely_human" | "verified_bot" | "suspected_bot" | "unknown") | null;
+            /**
+             * Provider
+             * @default null
+             */
+            provider: string | null;
+        };
         /** ReviewView */
         ReviewView: {
             /** Author */
@@ -2456,7 +2521,10 @@ export interface components {
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+        RequestContext: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -2470,7 +2538,10 @@ export interface operations {
                 cursor?: string | null;
                 limit?: number;
             };
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -2484,6 +2555,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlListListResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2526,7 +2604,10 @@ export interface operations {
     createUrlList: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -2544,6 +2625,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlList"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2604,7 +2692,10 @@ export interface operations {
     getUrlList: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -2620,6 +2711,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlList"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2671,7 +2769,10 @@ export interface operations {
     deleteUrlList: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -2687,6 +2788,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlList"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2742,7 +2850,10 @@ export interface operations {
                 cursor?: string | null;
                 limit?: number;
             };
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -2758,6 +2869,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlListUrlsResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2809,7 +2927,10 @@ export interface operations {
     addUrlListUrls: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -2829,6 +2950,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlMutationResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2896,7 +3024,10 @@ export interface operations {
     checkUrlListUrls: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -2916,6 +3047,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageContainsResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -2983,7 +3121,10 @@ export interface operations {
     removeUrlListUrls: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 urlListId: string;
             };
@@ -3003,6 +3144,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoverageUrlMutationResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3070,7 +3218,10 @@ export interface operations {
     getDomain: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 host: string;
             };
@@ -3087,6 +3238,13 @@ export interface operations {
                     "application/json": components["schemas"]["DomainCoverageResponse"];
                 };
             };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -3101,7 +3259,10 @@ export interface operations {
     getMe: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3115,6 +3276,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing, invalid, or revoked Bearer API key. */
             401: {
@@ -3157,7 +3325,10 @@ export interface operations {
     countProductFacets: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3175,6 +3346,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProgrammaticFacetCountsResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3208,7 +3386,10 @@ export interface operations {
     lookupProduct: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3229,6 +3410,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProgrammaticProductLookupResponse"];
                     "text/markdown": string;
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3324,7 +3512,10 @@ export interface operations {
     moreLikeThisProducts: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3405,7 +3596,10 @@ export interface operations {
     parseProductAlias: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3426,6 +3620,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProgrammaticProductLookupResponse"];
                     "text/markdown": string;
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3521,7 +3722,10 @@ export interface operations {
     resolveProductFromHtml: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3539,6 +3743,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MerchantProductUrlLookupResponse"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3614,7 +3825,10 @@ export interface operations {
     searchProducts: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3718,7 +3932,10 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3732,6 +3949,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TaxonomyAttributePage"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3786,7 +4010,10 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path: {
                 /** @description Attribute handle from `GET /taxonomy/attributes`. */
                 handle: string;
@@ -3803,6 +4030,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TaxonomyAttributeValuePage"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {
@@ -3859,7 +4093,10 @@ export interface operations {
                 /** @description A category UUID, a section handle such as `apparel`, or a category path such as `Apparel & Accessories > Clothing` (any letter case). */
                 parent?: string | null;
             };
-            header?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3873,6 +4110,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TaxonomyCategoryPage"];
                 };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing or invalid Bearer API key. */
             401: {

@@ -1,6 +1,6 @@
 [project]
 name = "octogen-ai-sdk"
-version = "0.9.0"
+version = "0.10.0"
 description = "Async Python SDK for the Octogen AI commerce API"
 readme = "README.md"
 authors = [
@@ -54,6 +54,9 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.ruff]
+# Keep import classification identical for SDK-local checks and CI's explicit
+# --config invocation; same-package imports inside src remain first-party.
+src = []
 line-length = 88
 target-version = "py311"
 

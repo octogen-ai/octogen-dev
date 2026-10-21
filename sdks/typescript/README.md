@@ -202,3 +202,85 @@ reason to install an SDK instead of calling `fetch`.
 from the generated contract, so naming a route the API does not publish is a
 compile error, and `tests/contract` fails when a published operation has no
 method here.
+
+## Per-call RequestContext
+
+From **0.8.0**, every typed API method accepts request options as its final
+argument, outside the search/body parameters. `lookupProduct` and
+`parseProductAlias` include `context` in their existing options argument;
+`fetchRaw` includes it in its existing options object. Configure stable application
+metadata once and supply visitor context per call. A Website/server example:
+
+```typescript
+import { OctogenClient, type RequestContext } from "@octogen-ai/sdk";
+
+const client = new OctogenClient({
+  defaultContext: { application: "website", feature: "brand-grid" },
+});
+
+// Inherit stable defaults for shared background work without a visitor.
+await client.searchProducts({ q: "linen shirt" });
+const context: RequestContext = {
+  trigger: "page_load",
+  session_id: "synthetic-session",
+  page_view_id: "synthetic-view",
+  user_agent: "Original Browser/1.0",
+  visitor: { classification: "likely_human", provider: "website" },
+};
+await client.searchProducts({ q: "linen shirt" }, { context });
+```
+
+An external customer can override and clear defaults with the same API:
+
+```typescript
+const storefront = new OctogenClient({
+  apiKey: process.env.OCTOGEN_PLATFORM_API_KEY,
+  defaultContext: { application: "storefront", feature: "grid" },
+});
+await storefront.searchProducts(
+  { q: "shirt" },
+  {
+    context: { feature: "search", trigger: "user_search", user_id: "synthetic-user" },
+  },
+);
+// Clear one inherited field; other defaults remain (JSON null is sent).
+await storefront.searchProducts({}, { context: { feature: null } });
+// Suppress the whole inherited context header for this call.
+await storefront.searchProducts({}, { context: null });
+// Operations with existing pagination params retain their argument positions.
+await storefront.listTaxonomyAttributes("apparel", { limit: 10 }, { context });
+```
+
+Omitted/`undefined` context inherits defaults; `{ context: {} }` also inherits
+them. Without defaults, omission sends no new header and `{ context: {} }` sends
+`{}`. An `undefined` field is omitted; an explicit `null` field clears that
+default. Defaults accept only `application`, `feature`, `trigger`. Per-call
+fields also include `user_id`, `session_id`, `page_view_id`, `user_agent`, `visitor`;
+visitor fields are `classification`, `provider`, `bot_name`. Context uses wire
+field names, including underscores, and IDs stay at its root.
+
+The SDK snapshots inputs and builds fresh headers per request. Concurrent calls
+never store another visitor's IDs or agents on the client. Injected fetch retries
+reuse the logical call's encoded context; the SDK adds no retry policy. When
+`fetchRaw` combines typed/default context with a manually supplied context header,
+typed context wins regardless of header casing; `context: null` removes it. The
+caller's header object is never mutated.
+
+`X-Octogen-Request-Context` is compact ASCII-safe JSON, at most **4,096 serialized
+bytes**. Strings allow **256 Unicode code points**, except `user_agent`
+(**1,024**), within the same total budget. Emoji count once but their ASCII
+surrogate escapes use twelve bytes. Unknown fields, incorrect types/enums,
+unpaired surrogates and size violations throw `InvalidRequestContext` (a
+`TypeError`) with no input values before fetch. `trigger` accepts `user_search`,
+`page_load`, `filter_change`, `pagination`, `autoplay`, `prefetch`, `isr_refresh`,
+`background`. Classification accepts `likely_human`, `verified_bot`,
+`suspected_bot`, `unknown`. Every field is optional and nullable.
+
+`context.user_agent` reports the original visitor's agent. HTTP `User-Agent`
+continues to identify the SDK/transport; neither is synthesized from the other.
+Omit original visitor context for shared background/ISR calls with no originating
+visitor. Use opaque pseudonymous IDs, never email, names, cookies or tokens.
+Application labels and even `verified_bot` remain caller reports, not authenticated
+source or bot trust. Context stays outside request bodies and response/product
+data. Publication (OCT-4518), consumer adoption and server collection activation
+are separate steps; this change only prepares the SDK API.

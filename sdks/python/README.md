@@ -413,3 +413,73 @@ request body would not accept a plain `str`.
 
 `operations.py` is the routing table; `tests/contract` fails when it and the
 published contract disagree in either direction.
+
+## Per-call RequestContext
+
+From **0.10.0**, every API operation accepts a keyword-only `context`, outside
+its request body. Configure only stable application metadata as defaults; pass
+visitor identity and the original visitor user agent on each call:
+
+```python
+from octogen_ai_sdk import (
+    OctogenClient, RequestContext, RequestContextDefaults, RequestVisitor,
+)
+
+async with OctogenClient(
+    default_context=RequestContextDefaults(application="storefront", feature="grid"),
+) as client:
+    # Inherit application/feature defaults.
+    await client.search_products(q="linen shirt")
+    # Override one default and attach this visitor only to this call.
+    await client.search_products(
+        q="linen shirt",
+        context=RequestContext(
+            feature="search", trigger="user_search",
+            user_id="synthetic-user", session_id="synthetic-session",
+            page_view_id="synthetic-view", user_agent="Original Browser/1.0",
+            visitor=RequestVisitor(classification="likely_human", provider="storefront"),
+        ),
+    )
+    # Clear one inherited field; other defaults remain.
+    await client.search_products(context=RequestContext(feature=None))
+    # Clear the entire inherited context: no context header for this call.
+    await client.search_products(context=None)
+```
+
+Omitting `context` inherits defaults; `RequestContext()` also inherits them.
+Without defaults, omission sends no new header and `RequestContext()` sends
+`{}`. Explicit `None` on a context field clears that default by sending JSON
+`null`. Defaults accept only `application`, `feature` and `trigger`; per-call
+fields also include `user_id`, `session_id`, `page_view_id`, `user_agent` and
+`visitor`. Visitor fields are `classification`, `provider` and `bot_name`.
+IDs stay at the context root. Inputs are copied and headers are built per request,
+including for an injected shared HTTPX client. A transport retry retains that
+request's encoded context; the SDK itself never retries.
+
+The header uses compact ASCII-safe JSON, with a **4,096-byte** serialized limit.
+Strings allow **256 Unicode characters**, except `user_agent` (**1,024**), within
+that same byte budget. Emoji count as one character but consume twelve bytes as
+ASCII escapes. Unknown fields, invalid types/enums and limits raise
+`InvalidRequestContext` (a `TypeError`) with no input values. `trigger` accepts
+`user_search`, `page_load`, `filter_change`, `pagination`, `autoplay`, `prefetch`,
+`isr_refresh`, `background`. Classification accepts `likely_human`, `verified_bot`,
+`suspected_bot`, `unknown`. All fields may be omitted or null.
+
+Raw HTTP uses the same optional header:
+
+```bash
+curl https://api.octogen.ai/v1/products/search \
+  -H "Authorization: Bearer $OCTOGEN_PLATFORM_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Octogen-Request-Context: {"application":"storefront","feature":"caf\u00e9","trigger":"user_search","user_id":"synthetic-user"}' \
+  -d '{"q":"linen shirt"}'
+```
+
+`context.user_agent` is the caller-reported original visitor agent. HTTP
+`User-Agent` continues to identify the SDK/transport; neither value is synthesized
+from the other. Omit original visitor context for shared background/ISR work
+without an originating visitor. Use opaque pseudonymous IDs, never email, names,
+cookies or authentication tokens. Application labels and even `verified_bot` are
+caller reports, not authenticated source or bot trust. Context is transient
+metadata, not response data or search parameters; server storage and collection
+activation are separate operations. Release publication is tracked by OCT-4518.

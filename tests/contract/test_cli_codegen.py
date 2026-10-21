@@ -63,3 +63,18 @@ def test_new_and_removed_operations_change_projection() -> None:
     del spec["paths"]["/products/search"]
     assert module.render(spec) != original
     assert '"searchProducts"' not in module.render(spec)
+
+
+def test_shared_json_header_is_not_a_cli_argument() -> None:
+    spec = document()
+    spec["components"].setdefault("parameters", {})["SyntheticContext"] = {
+        "name": "X-Synthetic-Context",
+        "in": "header",
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    }
+    spec["paths"]["/products/search"]["post"].setdefault("parameters", []).append(
+        {"$ref": "#/components/parameters/SyntheticContext"}
+    )
+    rendered = module.render(spec)
+    assert "X-Synthetic-Context" not in rendered
+    assert '"q"' in rendered
