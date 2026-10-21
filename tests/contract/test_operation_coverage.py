@@ -10,9 +10,9 @@ same committed snapshot. Failing in either direction is a hard failure, with
   at runtime.
 
 Brands, deferred from CLI v1 on 2026-08-20, were published on 2026-10-21, so
-there is no unpublished surface left for an SDK method to legitimately call. This test is what makes
-``POST /products/recrawl`` — shipped in both SDKs, never a real route —
-impossible to reintroduce.
+there is no unpublished surface left for an SDK method to legitimately call.
+This test is what makes ``POST /products/recrawl`` — shipped in both SDKs,
+never a real route — impossible to reintroduce.
 
 The three assertions together pin each routing table to *exactly* the published
 operation set, so the two SDKs are held to each other transitively without

@@ -187,7 +187,8 @@ describe("storerouter brands products", () => {
     );
     const body = result.json();
     expect(body["total"]).toBe(340);
-    expect(body["nextOffset"]).toBe(11);
+    // The window advances by limit: dropped rows must not be re-read.
+    expect(body["nextOffset"]).toBe(12);
     expect(body["items"]).toEqual([
       {
         uuid: PAGE.products[0]?.uuid,
@@ -197,6 +198,43 @@ describe("storerouter brands products", () => {
         productUrl: "https://www.thereformation.com/products/juliette",
       },
     ]);
+  });
+
+  it("treats an empty page with more to come as success, not a miss", async () => {
+    const result = await runCli({
+      argv: [
+        "brands",
+        "products",
+        "reformation",
+        "--limit",
+        "2",
+        "--offset",
+        "10",
+        "--json",
+      ],
+      env: KEYED,
+      routes: {
+        "GET /brands/reformation/products": { body: { ...PAGE, products: [] } },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.json();
+    expect(body["count"]).toBe(0);
+    expect(body["nextOffset"]).toBe(12);
+  });
+
+  it("exits 6 only when the page is empty and nothing follows", async () => {
+    const result = await runCli({
+      argv: ["brands", "products", "reformation", "--json"],
+      env: KEYED,
+      routes: {
+        "GET /brands/reformation/products": {
+          body: { ...PAGE, products: [], hasMore: false },
+        },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("no_matches");
   });
 
   it("rejects an offset past the contract's ceiling before any request", async () => {

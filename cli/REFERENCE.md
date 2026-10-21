@@ -220,7 +220,8 @@ storerouter brands products <brand> [--limit <n>] [--offset <n>]
   Browse one brand's products
 
   Products from the catalogs your key can access. Continue with --offset
-  <nextOffset>; paging stops at offset 10000.
+  <nextOffset>; paging stops at offset 10000. A page can hold fewer than
+  --limit products, or none, while more remain: follow nextOffset, not the count.
 
 Options:
   --limit <n>   Limit Default: 24. Minimum: 1. Maximum: 100.

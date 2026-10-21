@@ -376,7 +376,9 @@ async function runProducts(context: CommandContext): Promise<ExitCode> {
   } catch (error) {
     throw brandMissOrRethrow(error, brand, "GET /brands/{brand}/products");
   }
-  if (page.products.length === 0) {
+  // Rows without a usable product URL are dropped after the limit/offset
+  // window, so a page can be short, or empty, with more to come.
+  if (page.products.length === 0 && !page.hasMore) {
     throw noResult({
       answeredWith: "200 GET /brands/{brand}/products with an empty products[]",
       code: "no_matches",
@@ -385,7 +387,7 @@ async function runProducts(context: CommandContext): Promise<ExitCode> {
       serverAnswered: true,
     });
   }
-  const nextOffset = page.hasMore ? page.offset + page.products.length : null;
+  const nextOffset = page.hasMore ? page.offset + page.limit : null;
   context.writer.emit({
     command: context.command,
     data: {
@@ -429,7 +431,8 @@ export const brandsProductsCommand = {
   name: "brands products",
   notes: [
     "Products from the catalogs your key can access. Continue with --offset",
-    "<nextOffset>; paging stops at offset 10000.",
+    "<nextOffset>; paging stops at offset 10000. A page can hold fewer than",
+    "--limit products, or none, while more remain: follow nextOffset, not the count.",
   ],
   operations: ["browseBrandProducts"] as const,
   run: runProducts,
