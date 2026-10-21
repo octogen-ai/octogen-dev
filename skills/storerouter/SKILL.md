@@ -1,6 +1,6 @@
 ---
 name: storerouter
-description: Product data from real merchant catalogs, through the storerouter CLI. Use it to turn a product URL into a structured product, search products across covered stores, find similar products, check whether a store is covered and which filters it supports, and resolve a product from page HTML you already have. Not for scraping arbitrary pages, general web search, or non-product pages.
+description: Product data from real merchant catalogs, through the storerouter CLI. Use it to turn a product URL into a structured product, search products across covered stores, find similar products, check whether a store is covered and which filters it supports, discover brands and browse a brand's products, and resolve a product from page HTML you already have. Not for scraping arbitrary pages, general web search, or non-product pages.
 metadata: {"openclaw":{"requires":{"bins":["storerouter"]},"install":[{"kind":"node","package":"@storerouter/cli","bins":["storerouter"]}]}}
 ---
 
@@ -42,6 +42,12 @@ conversation.
 | A need, but no URL                         | `storerouter search '<query>'`                  |
 | A product, and want alternatives           | `storerouter similar <url-or-uuid>`             |
 | A store, and want its coverage and filters | `storerouter store <host>`                      |
+| A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
+| A brand, and want brands like it           | `storerouter brands similar <brand>`            |
+| A brand, and want its details              | `storerouter brands show <brand>`               |
+| A brand, and want its products             | `storerouter brands products <brand>`           |
+| A brand, and want what it mostly sells     | `storerouter brands categories <brand>`         |
+| Part of a brand name                       | `storerouter brands prefix <prefix>`            |
 | Page HTML you already fetched              | `storerouter resolve --html <file> --url <url>` |
 | Any other `/v1` route                      | `storerouter api <METHOD> <path>`               |
 
@@ -114,6 +120,23 @@ The source must be in the index: `parse` it first if unsure. A short first page
 is retried with the server's own inferred filters dropped, never yours;
 `--no-relax` turns that off. `--price-preference lower` steers toward cheaper
 alternatives.
+
+## Discover brands
+
+```bash
+storerouter brands search 'quiet luxury knitwear' --like 'Loro Piana' --limit 10
+storerouter brands similar Reformation --limit 10
+storerouter brands products reformation --limit 24
+```
+
+- `<brand>` is a slug or a case-insensitive name; quote names with spaces. If
+  you only have part of one, `brands prefix` completes it.
+- Brand metadata spans the whole corpus; `brands products` lists only products
+  from catalogs your key can access. Page it with `--offset <nextOffset>`.
+- Exit `6` with `code: brand_not_found` means the brand name did not resolve;
+  with `no_matches`, the brand resolved and the answer was empty.
+- To search one brand's products by text, use `storerouter search` with
+  `--facet brand_name=<name>`.
 
 ## Present results
 

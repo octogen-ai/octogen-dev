@@ -64,6 +64,8 @@ const COVERAGE: { schema: string; map: string }[] = [
   { map: "searchProducts", schema: "ProgrammaticProductSearchRequest" },
   { map: "moreLikeThisProducts", schema: "ProgrammaticMoreLikeThisRequest" },
   { map: "resolveProductFromHtml", schema: "ProgrammaticResolveFromHtmlRequest" },
+  { map: "searchBrandsFromText", schema: "BrandTextSearchRequest" },
+  { map: "searchSimilarBrands", schema: "SimilarBrandsRequest" },
 ];
 
 describe("every published request field is accounted for", () => {
@@ -121,6 +123,12 @@ describe("every published request field is accounted for", () => {
       searchProducts: "search",
       getMe: "status",
       getDomain: "store",
+      searchBrandsFromText: "brands search",
+      searchSimilarBrands: "brands similar",
+      searchBrandPrefix: "brands prefix",
+      getBrandDetails: "brands show",
+      browseBrandProducts: "brands products",
+      getBrandTopCategories: "brands categories",
     };
 
     for (const [map, fields] of Object.entries(FIELD_MAPS)) {

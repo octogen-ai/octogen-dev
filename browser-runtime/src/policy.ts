@@ -1,5 +1,5 @@
 import { OPERATIONS, type OperationId } from "@octogen-ai/sdk";
-import { requestSchema, validate } from "../../cli/src/contract.js";
+import { CONTRACT, requestSchema, scalar, validate } from "../../cli/src/contract.js";
 import type { Transport, TransportRequest } from "./protocol.js";
 
 /** A profile of public read operations, not a second CLI command/schema registry. */
@@ -9,6 +9,13 @@ export const DEMO_OPERATIONS = [
   "parseProductAlias",
   "moreLikeThisProducts",
   "getDomain",
+  // `/brands/prefix` before `/brands/{brand}`, which would also match it.
+  "searchBrandPrefix",
+  "searchBrandsFromText",
+  "searchSimilarBrands",
+  "getBrandDetails",
+  "browseBrandProducts",
+  "getBrandTopCategories",
 ] as const satisfies readonly OperationId[];
 /**
  * One already-normalized host: lowercase labels, at least one dot, no `www.`,
@@ -17,6 +24,48 @@ export const DEMO_OPERATIONS = [
  */
 const NORMALIZED_HOST =
   /^(?!www\.)(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+/**
+ * A brand name or slug, decoded: no separator, dot segment or control
+ * character, so the server routes it to the same operation the policy checked.
+ */
+function isBrandSegment(value: string): boolean {
+  return (
+    value.trim().length > 0 &&
+    value !== "." &&
+    value !== ".." &&
+    !/[/\\]/.test(value) &&
+    !Array.from({ length: value.length }, (_, index) => value.charCodeAt(index)).some(
+      (code) => code < 0x20 || code === 0x7f,
+    )
+  );
+}
+/**
+ * The query an operation declares, typed from its contract schema. Unknown or
+ * repeated names, and integers that are not plain digits, are denied.
+ */
+function queryParams(operation: OperationId, url: URL): Record<string, unknown> {
+  const declared = new Map(
+    (CONTRACT.operations[operation]?.parameters ?? [])
+      .filter((parameter) => parameter.in === "query")
+      .map((parameter) => [parameter.name, scalar(parameter.schema)]),
+  );
+  // Exactly the serialization the SDK produces, so `?`, `&&` or odd escapes
+  // cannot carry anything the checks below did not see.
+  if (url.searchParams.toString() !== url.search.slice(1))
+    throw new Error("Browser policy: query parameters denied");
+  const query: Record<string, unknown> = {};
+  for (const [name, value] of url.searchParams) {
+    const schema = declared.get(name);
+    if (schema === undefined || name in query)
+      throw new Error("Browser policy: query parameters denied");
+    if (schema.type === "integer") {
+      if (!/^(0|[1-9][0-9]{0,5})$/.test(value))
+        throw new Error("Browser policy: query parameters denied");
+      query[name] = Number(value);
+    } else query[name] = value;
+  }
+  return query;
+}
 /** Match a contract path template; `{name}` takes one non-empty segment. */
 function routeParams(
   pathname: string,
@@ -49,13 +98,27 @@ export function checkDemoRequest(request: TransportRequest): OperationId {
     return matched !== null;
   });
   if (!operation) throw new Error("Browser policy: operation denied");
-  // The current allowlist has no query inputs. Deny query smuggling through raw api.
-  if (url.search) throw new Error("Browser policy: query parameters denied");
+  // Only the query parameters the operation declares, so nothing is smuggled
+  // through raw api.
+  const query = queryParams(operation, url);
   if (operation === "getDomain") {
     // One store's snapshot, by exactly one normalized host; never a list.
     if (!NORMALIZED_HOST.test(params["host"] ?? ""))
       throw new Error("Browser policy: host denied");
+  }
+  if (request.method === "GET") {
     if (request.body !== undefined) throw new Error("Browser policy: GET body denied");
+    const decoded: Record<string, string> = {};
+    for (const [name, value] of Object.entries(params)) {
+      try {
+        decoded[name] = decodeURIComponent(value);
+      } catch {
+        throw new Error("Browser policy: path denied");
+      }
+    }
+    if (decoded["brand"] !== undefined && !isBrandSegment(decoded["brand"]))
+      throw new Error("Browser policy: brand denied");
+    validate(requestSchema(operation), { ...decoded, ...query }, "request");
     return operation;
   }
   const body: unknown = JSON.parse(request.body ?? "null");

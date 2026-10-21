@@ -156,6 +156,29 @@ Exit `6` with `covered: false` means the server answered `404
 domain_not_covered`: no catalog serves that host. It asks about one host at a
 time; there is no list of covered hosts.
 
+### `storerouter brands <search|similar|show|products|categories|prefix>`
+
+```bash
+storerouter brands search 'quiet luxury knitwear' --like 'Loro Piana' --limit 10
+storerouter brands similar Reformation 'Free People' --limit 10
+storerouter brands show reformation
+storerouter brands products reformation --limit 24 --offset 24
+storerouter brands categories reformation --min-level 2
+storerouter brands prefix Re
+```
+
+Brand discovery over `/v1/brands`. `search` ranks brands against a
+plain-language description, steered by `--like` brands; `similar` ranks them
+against one or more source brands; `prefix` completes a canonical name. `show`
+and `categories` describe one brand, and `products` pages its active products
+within the catalogs your key can access (continue with `--offset
+<nextOffset>`). A `<brand>` is a slug or a case-insensitive name. Brand facets
+use the brand index's names, such as `--facet facet_price_tier=premium`.
+
+Exit `6` with `code: brand_not_found` means the server could not resolve the
+brand; `no_matches` means it resolved and the answer was empty. There is no
+command that lists every brand.
+
 ### `storerouter resolve --html <file|->`
 
 ```bash

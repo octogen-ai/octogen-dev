@@ -8,10 +8,10 @@
  * * an SDK method calling a path the contract does not define is a guaranteed
  *   404 at runtime.
  *
- * Brands were deferred from CLI v1 on 2026-08-20, so there is no unpublished
- * surface left for an SDK method to legitimately call. This test is what makes
- * `POST /products/recrawl` — shipped in both SDKs, never a real route —
- * impossible to reintroduce.
+ * Brands, deferred from CLI v1 on 2026-08-20, were published on 2026-10-21, so
+ * there is no unpublished surface left for an SDK method to legitimately call.
+ * This test is what makes `POST /products/recrawl` — shipped in both SDKs,
+ * never a real route — impossible to reintroduce.
  *
  * The three assertions together pin the routing table to *exactly* the
  * published operation set. `tests/contract/test_operation_coverage.py` pins the

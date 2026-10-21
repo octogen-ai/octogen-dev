@@ -16,7 +16,7 @@ import { COMMAND_LIST, COMMAND_TABLE } from "./commands/index.js";
 import { resolveBaseUrl } from "./config.js";
 import type { CommandContext } from "./context.js";
 import { CliError, ExitCode, usageError } from "./exit.js";
-import { renderCommandHelp, renderRootHelp } from "./help-core.js";
+import { renderCommandHelp, renderGroupHelp, renderRootHelp } from "./help-core.js";
 import { Redactor } from "./redact.js";
 import { resolveJsonMode, Writer } from "./output.js";
 import type { CommandSpec } from "./registry.js";
@@ -111,7 +111,23 @@ export async function run(options: RunOptions): Promise<ExitCode> {
 
     const matched = matchCommand(bare);
     if (matched === undefined) {
-      throw usageError(`Unknown command: ${bare[0] ?? ""}`, "unknown_command");
+      // `storerouter brands` names a group of two-word commands, not a command.
+      const group = bare[0] ?? "";
+      const members = commands.filter((command) =>
+        command.name.startsWith(`${group} `),
+      );
+      if (members.length > 0 && bare.length === 1) {
+        writer.diagnostic(renderGroupHelp(group, members, options.host.version));
+        return argv.includes("--help") ? ExitCode.Success : ExitCode.Usage;
+      }
+      if (members.length > 0) {
+        const names = members.map((command) => command.name.slice(group.length + 1));
+        throw usageError(
+          `Unknown ${group} subcommand: ${bare[1] ?? ""}. Use one of: ${names.join(", ")}.`,
+          "unknown_command",
+        );
+      }
+      throw usageError(`Unknown command: ${group}`, "unknown_command");
     }
     const { command, invokedAs } = matched;
     if (unavailable.has(command.name)) {

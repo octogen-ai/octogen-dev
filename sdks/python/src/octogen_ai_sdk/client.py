@@ -16,7 +16,7 @@ from types import TracebackType
 from typing import Any, Self, TypeVar
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from octogen_ai_sdk.errors import (
     MissingAPIKeyError,
@@ -34,6 +34,10 @@ from octogen_ai_sdk.errors import (
 )
 from octogen_ai_sdk.hosts import normalize_host
 from octogen_ai_sdk.models import (
+    BrandDetailsView,
+    BrandFacet,
+    BrandProductsPage,
+    BrandTopCategoriesPage,
     CoverageContainsResponse,
     CoverageUrlList,
     CoverageUrlListCreateRequest,
@@ -62,6 +66,7 @@ from octogen_ai_sdk.models import (
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
+    SimilarBrandsResponse,
     TaxonomyAttributePage,
     TaxonomyAttributeValuePage,
     TaxonomyCategoryPage,
@@ -114,12 +119,19 @@ _warned_deprecated_api_key_env_var = False
 #: dict, or a facet a response returned, such as a ``TaxonomyCategory``'s.
 FacetInput = Facet | BaseModel | dict[str, Any]
 
+#: A brand facet as a brand search accepts it: a :class:`BrandFacet` or a
+#: ``{"name", "values"}`` dict. Brand facet names are ``facet_*`` keys such as
+#: ``"facet_price_tier"``, not product search facet names.
+BrandFacetInput = BrandFacet | dict[str, Any]
+
+_BRAND_NAMES = TypeAdapter(list[str])
+
 
 def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.10.0"
+        return "0.11.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -647,6 +659,173 @@ class OctogenClient:
         )
         return TaxonomyAttributeValuePage.model_validate(data)
 
+    async def search_brand_prefix(
+        self,
+        prefix: str,
+        *,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> list[str]:
+        """Canonical brand names starting with ``prefix``, for autocomplete.
+
+        ``prefix`` is 1-100 characters; ``limit`` is 1-50 (server default 20).
+        Each name works as ``brand`` on :meth:`get_brand_details` and as a
+        source brand on :meth:`search_similar_brands`.
+        """
+        _require_text("search_brand_prefix", "prefix", prefix)
+        data = await self._json(
+            "searchBrandPrefix",
+            params={"prefix": prefix, "limit": limit},
+            context=context,
+            timeout=timeout,
+        )
+        return _BRAND_NAMES.validate_python(data)
+
+    async def search_brands_from_text(
+        self,
+        text: str,
+        *,
+        reference_brands: Sequence[str] | None = None,
+        facets: Sequence[BrandFacetInput] | None = None,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> SimilarBrandsResponse:
+        """Brands matching a natural-language description.
+
+        ``text`` is 1-500 characters, such as ``"minimalist Scandinavian
+        outerwear"``. ``reference_brands`` (1-20 canonical names) steers the
+        search toward those brands. ``facets`` (up to 20) are
+        :class:`BrandFacet` filters that override the facets generated from
+        ``text`` by name. ``limit`` is 1-100 (server default 24).
+        """
+        operation = "search_brands_from_text"
+        _require_text(operation, "text", text)
+        body = _without_none(
+            {
+                "text": text,
+                "referenceBrands": _brand_names(
+                    operation, "reference_brands", reference_brands
+                ),
+                "facets": _brand_facet_list(facets),
+                "limit": limit,
+            }
+        )
+        data = await self._json(
+            "searchBrandsFromText", json=body, context=context, timeout=timeout
+        )
+        return SimilarBrandsResponse.model_validate(data)
+
+    async def search_similar_brands(
+        self,
+        brands: Sequence[str],
+        *,
+        facets: Sequence[BrandFacetInput] | None = None,
+        exclusion_facets: Sequence[BrandFacetInput] | None = None,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> SimilarBrandsResponse:
+        """Brands similar to one or more source brands.
+
+        ``brands`` is 1-20 brand names, matched case-insensitively.
+        ``facets`` and ``exclusion_facets`` (up to 20 each) are
+        :class:`BrandFacet` filters to keep and drop. ``limit`` is 1-100
+        (server default 24). An unknown source brand raises
+        :class:`OctogenNotFoundError`.
+        """
+        operation = "search_similar_brands"
+        names = _brand_names(operation, "brands", brands)
+        body = _without_none(
+            {
+                "brands": names,
+                "facets": _brand_facet_list(facets),
+                "exclusionFacets": _brand_facet_list(exclusion_facets),
+                "limit": limit,
+            }
+        )
+        data = await self._json(
+            "searchSimilarBrands", json=body, context=context, timeout=timeout
+        )
+        return SimilarBrandsResponse.model_validate(data)
+
+    async def get_brand_details(
+        self,
+        brand: str,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> BrandDetailsView:
+        """One brand's profile (``GET /v1/brands/{brand}``).
+
+        ``brand`` is a brand slug or a case-insensitive brand name. An unknown
+        brand raises :class:`OctogenNotFoundError` with
+        ``detail == "brand_not_found"``.
+        """
+        _require_text("get_brand_details", "brand", brand)
+        data = await self._json(
+            "getBrandDetails",
+            path_params={"brand": brand},
+            context=context,
+            timeout=timeout,
+        )
+        return BrandDetailsView.model_validate(data)
+
+    async def browse_brand_products(
+        self,
+        brand: str,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> BrandProductsPage:
+        """A page of one brand's active products, within your catalog scope.
+
+        ``brand`` takes the same references as :meth:`get_brand_details`.
+        ``limit`` is 1-100 (server default 24) and ``offset`` 0-10000; continue
+        while ``has_more``, which turns false at the offset ceiling even when
+        ``total`` is larger. An unknown brand raises
+        :class:`OctogenNotFoundError` with ``detail == "brand_not_found"``.
+        """
+        _require_text("browse_brand_products", "brand", brand)
+        data = await self._json(
+            "browseBrandProducts",
+            params={"limit": limit, "offset": offset},
+            path_params={"brand": brand},
+            context=context,
+            timeout=timeout,
+        )
+        return BrandProductsPage.model_validate(data)
+
+    async def get_brand_top_categories(
+        self,
+        brand: str,
+        *,
+        min_level: int | None = None,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> BrandTopCategoriesPage:
+        """A brand's largest taxonomy categories, by product count.
+
+        ``brand`` takes the same references as :meth:`get_brand_details`.
+        ``min_level`` (0-10, server default 0) skips categories shallower than
+        that taxonomy depth; ``limit`` is 1-20 (server default 3). An unknown
+        brand raises :class:`OctogenNotFoundError` with
+        ``detail == "brand_not_found"``.
+        """
+        _require_text("get_brand_top_categories", "brand", brand)
+        data = await self._json(
+            "getBrandTopCategories",
+            params={"minLevel": min_level, "limit": limit},
+            path_params={"brand": brand},
+            context=context,
+            timeout=timeout,
+        )
+        return BrandTopCategoriesPage.model_validate(data)
+
     async def more_like_this_products(
         self,
         *,
@@ -1120,6 +1299,42 @@ def _string_list(values: Sequence[str] | None, field: str) -> list[str] | None:
     if isinstance(values, str):
         raise TypeError(f"{field} must be a list of strings, not a string")
     return None if values is None else list(values)
+
+
+def _without_none(body: dict[str, Any]) -> dict[str, Any]:
+    """A hand-built wire body with its unset optional fields omitted."""
+    return {key: value for key, value in body.items() if value is not None}
+
+
+def _require_text(operation: str, field: str, value: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{operation}: {field} must be a non-empty string")
+
+
+def _brand_names(
+    operation: str, field: str, brands: Sequence[str] | None
+) -> list[str] | None:
+    names = _string_list(brands, field)
+    if names is not None and (
+        not names or any(not isinstance(n, str) or not n.strip() for n in names)
+    ):
+        raise ValueError(
+            f"{operation}: {field} must be a non-empty list of non-empty brand names"
+        )
+    return names
+
+
+def _brand_facet_list(
+    facets: Sequence[BrandFacetInput] | None,
+) -> list[dict[str, Any]] | None:
+    if facets is None:
+        return None
+    return [
+        _body(
+            facet if isinstance(facet, BrandFacet) else BrandFacet.model_validate(facet)
+        )
+        for facet in facets
+    ]
 
 
 def _embedding_columns(

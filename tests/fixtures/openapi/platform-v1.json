@@ -93,6 +93,337 @@
         "title": "AudienceView",
         "type": "object"
       },
+      "BrandDetailsView": {
+        "description": "Public-safe metadata for one resolved brand.",
+        "properties": {
+          "brandDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short description of the brand.",
+            "title": "Branddescription"
+          },
+          "brandName": {
+            "description": "Canonical name of the brand.",
+            "title": "Brandname",
+            "type": "string"
+          },
+          "brandSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical slug for the brand.",
+            "title": "Brandslug"
+          },
+          "brandUuid": {
+            "description": "Unique identifier for the brand.",
+            "title": "Branduuid",
+            "type": "string"
+          },
+          "directorySubheading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Brand subheading for directory display.",
+            "title": "Directorysubheading"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary website domain for the brand.",
+            "title": "Domain"
+          },
+          "foundedYear": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Year the brand was founded.",
+            "title": "Foundedyear"
+          },
+          "originCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Country of origin for the brand.",
+            "title": "Origincountry"
+          },
+          "priceTier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Price positioning for the brand.",
+            "title": "Pricetier"
+          }
+        },
+        "required": [
+          "brandName",
+          "brandUuid"
+        ],
+        "title": "BrandDetailsView",
+        "type": "object"
+      },
+      "BrandFacet": {
+        "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrandFacetName"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+            "title": "Name"
+          },
+          "values": {
+            "description": "List of values to filter by. They should be lowercase; phrases allowed.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "BrandFacet",
+        "type": "object"
+      },
+      "BrandFacetName": {
+        "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
+        "enum": [
+          "facet_types",
+          "facet_tags",
+          "facet_styles",
+          "facet_style_identity",
+          "facet_genders",
+          "facet_age_groups",
+          "facet_categories",
+          "facet_origin_country",
+          "facet_price_tier",
+          "facet_target_audience",
+          "facet_sustainability",
+          "facet_brand_ethics",
+          "facet_brand_inclusivity",
+          "facet_brand_cultural_anchors",
+          "facet_key_people_names",
+          "facet_key_people_nationalities",
+          "facet_brand_hype_cycle_stage",
+          "facet_category_path.depth_0",
+          "facet_category_path.depth_1",
+          "facet_category_path.depth_2",
+          "facet_category_path.depth_3",
+          "facet_category_path.depth_4",
+          "facet_category_path.depth_5",
+          "facet_category_path.depth_6"
+        ],
+        "title": "BrandFacetName",
+        "type": "string"
+      },
+      "BrandProductsPage": {
+        "description": "One page of a brand's active indexed products.",
+        "properties": {
+          "brandName": {
+            "description": "Canonical brand name used for the query.",
+            "title": "Brandname",
+            "type": "string"
+          },
+          "brandSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical brand slug used for the query.",
+            "title": "Brandslug"
+          },
+          "hasMore": {
+            "description": "Whether another fetchable page exists. False once pagination reaches the offset ceiling (10000), even if `total` is larger.",
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Maximum number of products per page.",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of products skipped.",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "products": {
+            "description": "Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.",
+            "items": {
+              "$ref": "#/components/schemas/MerchantProductListItem"
+            },
+            "title": "Products",
+            "type": "array"
+          },
+          "total": {
+            "description": "Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "brandName",
+          "hasMore",
+          "limit",
+          "offset",
+          "products",
+          "total"
+        ],
+        "title": "BrandProductsPage",
+        "type": "object"
+      },
+      "BrandTextSearchRequest": {
+        "additionalProperties": false,
+        "description": "Generate and execute a brand search from text and optional references.",
+        "properties": {
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BrandFacet"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "title": "Facets"
+          },
+          "limit": {
+            "default": 24,
+            "description": "Maximum number of matching brands.",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "referenceBrands": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical source brands whose averaged embeddings guide the search.",
+            "title": "Referencebrands"
+          },
+          "text": {
+            "description": "Natural-language brand discovery query.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "BrandTextSearchRequest",
+        "type": "object"
+      },
+      "BrandTopCategoriesPage": {
+        "description": "A brand's top categories by product count.",
+        "properties": {
+          "brandName": {
+            "description": "Canonical brand name used for the query.",
+            "title": "Brandname",
+            "type": "string"
+          },
+          "topCategories": {
+            "description": "Top categories sorted by product count, descending.",
+            "items": {
+              "$ref": "#/components/schemas/BrandTopCategoryView"
+            },
+            "title": "Topcategories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "brandName",
+          "topCategories"
+        ],
+        "title": "BrandTopCategoriesPage",
+        "type": "object"
+      },
+      "BrandTopCategoryView": {
+        "description": "A top category for a brand based on product count.",
+        "properties": {
+          "categoryLevel": {
+            "description": "Depth level of the category in the taxonomy.",
+            "title": "Categorylevel",
+            "type": "integer"
+          },
+          "categoryName": {
+            "description": "Name of the category.",
+            "title": "Categoryname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "categoryLevel",
+          "categoryName"
+        ],
+        "title": "BrandTopCategoryView",
+        "type": "object"
+      },
       "BrandView": {
         "properties": {
           "description": {
@@ -4928,6 +5259,166 @@
         "title": "ReviewView",
         "type": "object"
       },
+      "SimilarBrandView": {
+        "description": "One similar brand.",
+        "properties": {
+          "brandDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short description of the brand.",
+            "title": "Branddescription"
+          },
+          "brandName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the brand.",
+            "title": "Brandname"
+          },
+          "brandSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical slug for the brand.",
+            "title": "Brandslug"
+          },
+          "brandUuid": {
+            "description": "Unique identifier for the brand.",
+            "title": "Branduuid",
+            "type": "string"
+          },
+          "directorySubheading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Brand subheading for directory display.",
+            "title": "Directorysubheading"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary website domain for the brand.",
+            "title": "Domain"
+          }
+        },
+        "required": [
+          "brandUuid"
+        ],
+        "title": "SimilarBrandView",
+        "type": "object"
+      },
+      "SimilarBrandsRequest": {
+        "additionalProperties": false,
+        "description": "Find brands similar to a set of source brands.",
+        "properties": {
+          "brands": {
+            "description": "Source brand names (case-insensitive) to find similar brands for.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Brands",
+            "type": "array"
+          },
+          "exclusionFacets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BrandFacet"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 exclusion filters, with the same names and value bounds as facets.",
+            "title": "Exclusionfacets"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BrandFacet"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 inclusion filters. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "title": "Facets"
+          },
+          "limit": {
+            "default": 24,
+            "description": "Maximum number of similar brands.",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "brands"
+        ],
+        "title": "SimilarBrandsRequest",
+        "type": "object"
+      },
+      "SimilarBrandsResponse": {
+        "description": "Brands ranked by text-query relevance or source-brand similarity.",
+        "properties": {
+          "results": {
+            "description": "Matching brands, highest-ranked first.",
+            "items": {
+              "$ref": "#/components/schemas/SimilarBrandView"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "totalFound": {
+            "description": "Total number of matching brands found.",
+            "title": "Totalfound",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "totalFound"
+        ],
+        "title": "SimilarBrandsResponse",
+        "type": "object"
+      },
       "TaxonomyAttribute": {
         "description": "One taxonomy attribute definition.",
         "properties": {
@@ -5305,12 +5796,888 @@
   },
   "info": {
     "description": "Use `/v1` with Catalog partner organization API keys. Merchant organization keys remain forbidden.",
-    "summary": "Public server-to-server API for Catalog partner product search and lookup",
+    "summary": "Public server-to-server API for product search, lookup, and brand discovery",
     "title": "StoreRouter Catalog API",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/brands/prefix": {
+      "get": {
+        "description": "Find corpus-wide canonical brand names by raw or punctuation-free prefix.\n\nBrand matches do not promise products within your catalog scope.",
+        "operationId": "searchBrandPrefix",
+        "parameters": [
+          {
+            "description": "Canonical brand name prefix.",
+            "in": "query",
+            "name": "prefix",
+            "required": true,
+            "schema": {
+              "description": "Canonical brand name prefix.",
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Prefix",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Searchbrandprefix",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "searchUnavailable": {
+                    "summary": "Brand search unavailable",
+                    "value": {
+                      "detail": "brand_search_unavailable"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Brand search backend unavailable (safe to retry)."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Find canonical brand names by prefix",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/search": {
+      "post": {
+        "description": "Discover brands from text and optional reference brands.\n\nSearches corpus-wide brand identities, not stores or sellers. Brand matches\ndo not promise products in your catalog scope. Returns 400 for an unusable\ngenerated query or reference brands without embeddings.",
+        "operationId": "searchBrandsFromText",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandTextSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarBrandsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unusableQuery": {
+                    "summary": "Unusable generated query",
+                    "value": {
+                      "detail": "brand_query_unusable"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Unusable generated query or reference brands without embeddings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "searchUnavailable": {
+                    "summary": "Brand search unavailable",
+                    "value": {
+                      "detail": "brand_search_unavailable"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Brand search backend unavailable (safe to retry)."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Find brands from a natural-language query",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/similar": {
+      "post": {
+        "description": "Find corpus-wide brands by averaged source-brand embedding similarity.\n\nBrand matches do not promise products within your catalog scope.",
+        "operationId": "searchSimilarBrands",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarBrandsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarBrandsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "noEmbeddings": {
+                    "summary": "Unknown brands / no vectors",
+                    "value": {
+                      "detail": "brands_have_no_embeddings"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "None of the requested brands have embeddings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "searchUnavailable": {
+                    "summary": "Brand search unavailable",
+                    "value": {
+                      "detail": "brand_search_unavailable"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Brand search backend unavailable (safe to retry)."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Find brands similar to a set of brands",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/{brand}": {
+      "get": {
+        "description": "Resolve a corpus-wide brand by slug or case-insensitive name.\n\nReturns display metadata only. The domain is the brand website, not a\npromise that a store or seller is indexed.",
+        "operationId": "getBrandDetails",
+        "parameters": [
+          {
+            "description": "Brand slug or case-insensitive name.",
+            "in": "path",
+            "name": "brand",
+            "required": true,
+            "schema": {
+              "description": "Brand slug or case-insensitive name.",
+              "minLength": 1,
+              "title": "Brand",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandDetailsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Get public-safe details for a brand",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/{brand}/products": {
+      "get": {
+        "description": "Paginated active products for a brand, within the caller's scope.",
+        "operationId": "browseBrandProducts",
+        "parameters": [
+          {
+            "description": "Brand slug or case-insensitive name.",
+            "in": "path",
+            "name": "brand",
+            "required": true,
+            "schema": {
+              "description": "Brand slug or case-insensitive name.",
+              "minLength": 1,
+              "title": "Brand",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandProductsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Browse products for a brand",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/{brand}/top-categories": {
+      "get": {
+        "description": "A brand's top categories by active-product count.\n\nResolves ``{brand}`` as slug or case-insensitive name and returns\nprecomputed, corpus-wide category names. These are not scoped inventory\ncounts and do not promise products within your catalog scope.",
+        "operationId": "getBrandTopCategories",
+        "parameters": [
+          {
+            "description": "Brand slug or case-insensitive name.",
+            "in": "path",
+            "name": "brand",
+            "required": true,
+            "schema": {
+              "description": "Brand slug or case-insensitive name.",
+              "minLength": 1,
+              "title": "Brand",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minLevel",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10,
+              "minimum": 0,
+              "title": "Minlevel",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandTopCategoriesPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Top categories for a brand by product count",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
     "/coverage/url-lists": {
       "get": {
         "description": "List the calling organization's URL lists, newest first.",

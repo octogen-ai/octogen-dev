@@ -1,6 +1,16 @@
 # Changelog — `@octogen-ai/sdk`
 
-## 0.8.0 (unreleased)
+## 0.9.0 (unreleased)
+
+- Add the six published `/v1/brands` operations: `searchBrandPrefix`,
+  `searchBrandsFromText`, `searchSimilarBrands`, `getBrandDetails`,
+  `browseBrandProducts` and `getBrandTopCategories`, with their request and
+  response types. Blank brands, prefixes and descriptions throw a `TypeError`
+  before any request; an unknown brand is an `OctogenNotFoundError` with
+  `detail` `brand_not_found`.
+- Refresh the OpenAPI snapshot and generated mirrors for the brand routes.
+
+## 0.8.0
 
 - Add typed per-call `RequestContext` on every API operation, with stable
   application defaults, explicit override/clear semantics and isolated request

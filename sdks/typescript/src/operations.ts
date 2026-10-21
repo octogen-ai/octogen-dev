@@ -24,6 +24,7 @@ export interface OperationDefinition {
 
 export const OPERATIONS = {
   addUrlListUrls: { method: "POST", path: "/coverage/url-lists/{urlListId}/urls" },
+  browseBrandProducts: { method: "GET", path: "/brands/{brand}/products" },
   checkUrlListUrls: {
     method: "POST",
     path: "/coverage/url-lists/{urlListId}/urls/contains",
@@ -31,6 +32,8 @@ export const OPERATIONS = {
   countProductFacets: { method: "POST", path: "/products/facet-counts" },
   createUrlList: { method: "POST", path: "/coverage/url-lists" },
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
+  getBrandDetails: { method: "GET", path: "/brands/{brand}" },
+  getBrandTopCategories: { method: "GET", path: "/brands/{brand}/top-categories" },
   getDomain: { method: "GET", path: "/domains/{host}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
@@ -50,7 +53,10 @@ export const OPERATIONS = {
     path: "/coverage/url-lists/{urlListId}/urls/remove",
   },
   resolveProductFromHtml: { method: "POST", path: "/products/resolve-from-html" },
+  searchBrandPrefix: { method: "GET", path: "/brands/prefix" },
+  searchBrandsFromText: { method: "POST", path: "/brands/search" },
   searchProducts: { method: "POST", path: "/products/search" },
+  searchSimilarBrands: { method: "POST", path: "/brands/similar" },
 } as const satisfies Record<string, OperationDefinition>;
 
 export type OperationId = keyof typeof OPERATIONS;

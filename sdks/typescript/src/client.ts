@@ -17,6 +17,11 @@ import { normalizeHost } from "./hosts.js";
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
+  BrandDetailsView,
+  BrandProductsPage,
+  BrandTextSearchRequest,
+  BrandTopCategoriesPage,
+  BrowseBrandProductsParams,
   CountProductFacetsParams,
   CoverageContainsResponse,
   CoveragePaginationParams,
@@ -25,6 +30,7 @@ import type {
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
   DomainCoverageResponse,
+  GetBrandTopCategoriesParams,
   ListTaxonomyCategoriesParams,
   MeResponse,
   MoreLikeThisProductsParams,
@@ -40,7 +46,12 @@ import type {
   ProgrammaticProductSearchRequest,
   ProgrammaticResolveFromHtmlRequest,
   ResolveProductFromHtmlParams,
+  SearchBrandPrefixParams,
+  SearchBrandsFromTextParams,
   SearchProductsParams,
+  SearchSimilarBrandsParams,
+  SimilarBrandsRequest,
+  SimilarBrandsResponse,
   Facet,
   TaxonomyAttributePage,
   TaxonomyAttributeValuePage,
@@ -51,7 +62,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.octogen.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.8.0";
+export const SDK_VERSION = "0.9.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -240,6 +251,121 @@ export class OctogenClient {
       pathParams: { host },
     });
     return data as DomainCoverageResponse;
+  }
+
+  /**
+   * Canonical brand names starting with `prefix`
+   * (`GET /v1/brands/prefix`), for autocomplete. Corpus-wide metadata: not
+   * limited to the catalogs your key can browse.
+   */
+  async searchBrandPrefix(
+    prefix: string,
+    params: SearchBrandPrefixParams = {},
+    options: RequestOptions = {},
+  ): Promise<string[]> {
+    assertNonEmptyString(prefix.trim(), "prefix");
+    const data = await this.json("searchBrandPrefix", {
+      context: options.context,
+      query: { prefix, limit: params.limit },
+    });
+    return data as string[];
+  }
+
+  /**
+   * Brands matching a natural-language description
+   * (`POST /v1/brands/search`), optionally steered by `referenceBrands`.
+   * Explicit `facets` override the facets generated from `text` by name.
+   */
+  async searchBrandsFromText(
+    params: SearchBrandsFromTextParams,
+    options: RequestOptions = {},
+  ): Promise<SimilarBrandsResponse> {
+    assertNonEmptyString(params.text.trim(), "text");
+    const body: BrandTextSearchRequest = { text: params.text };
+    if (params.referenceBrands !== undefined)
+      body.referenceBrands = params.referenceBrands;
+    if (params.facets !== undefined) body.facets = params.facets;
+    if (params.limit !== undefined) body.limit = params.limit;
+    const data = await this.json("searchBrandsFromText", {
+      context: options.context,
+      body,
+    });
+    return data as SimilarBrandsResponse;
+  }
+
+  /**
+   * Brands similar to one or more source brands (`POST /v1/brands/similar`).
+   * An unknown source brand is a `404` with `detail` `brand_not_found`.
+   */
+  async searchSimilarBrands(
+    params: SearchSimilarBrandsParams,
+    options: RequestOptions = {},
+  ): Promise<SimilarBrandsResponse> {
+    if (params.brands.length === 0) {
+      throw new TypeError("brands must contain at least one brand");
+    }
+    for (const brand of params.brands) assertNonEmptyString(brand.trim(), "brands[]");
+    const body: SimilarBrandsRequest = { brands: params.brands };
+    if (params.facets !== undefined) body.facets = params.facets;
+    if (params.exclusionFacets !== undefined)
+      body.exclusionFacets = params.exclusionFacets;
+    if (params.limit !== undefined) body.limit = params.limit;
+    const data = await this.json("searchSimilarBrands", {
+      context: options.context,
+      body,
+    });
+    return data as SimilarBrandsResponse;
+  }
+
+  /**
+   * Public-safe details for one brand (`GET /v1/brands/{brand}`). `brand` is a
+   * slug or a case-insensitive name; an unknown one is a `404` with `detail`
+   * `brand_not_found`.
+   */
+  async getBrandDetails(
+    brand: string,
+    options: RequestOptions = {},
+  ): Promise<BrandDetailsView> {
+    const data = await this.json("getBrandDetails", {
+      context: options.context,
+      pathParams: { brand },
+    });
+    return data as BrandDetailsView;
+  }
+
+  /**
+   * One page of a brand's active products (`GET /v1/brands/{brand}/products`),
+   * within the catalogs your key can browse. Items are shaped like
+   * `searchProducts` items; continue with `offset` while `hasMore` is true.
+   */
+  async browseBrandProducts(
+    brand: string,
+    params: BrowseBrandProductsParams = {},
+    options: RequestOptions = {},
+  ): Promise<BrandProductsPage> {
+    const data = await this.json("browseBrandProducts", {
+      context: options.context,
+      pathParams: { brand },
+      query: { limit: params.limit, offset: params.offset },
+    });
+    return data as BrandProductsPage;
+  }
+
+  /**
+   * A brand's top categories by product count
+   * (`GET /v1/brands/{brand}/top-categories`), from `minLevel` down.
+   */
+  async getBrandTopCategories(
+    brand: string,
+    params: GetBrandTopCategoriesParams = {},
+    options: RequestOptions = {},
+  ): Promise<BrandTopCategoriesPage> {
+    const data = await this.json("getBrandTopCategories", {
+      context: options.context,
+      pathParams: { brand },
+      query: { minLevel: params.minLevel, limit: params.limit },
+    });
+    return data as BrandTopCategoriesPage;
   }
 
   /**

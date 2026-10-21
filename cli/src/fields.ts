@@ -21,6 +21,8 @@ type LookupRequest = components["schemas"]["ProgrammaticProductLookupRequest"];
 type SearchRequest = components["schemas"]["ProgrammaticProductSearchRequest"];
 type MoreLikeThisRequest = components["schemas"]["ProgrammaticMoreLikeThisRequest"];
 type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
+type BrandTextSearchRequest = components["schemas"]["BrandTextSearchRequest"];
+type SimilarBrandsRequest = components["schemas"]["SimilarBrandsRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
@@ -142,6 +144,48 @@ export const STORE_FIELDS = {
   host: { flag: "<host|url> (positional)" },
 } satisfies FieldMap<{ host: string }>;
 
+// ── /brands ─────────────────────────────────────────────────────────────────
+
+export const BRAND_SEARCH_FIELDS = {
+  facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
+  limit: { flag: "--limit" },
+  referenceBrands: { flag: "--like", multiple: true, placeholder: "brand" },
+  text: { flag: "<description> (positional)" },
+} satisfies FieldMap<BrandTextSearchRequest>;
+
+export const BRAND_SIMILAR_FIELDS = {
+  brands: { flag: "<brand>… (positional)", codec: "custom" },
+  exclusionFacets: {
+    flag: "--exclude-facet",
+    codec: "facets",
+    multiple: true,
+    placeholder: "k=v",
+  },
+  facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
+  limit: { flag: "--limit" },
+} satisfies FieldMap<SimilarBrandsRequest>;
+
+export const BRAND_PREFIX_FIELDS = {
+  limit: { flag: "--limit" },
+  prefix: { flag: "<prefix> (positional)" },
+} satisfies FieldMap<{ prefix: string; limit: number }>;
+
+export const BRAND_SHOW_FIELDS = {
+  brand: { flag: "<brand> (positional)" },
+} satisfies FieldMap<{ brand: string }>;
+
+export const BRAND_PRODUCTS_FIELDS = {
+  brand: { flag: "<brand> (positional)" },
+  limit: { flag: "--limit" },
+  offset: { flag: "--offset" },
+} satisfies FieldMap<{ brand: string; limit: number; offset: number }>;
+
+export const BRAND_CATEGORIES_FIELDS = {
+  brand: { flag: "<brand> (positional)" },
+  limit: { flag: "--limit" },
+  minLevel: { flag: "--min-level" },
+} satisfies FieldMap<{ brand: string; limit: number; minLevel: number }>;
+
 /**
  * Every field map, including operations with no request fields.
  */
@@ -154,4 +198,10 @@ export const FIELD_MAPS: Readonly<
   searchProducts: SEARCH_FIELDS,
   getMe: {},
   getDomain: STORE_FIELDS,
+  searchBrandsFromText: BRAND_SEARCH_FIELDS,
+  searchSimilarBrands: BRAND_SIMILAR_FIELDS,
+  searchBrandPrefix: BRAND_PREFIX_FIELDS,
+  getBrandDetails: BRAND_SHOW_FIELDS,
+  browseBrandProducts: BRAND_PRODUCTS_FIELDS,
+  getBrandTopCategories: BRAND_CATEGORIES_FIELDS,
 });

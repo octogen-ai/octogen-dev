@@ -1,5 +1,29 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.11.0 (unreleased)
+
+Brand discovery, for the six `/v1/brands` operations the API now publishes.
+
+- Add `search_brand_prefix(prefix)` (`GET /v1/brands/prefix`), returning
+  canonical brand names as a `list[str]`.
+- Add `search_brands_from_text(text, reference_brands=..., facets=...)`
+  (`POST /v1/brands/search`) and `search_similar_brands(brands, facets=...,
+  exclusion_facets=...)` (`POST /v1/brands/similar`), both returning a
+  `SimilarBrandsResponse`. Facets are `BrandFacet`s or `{"name", "values"}`
+  dicts.
+- Add `get_brand_details(brand)` (`GET /v1/brands/{brand}`),
+  `browse_brand_products(brand, limit=..., offset=...)`
+  (`GET /v1/brands/{brand}/products`) and
+  `get_brand_top_categories(brand, min_level=..., limit=...)`
+  (`GET /v1/brands/{brand}/top-categories`). `brand` is a slug or a
+  case-insensitive name; an unknown brand raises `OctogenNotFoundError` with
+  `detail == "brand_not_found"`.
+- A blank `prefix`, `text` or `brand`, or an empty `brands` or
+  `reference_brands` list, raises `ValueError` before any request.
+- Adds the `BrandDetailsView`, `BrandFacet`, `BrandProductsPage`,
+  `BrandTopCategoriesPage`, `BrandTopCategoryView`, `SimilarBrandView` and
+  `SimilarBrandsResponse` models, re-exported from the contract mirror.
+
 ## 0.10.0 (unreleased)
 
 - Add typed per-call `RequestContext` on every API operation, with stable

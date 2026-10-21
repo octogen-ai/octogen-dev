@@ -757,6 +757,85 @@ export type PriceDistribution = components["schemas"]["PriceDistribution"];
 /** One histogram bar: products priced in `[min, max)`. */
 export type PriceBucket = components["schemas"]["PriceBucket"];
 
+// ── Brands (/v1/brands) ─────────────────────────────────────────────────────
+
+/** A brand-index filter: a {@link BrandFacetName} or an attribute key, plus values. */
+export type BrandFacet = components["schemas"]["BrandFacet"];
+
+/** Base facet keys of the brand index. */
+export type BrandFacetName = components["schemas"]["BrandFacetName"];
+
+/** Public-safe metadata for one resolved brand. */
+export type BrandDetailsView = components["schemas"]["BrandDetailsView"];
+
+/** One ranked brand from a text or similar-brands search. */
+export type SimilarBrandView = components["schemas"]["SimilarBrandView"];
+
+/** Brands ranked by text relevance or by similarity to the source brands. */
+export type SimilarBrandsResponse = components["schemas"]["SimilarBrandsResponse"];
+
+/** One page of a brand's active products, shaped like search items. */
+export type BrandProductsPage = components["schemas"]["BrandProductsPage"];
+
+/** A brand's top categories by product count. */
+export type BrandTopCategoriesPage = components["schemas"]["BrandTopCategoriesPage"];
+
+/** One category and its taxonomy depth. */
+export type BrandTopCategoryView = components["schemas"]["BrandTopCategoryView"];
+
+/** Wire body of `POST /v1/brands/search`; `limit` has a server default. */
+export type BrandTextSearchRequest = Omit<
+  components["schemas"]["BrandTextSearchRequest"],
+  "limit"
+> & { limit?: number };
+
+/** Wire body of `POST /v1/brands/similar`; `limit` has a server default. */
+export type SimilarBrandsRequest = Omit<
+  components["schemas"]["SimilarBrandsRequest"],
+  "limit"
+> & { limit?: number };
+
+export interface SearchBrandPrefixParams {
+  /** 1-50; the server defaults to 20. */
+  limit?: number;
+}
+
+export interface SearchBrandsFromTextParams {
+  /** Natural-language brand query, 1-500 characters. */
+  text: string;
+  /** Up to 20 canonical brand names whose embeddings guide the search. */
+  referenceBrands?: string[];
+  /** Up to 20 filters; they override facets generated from `text` by name. */
+  facets?: BrandFacet[];
+  /** 1-100; the server defaults to 24. */
+  limit?: number;
+}
+
+export interface SearchSimilarBrandsParams {
+  /** 1-20 source brand names, case-insensitive. */
+  brands: string[];
+  /** Up to 20 inclusion filters. */
+  facets?: BrandFacet[];
+  /** Up to 20 exclusion filters, with the same names and bounds as `facets`. */
+  exclusionFacets?: BrandFacet[];
+  /** 1-100; the server defaults to 24. */
+  limit?: number;
+}
+
+export interface BrowseBrandProductsParams {
+  /** 1-100; the server defaults to 24. */
+  limit?: number;
+  /** 0-10000. `hasMore` goes false at 10000 even when more products exist. */
+  offset?: number;
+}
+
+export interface GetBrandTopCategoriesParams {
+  /** Shallowest taxonomy depth to count, 0-10; the server defaults to 0. */
+  minLevel?: number;
+  /** 1-20; the server defaults to 3. */
+  limit?: number;
+}
+
 // ── Caller identity (/v1/me) ────────────────────────────────────────────────
 
 export type MeResponse = components["schemas"]["MeResponse"];

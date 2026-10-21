@@ -94,6 +94,17 @@ if that stops being true — see
   filter to — by `categories`, `attributes` and `facet_names` — under the same
   `q`, facets, bounds and `catalogs`.
 
+- `search_brand_prefix(prefix)` completes a canonical brand name from its
+  first characters. `search_brands_from_text(text, ...)` finds brands from a
+  description, optionally steered by `reference_brands`;
+  `search_similar_brands(brands, ...)` finds brands like 1–20 source brands.
+  Both take `facets` (and similar, `exclusion_facets`) as `BrandFacet`s, whose
+  names are `facet_*` keys such as `facet_price_tier`.
+- `get_brand_details(brand)`, `browse_brand_products(brand, limit=..., offset=...)`
+  and `get_brand_top_categories(brand, min_level=..., limit=...)` read one
+  brand by slug or case-insensitive name. An unknown brand raises
+  `OctogenNotFoundError` with `detail == "brand_not_found"`.
+
 - `create_coverage_url_list(name=...)`, `list_coverage_url_lists(...)`,
   `get_coverage_url_list(url_list_id)`, and
   `delete_coverage_url_list(url_list_id)` manage coverage URL lists — named
@@ -140,6 +151,15 @@ async with OctogenClient() as client:
         attributes=["neckline"],
     )
     print(counts.categories[0].count, counts.attributes[0].values[:3])
+```
+
+```python
+async with OctogenClient() as client:
+    similar = await client.search_similar_brands(["Reformation"], limit=5)
+    for brand in similar.results:
+        print(brand.brand_name, brand.domain)
+    top = await client.get_brand_top_categories("reformation", min_level=1)
+    print([category.category_name for category in top.top_categories])
 ```
 
 ### Search controls

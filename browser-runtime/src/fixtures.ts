@@ -4,7 +4,45 @@ export const fixtureTransport: Transport = (request, signal) => {
   signal.throwIfAborted();
   const path = new URL(request.url).pathname;
   let data: unknown;
-  if (path.endsWith("/search"))
+  const brand = {
+    brandUuid: "fixture-brand",
+    brandName: "Example",
+    brandSlug: "example",
+    domain: "example.com",
+    brandDescription: "Linen basics (fixture).",
+  };
+  if (path === "/v1/brands/prefix") data = ["Example", "Example Studio"];
+  else if (path === "/v1/brands/search" || path === "/v1/brands/similar")
+    data = { results: [brand], totalFound: 1 };
+  else if (path.startsWith("/v1/brands/") && path.endsWith("/products"))
+    data = {
+      brandName: "Example",
+      brandSlug: "example",
+      total: 1,
+      limit: 24,
+      offset: 0,
+      hasMore: false,
+      products: [
+        {
+          uuid: "fixture-linen-dress",
+          catalogKey: "example",
+          productUrl: "https://example.com/linen-dress",
+          title: "Linen dress (fixture)",
+          brand: { name: "Example" },
+          currentPrice: 89,
+          currency: "USD",
+          imageUrl: null,
+        },
+      ],
+    };
+  else if (path.startsWith("/v1/brands/") && path.endsWith("/top-categories"))
+    data = {
+      brandName: "Example",
+      topCategories: [{ categoryName: "Dresses", categoryLevel: 2 }],
+    };
+  else if (path.startsWith("/v1/brands/"))
+    data = { ...brand, foundedYear: 2020, originCountry: "US", priceTier: "mid" };
+  else if (path.endsWith("/search"))
     data = {
       items: [
         {
