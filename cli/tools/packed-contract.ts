@@ -132,7 +132,7 @@ const cases = [
     // A GET with a path parameter: `body` is the parameter set, read back off
     // the path, since a GET carries no request body.
     operation: "getStore",
-    argv: ["store", "https://www.TheReformation.com/products/x"],
+    argv: ["stores", "show", "https://www.TheReformation.com/products/x"],
     path: "/stores/thereformation.com",
     body: { domain: "thereformation.com" },
     response: { host: "thereformation.com", catalogs: [] },

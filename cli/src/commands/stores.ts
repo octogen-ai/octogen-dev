@@ -1,7 +1,7 @@
 /**
- * `storerouter store <host|url>` — one covered store's coverage snapshot.
+ * `storerouter stores show <domain|url>` — one covered store's coverage snapshot.
  *
- * One host in, one snapshot out (`GET /v1/stores/{domain}`). There is
+ * One domain in, one snapshot out (`GET /v1/stores/{domain}`). There is
  * deliberately no list mode and no local host cache: the full covered-host
  * list is not public, and nothing here may rebuild it. Ask about the store you
  * have.
@@ -25,18 +25,18 @@ export type CoverageSnapshot = Pick<
   "computedAt" | "fields" | "price" | "productCount"
 >;
 
-async function runStore(context: CommandContext): Promise<ExitCode> {
+async function runShow(context: CommandContext): Promise<ExitCode> {
   const { writer } = context;
   const input = context.positionals[0];
   if (input === undefined || input.length === 0) {
     throw usageError(
-      "storerouter store <host|url> requires a store host, such as thereformation.com.",
+      "storerouter stores show <domain|url> requires a store domain, such as thereformation.com.",
       "missing_argument",
     );
   }
   if (context.positionals.length > 1) {
     throw usageError(
-      "storerouter store takes one host. For several, run it once per host.",
+      "storerouter stores show takes one domain. For several, run it once per domain.",
       "too_many_arguments",
     );
   }
@@ -45,7 +45,7 @@ async function runStore(context: CommandContext): Promise<ExitCode> {
   const host = normalizeHost(input);
   if (host === undefined) {
     throw usageError(
-      `No host in ${JSON.stringify(input)}. Pass a host such as thereformation.com, or a URL.`,
+      `No host in ${JSON.stringify(input)}. Pass a domain such as thereformation.com, or a URL.`,
       "invalid_host",
     );
   }
@@ -190,18 +190,18 @@ export function formatCount(value: number): string {
   return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-export const storeCommand = {
-  name: "store",
+export const storesShowCommand = {
+  name: "stores show",
   notes: [
-    "Takes a bare host or any URL on the store, normalized the way the API",
+    "Takes a bare domain or any URL on the store, normalized the way the API",
     "normalizes hosts: lowercased, port and leading `www.` dropped. So",
     "`https://www.TheReformation.com/products/x` asks about thereformation.com.",
     "",
     "Exit 6 means the server answered 404 domain_not_covered: no catalog serves",
-    "that host. One host per call; there is no list of covered hosts.",
+    "that domain. One domain per call; there is no list of covered stores.",
   ],
   operations: ["getStore"] as const,
-  run: runStore,
+  run: runShow,
   summary: "Show one store's coverage: catalogs, product counts, fields, prices",
-  usage: "store <host|url>",
+  usage: "stores show <domain|url>",
 } satisfies CommandSpec;

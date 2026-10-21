@@ -3,11 +3,10 @@
 ## 0.5.0 (unreleased, `next`)
 
 - `brands show <brand>` also prints the brand's coverage across catalogs in the
-  same layout as one `store` catalog (product count, price histogram summary,
-  best-covered fields), then the catalogs carrying it with product counts and
-  hosts to pass to `store`. The price tier line is now labelled `tier`.
-  `--json` carries the full `BrandCoverageResponse`.
-- `store` reads `GET /v1/stores/{domain}` (was `GET /v1/domains/{host}`).
+  same layout as one `stores show` catalog (product count, price histogram
+  summary, best-covered fields), then the catalogs carrying it with product
+  counts and hosts to pass to `stores show`. The price tier line is now
+  labelled `tier`. `--json` carries the full `BrandCoverageResponse`.
 
 - Add `storerouter brands` for the six `/v1/brands` operations: `brands search
 <description>` (`--like`, `--facet`, `--limit`), `brands similar <brand>…`
@@ -29,11 +28,12 @@ categories <brand>` (`--min-level`, `--limit`). `404 brand_not_found` and empty
   on 0.4.0 and older. Run `lookup` directly; a miss no longer points at
   `domains --check`. `status` still checks credentials with `GET /v1/me`.
 - Keyless trial messages name only `lookup` and `search`.
-- Add `storerouter store <host|url>`: one covered store's coverage snapshot
-  from `GET /v1/domains/{host}` (catalogs, product counts, populated fields,
-  price histogram), as a summary or `--json`. A URL is normalized to its host.
-  `404 domain_not_covered` exits `6` with `covered: false`. It takes one host;
-  there is no list mode and no host cache.
+- Add `storerouter stores show <domain|url>`: one covered store's coverage
+  snapshot from `GET /v1/stores/{domain}` (catalogs, product counts, populated
+  fields, price histogram), as a summary or `--json`. A URL is normalized to
+  its host. `404 domain_not_covered` exits `6` with `covered: false`. It takes
+  one domain; there is no list mode and no host cache. `storerouter stores`
+  alone lists the subcommands, like `storerouter brands`.
 - `similar` does not expose more-like-this `sources`; send several source
   products with `storerouter api`.
 - Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
