@@ -861,6 +861,11 @@ class ProgrammaticProductSearchRequest(BaseModel):
         description="Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
         title="Similar To Brands",
     )
+    stores: list[str] | None = Field(
+        None,
+        description="Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.",
+        title="Stores",
+    )
     understand: bool | None = Field(
         True,
         description="Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
@@ -979,6 +984,19 @@ class SimilarBrandsResponse(BaseModel):
         alias="totalFound",
         description="Total number of matching brands found.",
         title="Totalfound",
+    )
+
+
+class SimilarStoresRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    limit: int | None = Field(24, title="Limit")
+    stores: list[str] = Field(
+        ...,
+        description="Store domains to find neighbours for, as `GET /stores/{domain}` takes them. Each needs a published profile; several are averaged.",
+        title="Stores",
     )
 
 

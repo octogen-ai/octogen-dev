@@ -43,6 +43,8 @@ conversation.
 | A product, and want alternatives           | `storerouter similar <url-or-uuid>`             |
 | A store, and want its coverage and filters | `storerouter stores show <domain>`              |
 | A kind of store, but no domain             | `storerouter stores search '<description>'`     |
+| A store, and want stores like it           | `storerouter stores similar <domain>`           |
+| A store, and want its products             | `storerouter stores products <domain> [query]`  |
 | A store, and want what it mostly sells     | `storerouter stores categories <domain>`        |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
@@ -127,16 +129,23 @@ alternatives.
 
 ```bash
 storerouter stores search 'linen dresses' --limit 10
+storerouter stores similar thereformation.com --limit 10
+storerouter stores products thereformation.com 'linen dress' --price-max 300
 ```
 
-- Ranks the stores with published assortment profiles, not every covered store,
-  so fewer results than `--limit` is normal and there is no next page.
+- `stores search` and `stores similar` rank the stores with published
+  assortment profiles, not every covered store, so fewer results than `--limit`
+  is normal and there is no next page. `stores similar` compares whole stores
+  and averages several; the stores you pass never come back.
 - A result's `matchedDepartment.productCount` is the size of that department in
   the store's profile, not a count of products matching the description. To
-  find the products, run `storerouter search` with `--catalog <store.catalog>`.
+  find the products, run `storerouter stores products <store.primaryDomain>
+  [query]`.
 - Pass `store.primaryDomain` to `storerouter stores show` for its coverage and
   facet names, or to `storerouter stores categories` for what it mostly sells
   (`--min-level 2` skips broad levels such as Clothing).
+- `stores products` takes the same filters as `search`, searches every catalog
+  serving the domain, and needs no query to browse. Page it with `--cursor`.
 
 ## Discover brands
 

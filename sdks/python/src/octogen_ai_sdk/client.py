@@ -403,6 +403,35 @@ class OctogenClient:
         )
         return StoreSearchResponse.model_validate(data)
 
+    async def search_similar_stores(
+        self,
+        stores: Sequence[str],
+        *,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> StoreSearchResponse:
+        """Profiled stores most like one or more stores.
+
+        ``POST /v1/stores/similar``: ``stores`` is 1-10 domains, as
+        :meth:`get_store` takes them, and ``limit`` is 1-100 (server default
+        24). Ranked by the stores' averaged overall profiles over the same
+        cohort as :meth:`search_stores`; the given stores never appear in their
+        own results, which may underfill. Unbilled. An uncovered domain raises
+        :class:`OctogenNotFoundError` with ``detail == "domain_not_covered"``;
+        one with no published profile, ``"store_not_profiled"``.
+        """
+        domains = _string_list(stores, "stores") or []
+        if not domains or any(not isinstance(d, str) or not d.strip() for d in domains):
+            raise ValueError(
+                "search_similar_stores: stores must be a non-empty list of domains"
+            )
+        body = _without_none({"stores": domains, "limit": limit})
+        data = await self._json(
+            "searchSimilarStores", json=body, context=context, timeout=timeout
+        )
+        return StoreSearchResponse.model_validate(data)
+
     async def search_products(
         self,
         *,
@@ -418,6 +447,7 @@ class OctogenClient:
         similar_to_brands: Sequence[str] | None = None,
         fallback_category: Sequence[str] | None = None,
         catalogs: Sequence[str] | None = None,
+        stores: Sequence[str] | None = None,
         limit: int | None = None,
         cursor: str | None = None,
         relax: bool | None = None,
@@ -433,7 +463,9 @@ class OctogenClient:
         derived from it; ``understand=False`` matches it as written. ``facets``
         and ``exclude_facets`` say what to keep and drop, ``catalogs`` (1-500
         keys) where to look; omit it to search every catalog your key can
-        access. ``limit`` defaults to 50. Every page carries
+        access. ``stores`` (1-20 domains, as :meth:`get_store` takes them)
+        looks in every catalog serving each instead; an uncovered domain raises
+        :class:`OctogenNotFoundError`. ``limit`` defaults to 50. Every page carries
         ``effective_query``, the search that ran.
 
         ``fallback_category`` is a category path, root first (for example
@@ -479,6 +511,7 @@ class OctogenClient:
                 similar_to_brands=similar_to_brands,
                 fallback_category=fallback_category,
                 catalogs=catalogs,
+                stores=stores,
                 limit=limit,
                 cursor=cursor,
                 relax=relax,
@@ -504,6 +537,7 @@ class OctogenClient:
                 similar_to_brands=_string_list(similar_to_brands, "similar_to_brands"),
                 fallback_category=_string_list(fallback_category, "fallback_category"),
                 catalogs=_catalog_list(catalogs),
+                stores=_string_list(stores, "stores"),
                 limit=50 if limit is None else limit,
                 cursor=cursor,
                 relax=relax,

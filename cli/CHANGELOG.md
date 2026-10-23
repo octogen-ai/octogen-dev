@@ -2,6 +2,17 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- Add `storerouter stores similar <domain|url>…` (`--limit`) for `POST
+/v1/stores/similar`: profiled stores ranked by how much their whole assortment
+  resembles the given stores'. Uncovered or unprofiled stores and empty answers
+  exit `6` (`domain_not_covered`, `store_not_profiled`, `no_matches`).
+
+- Add `storerouter stores products <domain|url> [query]` (`--facet`,
+  `--price-min`, `--price-max`, `--limit`, `--cursor`): `POST
+/v1/products/search` with `stores: [domain]`, one request per page. Without a
+  query it browses by filters. An uncovered domain exits `6` with
+  `domain_not_covered`. Requires `@octogen-ai/sdk` 0.9.0.
+
 - Add `storerouter stores categories <domain|url>` (`--min-level`, `--limit`):
   each catalog's top categories by product count, with their share of the
   catalog, ranked from the `category_path.depth_<n>` fields of the same

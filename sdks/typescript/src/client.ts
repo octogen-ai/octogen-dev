@@ -52,9 +52,11 @@ import type {
   SearchBrandsFromTextParams,
   SearchProductsParams,
   SearchSimilarBrandsParams,
+  SearchSimilarStoresParams,
   SearchStoresParams,
   SimilarBrandsRequest,
   SimilarBrandsResponse,
+  SimilarStoresRequest,
   Facet,
   TaxonomyAttributePage,
   TaxonomyAttributeValuePage,
@@ -273,6 +275,27 @@ export class OctogenClient {
     const body: StoreSearchRequest = { text: params.text };
     if (params.limit !== undefined) body.limit = params.limit;
     const data = await this.json("searchStores", {
+      context: options.context,
+      body,
+    });
+    return data as StoreSearchResponse;
+  }
+
+  /**
+   * Profiled stores most like one or more stores (`POST /v1/stores/similar`),
+   * ranked by their averaged overall profiles. Unbilled, over the same cohort
+   * as {@link searchStores}; the given stores never appear in their own
+   * results, which may underfill. An uncovered domain is a `404` with `detail`
+   * `domain_not_covered`; one with no published profile, `store_not_profiled`.
+   */
+  async searchSimilarStores(
+    params: SearchSimilarStoresParams,
+    options: RequestOptions = {},
+  ): Promise<StoreSearchResponse> {
+    assertStores(params.stores, 10);
+    const body: SimilarStoresRequest = { stores: [...params.stores] };
+    if (params.limit !== undefined) body.limit = params.limit;
+    const data = await this.json("searchSimilarStores", {
       context: options.context,
       body,
     });
@@ -895,6 +918,17 @@ function assertCatalogs(catalogs: unknown, max: number): void {
   }
 }
 
+function assertStores(stores: unknown, max: number): void {
+  if (!Array.isArray(stores) || stores.length < 1 || stores.length > max) {
+    throw new TypeError(`stores must contain between 1 and ${String(max)} domains`);
+  }
+  for (const store of stores) {
+    if (typeof store !== "string" || store.trim().length === 0) {
+      throw new TypeError("stores must contain only non-empty domains");
+    }
+  }
+}
+
 /**
  * Search fields removed in 0.5.0 because the API now answers them with `422`.
  * A JavaScript caller still passing one is told the replacement here rather
@@ -919,6 +953,12 @@ function toSearchPayload(
   }
   if (params.catalogs !== undefined) {
     assertCatalogs(params.catalogs, 500);
+  }
+  if (params.stores !== undefined) {
+    if (params.catalogs !== undefined) {
+      throw new TypeError("send catalogs or stores, not both");
+    }
+    assertStores(params.stores, 20);
   }
   const limit = params.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
@@ -962,6 +1002,9 @@ function toSearchPayload(
   }
   if (params.catalogs !== undefined) {
     payload.catalogs = [...params.catalogs];
+  }
+  if (params.stores !== undefined) {
+    payload.stores = [...params.stores];
   }
   if (params.cursor !== undefined) {
     payload.cursor = params.cursor;

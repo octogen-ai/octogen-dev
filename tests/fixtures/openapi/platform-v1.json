@@ -4728,7 +4728,7 @@
       },
       "ProgrammaticProductSearchRequest": {
         "additionalProperties": false,
-        "description": "Search indexed products by free text, filters, or both.\n\nEach field controls one thing. ``q`` says what to find; ``facets``,\n``exclude_facets`` and the bounds say what to keep; ``catalogs`` says\nwhere to look; ``limit`` and ``cursor`` page. Combinations that would\ncontradict each other are rejected with 422 rather than resolved silently.",
+        "description": "Search indexed products by free text, filters, or both.\n\nEach field controls one thing. ``q`` says what to find; ``facets``,\n``exclude_facets`` and the bounds say what to keep; ``catalogs`` or\n``stores`` says where to look; ``limit`` and ``cursor`` page. Combinations that would\ncontradict each other are rejected with 422 rather than resolved silently.",
         "properties": {
           "brand_quality_max": {
             "anyOf": [
@@ -4933,6 +4933,23 @@
             ],
             "description": "Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
             "title": "Similar To Brands"
+          },
+          "stores": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.",
+            "title": "Stores"
           },
           "understand": {
             "default": true,
@@ -5423,6 +5440,36 @@
           "totalFound"
         ],
         "title": "SimilarBrandsResponse",
+        "type": "object"
+      },
+      "SimilarStoresRequest": {
+        "additionalProperties": false,
+        "description": "POST /v1/stores/similar: profiled stores like the given ones.",
+        "properties": {
+          "limit": {
+            "default": 24,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "stores": {
+            "description": "Store domains to find neighbours for, as `GET /stores/{domain}` takes them. Each needs a published profile; several are averaged.",
+            "items": {
+              "maxLength": 253,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Stores",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stores"
+        ],
+        "title": "SimilarStoresRequest",
         "type": "object"
       },
       "StoreAssortmentProfile": {
@@ -9719,6 +9766,91 @@
           }
         ],
         "summary": "Discover stores by observed assortment",
+        "tags": [
+          "platform-catalog-api",
+          "platform-stores-api"
+        ]
+      }
+    },
+    "/stores/similar": {
+      "post": {
+        "description": "Rank profiled stores by similarity to the given stores' whole assortment.\n\nUnbilled, authenticated and rate-limited, like stores/search, and over the\nsame pilot cohort. Compares overall store profiles, averaged across the\ngiven stores, which never appear in their own results. Results may\nunderfill; no total or pagination is promised.",
+        "operationId": "searchSimilarStores",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarStoresRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "description": "Organization cannot use the programmatic API."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "store_not_profiled"
+                }
+              }
+            },
+            "description": "A store is not covered (`domain_not_covered`) or has no published profile to compare (`store_not_profiled`)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "store_search_unavailable"
+                }
+              }
+            },
+            "description": "Store search is unconfigured or its backend is unavailable."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Find stores similar to one or more stores",
         "tags": [
           "platform-catalog-api",
           "platform-stores-api"

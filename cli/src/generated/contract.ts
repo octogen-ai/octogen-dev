@@ -1526,7 +1526,7 @@ export const PUBLIC_CONTRACT = {
     "searchProducts": {
       "body": {
         "additionalProperties": false,
-        "description": "Search indexed products by free text, filters, or both.\n\nEach field controls one thing. ``q`` says what to find; ``facets``,\n``exclude_facets`` and the bounds say what to keep; ``catalogs`` says\nwhere to look; ``limit`` and ``cursor`` page. Combinations that would\ncontradict each other are rejected with 422 rather than resolved silently.",
+        "description": "Search indexed products by free text, filters, or both.\n\nEach field controls one thing. ``q`` says what to find; ``facets``,\n``exclude_facets`` and the bounds say what to keep; ``catalogs`` or\n``stores`` says where to look; ``limit`` and ``cursor`` page. Combinations that would\ncontradict each other are rejected with 422 rather than resolved silently.",
         "properties": {
           "brand_quality_max": {
             "anyOf": [
@@ -1774,6 +1774,23 @@ export const PUBLIC_CONTRACT = {
             "description": "Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
             "title": "Similar To Brands"
           },
+          "stores": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.",
+            "title": "Stores"
+          },
           "understand": {
             "default": true,
             "description": "Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
@@ -1966,6 +1983,41 @@ export const PUBLIC_CONTRACT = {
       "parameters": [],
       "path": "/brands/similar"
     },
+    "searchSimilarStores": {
+      "body": {
+        "additionalProperties": false,
+        "description": "POST /v1/stores/similar: profiled stores like the given ones.",
+        "properties": {
+          "limit": {
+            "default": 24,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "stores": {
+            "description": "Store domains to find neighbours for, as `GET /stores/{domain}` takes them. Each needs a published profile; several are averaged.",
+            "items": {
+              "maxLength": 253,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Stores",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stores"
+        ],
+        "title": "SimilarStoresRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/stores/similar"
+    },
     "searchStores": {
       "body": {
         "additionalProperties": false,
@@ -1997,6 +2049,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "50e4e32df4857edce606fe9ff9b0b0d3b0af3db7c786197d371826c6bfdaf68c",
+  "sha256": "ec6c8fb0f52853f6bfd6ea5895d5ab165e65f377b9e47af3c9a43c0652d6c263",
   "version": "1.0.0"
 } as const;
