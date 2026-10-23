@@ -1269,6 +1269,45 @@ describe("OctogenClient searchStores", () => {
   });
 });
 
+describe("OctogenClient searchSimilarStores and searchProducts stores", () => {
+  it("POSTs stores and limit to /stores/similar", async () => {
+    const { calls, fetchMock } = createFetchMock({ results: [] });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchSimilarStores({ stores: ["thereformation.com"], limit: 5 });
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/stores/similar`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({ stores: ["thereformation.com"], limit: 5 });
+  });
+
+  it("refuses an empty, blank or oversized store list before any request", async () => {
+    const { calls, fetchMock } = createFetchMock({ results: [] });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    for (const stores of [[], [" "], Array.from({ length: 11 }, () => "a.example")]) {
+      await expect(client.searchSimilarStores({ stores })).rejects.toThrow(TypeError);
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  it("sends stores on searchProducts, but never with catalogs", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchProducts({ stores: ["thereformation.com"] });
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      limit: 50,
+      stores: ["thereformation.com"],
+    });
+    await expect(
+      client.searchProducts({ stores: ["a.example"], catalogs: ["acme"] }),
+    ).rejects.toThrow(TypeError);
+    await expect(client.searchProducts({ stores: [] })).rejects.toThrow(TypeError);
+    expect(calls).toHaveLength(1);
+  });
+});
+
 describe("the keyless metered trial", () => {
   it("refuses to build a keyless client unless asked", () => {
     // Off by default: a client with no key is only useful against three routes,

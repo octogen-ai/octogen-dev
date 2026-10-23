@@ -57,7 +57,10 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
 - `searchStores({ text, limit })` ranks profiled stores against a
   plain-language description (`POST /v1/stores/search`). It searches the stores
   with published profiles, not every covered store, so results may underfill;
-  there is no pagination.
+  there is no pagination. `searchSimilarStores({ stores })` ranks the same
+  stores by resemblance to one or more stores (`POST /v1/stores/similar`).
+- `searchProducts({ stores: [domain] })` searches every catalog serving a store
+  domain, as `getStore` resolves it, instead of naming `catalogs`.
 - Brand discovery (`/v1/brands`): `searchBrandsFromText({ text, referenceBrands })`
   and `searchSimilarBrands({ brands })` rank brands, `searchBrandPrefix(prefix)`
   completes a canonical name, `getBrandDetails(brand)` and

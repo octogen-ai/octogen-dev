@@ -1008,7 +1008,9 @@ describe("storerouter stores", () => {
   it("names the valid subcommands for an unknown one", async () => {
     const result = await runCli({ argv: ["stores", "list"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);
-    expect(result.json()["message"]).toContain("Use one of: search, show");
+    expect(result.json()["message"]).toContain(
+      "Use one of: search, similar, show, products, categories",
+    );
     expect(result.requests).toHaveLength(0);
   });
 
@@ -1024,4 +1026,180 @@ it("rejects the retired domains command without a request", async () => {
   const result = await runCli({ argv: ["domains"] });
   expect(result.exitCode).toBe(ExitCode.Usage);
   expect(result.requests).toHaveLength(0);
+});
+
+describe("storerouter stores products", () => {
+  it("is one searchProducts request scoped by store domain", async () => {
+    const result = await runCli({
+      argv: [
+        "stores",
+        "products",
+        "https://www.TheReformation.com/products/x",
+        "linen",
+        "dress",
+        "--facet",
+        "color_family=red",
+        "--price-max",
+        "300",
+        "--limit",
+        "12",
+        "--json",
+      ],
+      env: KEYED,
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]?.body).toEqual({
+      stores: ["thereformation.com"],
+      q: "linen dress",
+      facets: [{ name: "color_family", values: ["red"] }],
+      price_max: 300,
+      limit: 12,
+    });
+    const body = result.json();
+    expect(body["command"]).toBe("stores products");
+    expect(body["host"]).toBe("thereformation.com");
+    expect(body["query"]).toBe("linen dress");
+    expect(body["nextCursor"]).toBe("cursor-1");
+    expect(body["items"]).toEqual([
+      {
+        uuid: "11111111-1111-4111-8111-111111111111",
+        catalog: "mytheresa",
+        title: "Paisley silk jacket",
+        brand: "Etro",
+        currentPrice: 1183,
+        productUrl: "https://www.mytheresa.com/us/en/women/etro-paisley-silk-jacket",
+      },
+    ]);
+  });
+
+  it("browses without a query and pages with --cursor", async () => {
+    const result = await runCli({
+      argv: ["stores", "products", "thereformation.com", "--cursor", "cursor-1"],
+      env: KEYED,
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body["stores"]).toEqual(["thereformation.com"]);
+    expect(body["cursor"]).toBe("cursor-1");
+    expect(body).not.toHaveProperty("q");
+    expect(body).not.toHaveProperty("catalogs");
+  });
+
+  it("exits 6 with covered: false on 404 domain_not_covered", async () => {
+    const result = await runCli({
+      argv: ["stores", "products", "example.com"],
+      env: KEYED,
+      routes: {
+        "POST /products/search": {
+          body: { detail: "domain_not_covered" },
+          status: 404,
+        },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    const body = result.json();
+    expect(body["code"]).toBe("domain_not_covered");
+    expect(body["covered"]).toBe(false);
+  });
+
+  it("exits 6 with no_matches on an empty page", async () => {
+    const result = await runCli({
+      argv: ["stores", "products", "thereformation.com", "unicorn"],
+      env: KEYED,
+      routes: { "POST /products/search": { body: { items: [], nextCursor: null } } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("no_matches");
+  });
+
+  it.each([
+    [["stores", "products"], "missing_argument"],
+    [["stores", "products", "not a host/with a path"], "invalid_host"],
+    [["stores", "products", "a.example", "--catalog", "acme"], "unknown_option"],
+  ])("refuses %j before any request", async (argv, code) => {
+    const result = await runCli({ argv, env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe(code);
+    expect(result.requests).toHaveLength(0);
+  });
+});
+
+describe("storerouter stores similar", () => {
+  const results = { results: [STORE_SEARCH_BODY.results[1]] };
+
+  it("POSTs every normalized domain once, and --limit", async () => {
+    const result = await runCli({
+      argv: [
+        "stores",
+        "similar",
+        "https://www.TheReformation.com/products/x",
+        "everlane.com",
+        "thereformation.com",
+        "--limit",
+        "5",
+        "--json",
+      ],
+      env: KEYED,
+      routes: { "POST /stores/similar": { body: results } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests[0]?.body).toEqual({
+      stores: ["thereformation.com", "everlane.com"],
+      limit: 5,
+    });
+    const body = result.json();
+    expect(body["command"]).toBe("stores similar");
+    expect(body["similarTo"]).toEqual(["thereformation.com", "everlane.com"]);
+    expect(body["stores"]).toEqual(results.results);
+  });
+
+  it("prints each store on a terminal", async () => {
+    const result = await runCli({
+      argv: ["stores", "similar", "thereformation.com"],
+      env: KEYED,
+      isTty: true,
+      routes: { "POST /stores/similar": { body: results } },
+    });
+    expect(result.stdout).toBe(
+      ["1 store like thereformation.com", "  Uniqlo · uniqlo.com", ""].join("\n"),
+    );
+  });
+
+  it.each([
+    ["domain_not_covered", "not_covered"],
+    ["store_not_profiled", undefined],
+  ])("exits 6 on 404 %s", async (detail, coverage) => {
+    const result = await runCli({
+      argv: ["stores", "similar", "example.com"],
+      env: KEYED,
+      routes: { "POST /stores/similar": { body: { detail }, status: 404 } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    const body = result.json();
+    expect(body["code"]).toBe(detail);
+    if (coverage !== undefined) expect(body["coverage"]).toBe(coverage);
+  });
+
+  it("exits 6 with no_matches when nothing else is profiled", async () => {
+    const result = await runCli({
+      argv: ["stores", "similar", "thereformation.com"],
+      env: KEYED,
+      routes: { "POST /stores/similar": { body: { results: [] } } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("no_matches");
+  });
+
+  it.each([
+    [["stores", "similar"], "missing_argument"],
+    [["stores", "similar", "not a host/with a path"], "invalid_host"],
+  ])("refuses %j before any request", async (argv, code) => {
+    const result = await runCli({ argv, env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe(code);
+    expect(result.requests).toHaveLength(0);
+  });
 });

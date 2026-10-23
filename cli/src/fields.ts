@@ -24,6 +24,7 @@ type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"
 type BrandTextSearchRequest = components["schemas"]["BrandTextSearchRequest"];
 type SimilarBrandsRequest = components["schemas"]["SimilarBrandsRequest"];
 type StoreSearchRequest = components["schemas"]["StoreSearchRequest"];
+type SimilarStoresRequest = components["schemas"]["SimilarStoresRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
@@ -87,10 +88,24 @@ export const SEARCH_FIELDS = {
   similar_to_brands: unsupported(
     "Ranks by brand aesthetic rather than filtering; reach it with `storerouter api`.",
   ),
+  stores: unsupported(
+    "Searching by store domain is `storerouter stores products <domain> [query]`; " +
+      "`search` narrows by catalog key with --catalog.",
+  ),
   understand: unsupported(
     "Literal matching changes what the positional query means; reach it with " +
       "`storerouter api`.",
   ),
+} satisfies FieldMap<SearchRequest>;
+
+/** `stores products`: the same request, with the store domain as the positional. */
+export const STORE_PRODUCTS_FIELDS = {
+  ...SEARCH_FIELDS,
+  catalogs: unsupported(
+    "The store domain names the catalogs; the server rejects catalogs with stores.",
+  ),
+  q: { flag: "[query] (positional)" },
+  stores: { flag: "<domain|url> (positional)", codec: "custom" },
 } satisfies FieldMap<SearchRequest>;
 
 // ── POST /products/more-like-this ──────────────────────────────────────────
@@ -150,6 +165,11 @@ export const STORE_SEARCH_FIELDS = {
   text: { flag: "<description> (positional)" },
 } satisfies FieldMap<StoreSearchRequest>;
 
+export const STORE_SIMILAR_FIELDS = {
+  limit: { flag: "--limit" },
+  stores: { flag: "<domain|url>… (positional)", codec: "custom" },
+} satisfies FieldMap<SimilarStoresRequest>;
+
 // ── /brands ─────────────────────────────────────────────────────────────────
 
 export const BRAND_SEARCH_FIELDS = {
@@ -205,6 +225,7 @@ export const FIELD_MAPS: Readonly<
   getMe: {},
   getStore: STORE_FIELDS,
   searchStores: STORE_SEARCH_FIELDS,
+  searchSimilarStores: STORE_SIMILAR_FIELDS,
   searchBrandsFromText: BRAND_SEARCH_FIELDS,
   searchSimilarBrands: BRAND_SIMILAR_FIELDS,
   searchBrandPrefix: BRAND_PREFIX_FIELDS,
