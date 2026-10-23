@@ -123,6 +123,7 @@ describe("every published request field is accounted for", () => {
       searchProducts: "search",
       getMe: "status",
       getStore: "stores show",
+      searchStores: "stores search",
       searchBrandsFromText: "brands search",
       searchSimilarBrands: "brands similar",
       searchBrandPrefix: "brands prefix",

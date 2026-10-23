@@ -230,6 +230,36 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     });
     expect(result.calls).toBe(1);
   });
+  it("stores search runs one POST through the policy", async () => {
+    const result = await shell(
+      "storerouter stores search 'linen dresses' --limit 5 --json | jq -r '.stores[0].store.primaryDomain'",
+    );
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("example.com");
+    expect(result.calls).toBe(1);
+  });
+  it("allows searchStores with only its declared, in-range body", () => {
+    const url = "https://api.storerouter.ai/v1/stores/search";
+    expect(
+      checkDemoRequest({
+        url,
+        method: "POST",
+        headers: {},
+        body: JSON.stringify({ text: "linen dresses", limit: 24 }),
+      }),
+    ).toBe("searchStores");
+    for (const request of [
+      { url, method: "GET" },
+      { url: `${url}?limit=5`, method: "POST", body: JSON.stringify({ text: "x" }) },
+      { url, method: "POST", body: JSON.stringify({}) },
+      { url, method: "POST", body: JSON.stringify({ text: "x", limit: 101 }) },
+      { url, method: "POST", body: JSON.stringify({ text: "x", catalogs: ["a"] }) },
+    ])
+      expect(
+        () => checkDemoRequest({ ...request, headers: {} }),
+        `${request.method} ${request.url} ${request.body ?? ""}`,
+      ).toThrow();
+  });
   it("raw api cannot list stores or smuggle a host through store's route", async () => {
     for (const line of [
       "storerouter api GET /stores --no-retry",

@@ -1,6 +1,6 @@
 ---
 name: storerouter
-description: Product data from real merchant catalogs, through the storerouter CLI. Use it to turn a product URL into a structured product, search products across covered stores, find similar products, check whether a store is covered and which filters it supports, discover brands and browse a brand's products, and resolve a product from page HTML you already have. Not for scraping arbitrary pages, general web search, or non-product pages.
+description: Product data from real merchant catalogs, through the storerouter CLI. Use it to turn a product URL into a structured product, search products across covered stores, find similar products, check whether a store is covered and which filters it supports, find stores that sell a kind of product, discover brands and browse a brand's products, and resolve a product from page HTML you already have. Not for scraping arbitrary pages, general web search, or non-product pages.
 metadata: {"openclaw":{"requires":{"bins":["storerouter"]},"install":[{"kind":"node","package":"@storerouter/cli","bins":["storerouter"]}]}}
 ---
 
@@ -42,6 +42,7 @@ conversation.
 | A need, but no URL                         | `storerouter search '<query>'`                  |
 | A product, and want alternatives           | `storerouter similar <url-or-uuid>`             |
 | A store, and want its coverage and filters | `storerouter stores show <domain>`              |
+| A kind of store, but no domain             | `storerouter stores search '<description>'`     |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
 | A brand, and want its details and coverage | `storerouter brands show <brand>`               |
@@ -120,6 +121,20 @@ The source must be in the index: `parse` it first if unsure. A short first page
 is retried with the server's own inferred filters dropped, never yours;
 `--no-relax` turns that off. `--price-preference lower` steers toward cheaper
 alternatives.
+
+## Discover stores
+
+```bash
+storerouter stores search 'linen dresses' --limit 10
+```
+
+- Ranks the stores with published assortment profiles, not every covered store,
+  so fewer results than `--limit` is normal and there is no next page.
+- A result's `matchedDepartment.productCount` is the size of that department in
+  the store's profile, not a count of products matching the description. To
+  find the products, run `storerouter search` with `--catalog <store.catalog>`.
+- Pass `store.primaryDomain` to `storerouter stores show` for its coverage and
+  facet names.
 
 ## Discover brands
 

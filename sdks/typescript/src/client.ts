@@ -30,6 +30,8 @@ import type {
   CoverageUrlListUrlsPage,
   CoverageUrlMutationResponse,
   StoreCoverageResponse,
+  StoreSearchRequest,
+  StoreSearchResponse,
   GetBrandTopCategoriesParams,
   ListTaxonomyCategoriesParams,
   MeResponse,
@@ -50,6 +52,7 @@ import type {
   SearchBrandsFromTextParams,
   SearchProductsParams,
   SearchSimilarBrandsParams,
+  SearchStoresParams,
   SimilarBrandsRequest,
   SimilarBrandsResponse,
   Facet,
@@ -251,6 +254,29 @@ export class OctogenClient {
       pathParams: { domain: host },
     });
     return data as StoreCoverageResponse;
+  }
+
+  /**
+   * Stores whose observed assortment matches a plain-language description
+   * (`POST /v1/stores/search`), ranked by their precomputed profiles plus an
+   * exact store-name or domain match. Unbilled. Searches a configured cohort
+   * of profiled stores, not every covered store, so results may underfill and
+   * there is no pagination. Unconfigured search is a `503` with `detail`
+   * `store_search_unavailable`. Pass a result's `store.primaryDomain` to
+   * {@link getStore} for its coverage.
+   */
+  async searchStores(
+    params: SearchStoresParams,
+    options: RequestOptions = {},
+  ): Promise<StoreSearchResponse> {
+    assertNonEmptyString(params.text.trim(), "text");
+    const body: StoreSearchRequest = { text: params.text };
+    if (params.limit !== undefined) body.limit = params.limit;
+    const data = await this.json("searchStores", {
+      context: options.context,
+      body,
+    });
+    return data as StoreSearchResponse;
   }
 
   /**

@@ -71,6 +71,30 @@ export const fixtureTransport: Transport = (request, signal) => {
       ],
       catalogsTruncated: false,
     };
+  else if (path === "/v1/stores/search")
+    data = {
+      results: [
+        {
+          store: {
+            storeId: "catalog:example",
+            catalog: "example",
+            displayName: "Example (fixture)",
+            primaryDomain: "example.com",
+            domains: ["example.com"],
+          },
+          profileVersion: "fixture-profile",
+          computedAt: "2026-10-19T00:00:00Z",
+          summary: "Observed assortment (fixture).",
+          matchedDepartment: {
+            departmentId: "category:apparel & accessories > clothing",
+            categoryPath: ["Apparel & Accessories", "Clothing"],
+            productCount: 900,
+            summary: "Linen dresses (fixture).",
+            distributions: [],
+          },
+        },
+      ],
+    };
   else if (path.endsWith("/search"))
     data = {
       items: [

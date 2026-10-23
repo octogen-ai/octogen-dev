@@ -63,6 +63,10 @@ if that stops being true — see
   counts, populated facets and a price histogram. A URL is normalized to its
   host first. An uncovered host raises `OctogenNotFoundError` with
   `detail == "domain_not_covered"`. There is no list of covered hosts.
+- `search_stores(text, limit=...)` ranks profiled stores against a
+  plain-language description (`POST /v1/stores/search`). It searches the stores
+  with published profiles, not every covered store, so results may underfill;
+  there is no pagination.
 
 - `search_products(...)` searches every active catalog by default, or only the
   catalogs in `catalogs` (1–500 keys) when it is provided. The query field is

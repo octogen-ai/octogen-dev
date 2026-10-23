@@ -757,6 +757,31 @@ export type PriceDistribution = components["schemas"]["PriceDistribution"];
 /** One histogram bar: products priced in `[min, max)`. */
 export type PriceBucket = components["schemas"]["PriceBucket"];
 
+// ── Store discovery (/v1/stores/search) ─────────────────────────────────────
+
+/** Ranked unique stores; no total or pagination is promised, and results may underfill. */
+export type StoreSearchResponse = components["schemas"]["StoreSearchResponse"];
+
+/**
+ * One store with its published profile summary and, when one is relevant, its
+ * strongest department. Counts describe the profiled population, not matches
+ * to the query text.
+ */
+export type StoreSearchResult = components["schemas"]["StoreSearchResult"];
+
+/** Wire body of `POST /v1/stores/search`; `limit` has a server default. */
+export type StoreSearchRequest = Omit<
+  components["schemas"]["StoreSearchRequest"],
+  "limit"
+> & { limit?: number };
+
+export interface SearchStoresParams {
+  /** Plain-language description of the kind of store, 1-500 characters. */
+  text: string;
+  /** 1-100; the server defaults to 24. */
+  limit?: number;
+}
+
 // ── Brands (/v1/brands) ─────────────────────────────────────────────────────
 
 /** A brand-index filter: a {@link BrandFacetName} or an attribute key, plus values. */

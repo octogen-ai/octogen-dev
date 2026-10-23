@@ -54,6 +54,10 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   counts, populated facets and a price histogram. A URL is normalized to its
   host first. An uncovered host throws `OctogenNotFoundError` with
   `detail` `domain_not_covered`. There is no list of covered hosts.
+- `searchStores({ text, limit })` ranks profiled stores against a
+  plain-language description (`POST /v1/stores/search`). It searches the stores
+  with published profiles, not every covered store, so results may underfill;
+  there is no pagination.
 - Brand discovery (`/v1/brands`): `searchBrandsFromText({ text, referenceBrands })`
   and `searchSimilarBrands({ brands })` rank brands, `searchBrandPrefix(prefix)`
   completes a canonical name, `getBrandDetails(brand)` and

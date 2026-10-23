@@ -156,6 +156,22 @@ Exit `6` with `covered: false` means the server answered `404
 domain_not_covered`: no catalog serves that host. It asks about one host at a
 time; there is no list of covered hosts.
 
+### `storerouter stores search <description>`
+
+```bash
+storerouter stores search 'linen dresses' --limit 10
+```
+
+Stores ranked by how well their observed assortment matches the description,
+from `POST /v1/stores/search`. It searches the stores with published profiles,
+not every covered store, so fewer results than `--limit` is normal and there is
+no next page. Each result names the store and, when one is relevant, the
+department that matched with its profiled product count: the size of that
+department, not a count of matching products. `--json` emits `query`, `count`
+and `stores`, the results without each matched department's `distributions`
+(about 100 KB per store); `stores show --json` has the full profile. Exit `6` with `code: no_matches` means no
+profiled store matched.
+
 ### `storerouter brands <search|similar|show|products|categories|prefix>`
 
 ```bash

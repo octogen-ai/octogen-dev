@@ -23,6 +23,7 @@ type MoreLikeThisRequest = components["schemas"]["ProgrammaticMoreLikeThisReques
 type ResolveRequest = components["schemas"]["ProgrammaticResolveFromHtmlRequest"];
 type BrandTextSearchRequest = components["schemas"]["BrandTextSearchRequest"];
 type SimilarBrandsRequest = components["schemas"]["SimilarBrandsRequest"];
+type StoreSearchRequest = components["schemas"]["StoreSearchRequest"];
 
 // ── POST /products/lookup ──────────────────────────────────────────────────
 
@@ -144,6 +145,11 @@ export const STORE_FIELDS = {
   domain: { flag: "<host|url> (positional)" },
 } satisfies FieldMap<{ domain: string }>;
 
+export const STORE_SEARCH_FIELDS = {
+  limit: { flag: "--limit" },
+  text: { flag: "<description> (positional)" },
+} satisfies FieldMap<StoreSearchRequest>;
+
 // ── /brands ─────────────────────────────────────────────────────────────────
 
 export const BRAND_SEARCH_FIELDS = {
@@ -198,6 +204,7 @@ export const FIELD_MAPS: Readonly<
   searchProducts: SEARCH_FIELDS,
   getMe: {},
   getStore: STORE_FIELDS,
+  searchStores: STORE_SEARCH_FIELDS,
   searchBrandsFromText: BRAND_SEARCH_FIELDS,
   searchSimilarBrands: BRAND_SIMILAR_FIELDS,
   searchBrandPrefix: BRAND_PREFIX_FIELDS,

@@ -41,7 +41,7 @@ control is consistent across surfaces.
 
 The three product endpoints below are documented in full here. The rest are
 covered by the [published OpenAPI document](#openapi) and by a method in each
-SDK — `getMe`, `getStore`, `resolveProductFromHtml`, the six brand operations,
+SDK — `getMe`, `getStore`, `searchStores`, `resolveProductFromHtml`, the six brand operations,
 the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the eight
 [Coverage URL Lists](./coverage-url-lists-v1.md) operations:
 
@@ -49,6 +49,7 @@ the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the e
 | ------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `GET /me`                                  | Your organization, key id and provenance, quotas, rate-limit posture.                 |
 | `GET /stores/{domain}`                     | One store's coverage: catalogs, product counts, populated facets, price histogram.    |
+| `POST /stores/search`                      | Profiled stores ranked against a plain-language description of their assortment.      |
 | `POST /products/resolve-from-html`         | Resolve a product from HTML you already have. No index, no fetch.                     |
 | `GET /taxonomy/categories`                 | Root categories, or one category's children, with the facets that select each.        |
 | `GET /taxonomy/attributes`                 | A category's attributes and their search facet names.                                 |

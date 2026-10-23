@@ -2,6 +2,11 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- Add `storerouter stores search <description>` (`--limit`) for `POST
+/v1/stores/search`: profiled stores ranked by observed assortment, each with
+  the department that matched. An empty answer exits `6` with `no_matches`.
+  Requires `@octogen-ai/sdk` 0.9.0.
+
 - `brands show <brand>` also prints the brand's coverage across catalogs in the
   same layout as one `stores show` catalog (product count, price histogram
   summary, best-covered fields), then the catalogs carrying it with product

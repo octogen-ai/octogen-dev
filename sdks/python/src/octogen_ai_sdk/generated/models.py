@@ -1046,6 +1046,17 @@ class StoreProfileValue(BaseModel):
     value: str = Field(..., description="Canonical value identifier.", title="Value")
 
 
+class StoreSearchRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    limit: int | None = Field(24, title="Limit")
+    text: str = Field(
+        ..., description="Describe the kind of store to discover.", title="Text"
+    )
+
+
 class TaxonomyAttribute(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2468,6 +2479,24 @@ class StoreProfile(BaseModel):
     store: StoreIdentity
 
 
+class StoreSearchResult(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    computed_at: AwareDatetime = Field(..., alias="computedAt", title="Computedat")
+    matched_department: StoreDepartmentProfile | None = Field(
+        None,
+        alias="matchedDepartment",
+        description="Relevant department evidence, if any. Its counts describe that department's profile population, not matches to the query text.",
+    )
+    profile_version: str = Field(..., alias="profileVersion", title="Profileversion")
+    store: StoreIdentity
+    summary: str = Field(
+        ..., description="Published overall profile summary.", title="Summary"
+    )
+
+
 class MerchantProductUrlLookupResponse(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2560,7 +2589,7 @@ class StoreCatalogCoverage(BaseModel):
     )
     profile: StoreProfile | None = Field(
         None,
-        description="Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation.",
+        description="Precomputed discovery profile for this catalog, or null when no usable profile is published: missing, revoked, expired, invalid, or temporarily unavailable profiles are null. Current public catalog eligibility and registry identity are rechecked. Coverage is still available when null. Empty profiles retain their zero-product evidence. Profile counts and timestamps belong to its own generation.",
     )
 
 
@@ -2579,3 +2608,11 @@ class StoreCoverageResponse(BaseModel):
         description="Normalized requested domain; retained for compatibility.",
         title="Host",
     )
+
+
+class StoreSearchResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    results: list[StoreSearchResult] = Field(..., title="Results")

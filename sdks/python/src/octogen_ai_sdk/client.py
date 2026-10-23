@@ -67,6 +67,7 @@ from octogen_ai_sdk.models import (
     ProgrammaticResolveFromHtmlRequest,
     SimilarBrandsResponse,
     StoreCoverageResponse,
+    StoreSearchResponse,
     TaxonomyAttributePage,
     TaxonomyAttributeValuePage,
     TaxonomyCategoryPage,
@@ -375,6 +376,32 @@ class OctogenClient:
             "getStore", path_params={"domain": host}, context=context, timeout=timeout
         )
         return StoreCoverageResponse.model_validate(data)
+
+    async def search_stores(
+        self,
+        text: str,
+        *,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> StoreSearchResponse:
+        """Stores whose observed assortment matches a description.
+
+        ``POST /v1/stores/search``: ``text`` is 1-500 characters, such as
+        ``"linen dresses"``, and ``limit`` is 1-100 (server default 24). Stores
+        are ranked by their precomputed profiles plus an exact store-name or
+        domain match. Unbilled. Searches a configured cohort of profiled
+        stores, not every covered store, so results may underfill and there is
+        no pagination. Unconfigured search raises :class:`OctogenServerError`
+        (``503``) with ``detail == "store_search_unavailable"``. Pass
+        a result's ``store.primaryDomain`` to :meth:`get_store` for coverage.
+        """
+        _require_text("search_stores", "text", text)
+        body = _without_none({"text": text, "limit": limit})
+        data = await self._json(
+            "searchStores", json=body, context=context, timeout=timeout
+        )
+        return StoreSearchResponse.model_validate(data)
 
     async def search_products(
         self,

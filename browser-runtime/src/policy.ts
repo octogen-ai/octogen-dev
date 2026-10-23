@@ -9,6 +9,7 @@ export const DEMO_OPERATIONS = [
   "parseProductAlias",
   "moreLikeThisProducts",
   "getStore",
+  "searchStores",
   // `/brands/prefix` before `/brands/{brand}`, which would also match it.
   "searchBrandPrefix",
   "searchBrandsFromText",
