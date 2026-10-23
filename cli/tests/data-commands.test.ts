@@ -718,6 +718,127 @@ describe("storerouter stores show", () => {
   });
 });
 
+const STORE_SEARCH_BODY = {
+  results: [
+    {
+      store: {
+        storeId: "catalog:thereformation",
+        catalog: "thereformation",
+        displayName: "Reformation",
+        primaryDomain: "thereformation.com",
+        domains: ["thereformation.com"],
+      },
+      profileVersion: "profile-1",
+      computedAt: "2026-10-22T19:09:24Z",
+      summary: "Observed public indexed assortment.",
+      matchedDepartment: {
+        departmentId: "category:apparel & accessories > clothing",
+        categoryPath: ["Apparel & Accessories", "Clothing"],
+        productCount: 3118,
+        summary: "Dresses (substantial).",
+        distributions: [],
+      },
+    },
+    {
+      store: {
+        storeId: "catalog:uniqlo",
+        catalog: "uniqlo",
+        displayName: "Uniqlo",
+        primaryDomain: "uniqlo.com",
+        domains: ["uniqlo.com"],
+      },
+      profileVersion: "profile-2",
+      computedAt: "2026-10-22T19:09:24Z",
+      summary: "Observed public indexed assortment.",
+      matchedDepartment: null,
+    },
+  ],
+};
+
+describe("storerouter stores search", () => {
+  it("POSTs the joined description and --limit", async () => {
+    const result = await runCli({
+      argv: ["stores", "search", "linen", "dresses", "--limit", "5", "--json"],
+      env: KEYED,
+      routes: { "POST /stores/search": { body: STORE_SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]?.body).toEqual({ text: "linen dresses", limit: 5 });
+    const body = result.json();
+    expect(body["command"]).toBe("stores search");
+    expect(body["query"]).toBe("linen dresses");
+    expect(body["count"]).toBe(2);
+    const [first, second] = STORE_SEARCH_BODY.results;
+    expect(body["stores"]).toEqual([
+      {
+        ...first,
+        matchedDepartment: {
+          departmentId: "category:apparel & accessories > clothing",
+          categoryPath: ["Apparel & Accessories", "Clothing"],
+          productCount: 3118,
+          summary: "Dresses (substantial).",
+        },
+      },
+      second,
+    ]);
+  });
+
+  it("prints each store with its matched department on a terminal", async () => {
+    const result = await runCli({
+      argv: ["stores", "search", "linen dresses"],
+      env: KEYED,
+      isTty: true,
+      routes: { "POST /stores/search": { body: STORE_SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests[0]?.body).toEqual({ text: "linen dresses", limit: 24 });
+    expect(result.stdout).toBe(
+      [
+        '2 stores for "linen dresses"',
+        "  Reformation · thereformation.com",
+        "    Apparel & Accessories > Clothing · 3,118 products profiled",
+        "  Uniqlo · uniqlo.com",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("exits 6 when no profiled store matched", async () => {
+    const result = await runCli({
+      argv: ["stores", "search", "nothing like this", "--json"],
+      env: KEYED,
+      routes: { "POST /stores/search": { body: { results: [] } } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("no_matches");
+  });
+
+  it("does not borrow exit 6 for an unconfigured search", async () => {
+    const result = await runCli({
+      argv: ["stores", "search", "linen", "--json", "--no-retry"],
+      env: KEYED,
+      routes: {
+        "POST /stores/search": {
+          status: 503,
+          body: { detail: "store_search_unavailable" },
+        },
+      },
+    });
+    expect(result.exitCode).not.toBe(ExitCode.NoResult);
+    expect(result.exitCode).not.toBe(ExitCode.Success);
+  });
+
+  it.each([[["stores", "search"]], [["stores", "search", "x", "--limit", "101"]]])(
+    "is a usage error for %j, before any request",
+    async (argv) => {
+      const result = await runCli({ argv, env: KEYED });
+      expect(result.exitCode).toBe(ExitCode.Usage);
+      expect(result.requests).toEqual([]);
+    },
+  );
+});
+
 describe("retired commands", () => {
   it.each([
     ["voyage", "example.com"],
@@ -735,6 +856,7 @@ describe("storerouter stores", () => {
     const result = await runCli({ argv: ["stores"] });
     expect(result.exitCode).toBe(ExitCode.Usage);
     expect(result.stderr).toContain("Usage: storerouter stores <subcommand>");
+    expect(result.stderr).toContain("search");
     expect(result.stderr).toContain("show");
     expect(result.requests).toHaveLength(0);
   });
@@ -742,7 +864,7 @@ describe("storerouter stores", () => {
   it("names the valid subcommands for an unknown one", async () => {
     const result = await runCli({ argv: ["stores", "list"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);
-    expect(result.json()["message"]).toContain("Use one of: show");
+    expect(result.json()["message"]).toContain("Use one of: search, show");
     expect(result.requests).toHaveLength(0);
   });
 

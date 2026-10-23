@@ -5506,7 +5506,7 @@
                 "type": "null"
               }
             ],
-            "description": "Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation."
+            "description": "Precomputed discovery profile for this catalog, or null when no usable profile is published: missing, revoked, expired, invalid, or temporarily unavailable profiles are null. Current public catalog eligibility and registry identity are rechecked. Coverage is still available when null. Empty profiles retain their zero-product evidence. Profile counts and timestamps belong to its own generation."
           }
         },
         "required": [
@@ -5815,6 +5815,93 @@
           "value"
         ],
         "title": "StoreProfileValue",
+        "type": "object"
+      },
+      "StoreSearchRequest": {
+        "additionalProperties": false,
+        "description": "POST /v1/stores/search: profile discovery, without product-facet promises.",
+        "properties": {
+          "limit": {
+            "default": 24,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "text": {
+            "description": "Describe the kind of store to discover.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "StoreSearchRequest",
+        "type": "object"
+      },
+      "StoreSearchResponse": {
+        "additionalProperties": false,
+        "description": "Ranked unique stores; no exhaustive total or pagination promise.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/StoreSearchResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "StoreSearchResponse",
+        "type": "object"
+      },
+      "StoreSearchResult": {
+        "additionalProperties": false,
+        "description": "One unique store, with profile evidence rather than live query counts.",
+        "properties": {
+          "computedAt": {
+            "format": "date-time",
+            "title": "Computedat",
+            "type": "string"
+          },
+          "matchedDepartment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoreDepartmentProfile"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Relevant department evidence, if any. Its counts describe that department's profile population, not matches to the query text."
+          },
+          "profileVersion": {
+            "minLength": 1,
+            "title": "Profileversion",
+            "type": "string"
+          },
+          "store": {
+            "$ref": "#/components/schemas/StoreIdentity"
+          },
+          "summary": {
+            "description": "Published overall profile summary.",
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "computedAt",
+          "profileVersion",
+          "store",
+          "summary"
+        ],
+        "title": "StoreSearchResult",
         "type": "object"
       },
       "TaxonomyAttribute": {
@@ -9563,9 +9650,84 @@
         ]
       }
     },
+    "/stores/search": {
+      "post": {
+        "description": "Rank unique stores using semantic profiles and exact store name/domain.\n\nUnbilled, authenticated and rate-limited. Searches an explicitly configured\npilot cohort, not every store. Counts are observed profile populations;\nuse products/search to establish product-level requirements or conjunctions.\nMissing, ineligible, empty, expired or unindexed current generations are\nomitted, so results may underfill. No total or pagination is promised.",
+        "operationId": "searchStores",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "description": "Organization cannot use the programmatic API."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "store_search_unavailable"
+                }
+              }
+            },
+            "description": "Store search is unconfigured or its backend is unavailable."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Discover stores by observed assortment",
+        "tags": [
+          "platform-catalog-api",
+          "platform-stores-api"
+        ]
+      }
+    },
     "/stores/{domain}": {
       "get": {
-        "description": "Inspect every catalog serving a covered store domain.\n\n``domain`` is a bare host (not a URL), lowercased with a leading ``www.``\nremoved. Unbilled; coverage snapshots are cached per catalog for about a day.\nEach catalog's profile is null until precomputed profiles are published.\nProfile counts describe observed assortment, not live product-query matches.",
+        "description": "Inspect every catalog serving a covered store domain.\n\n``domain`` is a bare host (not a URL), lowercased with a leading ``www.``\nremoved. Unbilled; coverage snapshots are cached per catalog for about a day.\nProfiles are read from published artifacts and checked against live catalog\neligibility. Missing, revoked, expired, or unavailable profiles are null.\nEmpty profiles retain their zero-product evidence. Observation timestamps\nbelong to the profile generation, independently of the coverage snapshot.\nProfile counts describe observed assortment, not live product-query matches.",
         "operationId": "getStore",
         "parameters": [
           {

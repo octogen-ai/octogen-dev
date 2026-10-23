@@ -1223,6 +1223,52 @@ describe("OctogenClient getStore", () => {
   });
 });
 
+describe("OctogenClient searchStores", () => {
+  const SEARCH_JSON = {
+    results: [
+      {
+        store: {
+          storeId: "catalog:thereformation",
+          catalog: "thereformation",
+          displayName: "Reformation",
+          primaryDomain: "thereformation.com",
+          domains: ["thereformation.com"],
+        },
+        profileVersion: "profile-1",
+        computedAt: "2026-10-22T19:09:24Z",
+        summary: "Observed public indexed assortment.",
+        matchedDepartment: null,
+      },
+    ],
+  };
+
+  it("POSTs text and limit to /stores/search", async () => {
+    const { calls, fetchMock } = createFetchMock(SEARCH_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.searchStores({ text: "linen dresses", limit: 5 });
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/stores/search`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({
+      text: "linen dresses",
+      limit: 5,
+    });
+    expect(page.results[0]?.store.primaryDomain).toBe("thereformation.com");
+  });
+
+  it("leaves limit to the server default and refuses blank text", async () => {
+    const { calls, fetchMock } = createFetchMock(SEARCH_JSON);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchStores({ text: "linen" });
+    expect(requestBodyJson(lastCall(calls))).toEqual({ text: "linen" });
+    await expect(client.searchStores({ text: "  " })).rejects.toThrow(TypeError);
+    expect(calls).toHaveLength(1);
+  });
+});
+
 describe("the keyless metered trial", () => {
   it("refuses to build a keyless client unless asked", () => {
     // Off by default: a client with no key is only useful against three routes,

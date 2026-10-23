@@ -1450,6 +1450,58 @@ async def test_get_store_rejects_input_with_no_host(value: str) -> None:
             await client.get_store(value)
 
 
+STORE_SEARCH_JSON = {
+    "results": [
+        {
+            "store": {
+                "storeId": "catalog:thereformation",
+                "catalog": "thereformation",
+                "displayName": "Reformation",
+                "primaryDomain": "thereformation.com",
+                "domains": ["thereformation.com"],
+            },
+            "profileVersion": "profile-1",
+            "computedAt": "2026-10-22T19:09:24Z",
+            "summary": "Observed public indexed assortment.",
+            "matchedDepartment": {
+                "departmentId": "category:apparel & accessories > clothing",
+                "categoryPath": ["Apparel & Accessories", "Clothing"],
+                "productCount": 3118,
+                "summary": "Dresses (substantial).",
+                "distributions": [],
+            },
+        }
+    ]
+}
+
+
+@respx.mock
+async def test_search_stores_posts_text_and_limit() -> None:
+    route = respx.post(f"{BASE_URL}/stores/search").mock(
+        return_value=httpx.Response(200, json=STORE_SEARCH_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_stores("linen dresses", limit=5)
+        await client.search_stores("linen")
+
+    assert json.loads(route.calls[0].request.content) == {
+        "text": "linen dresses",
+        "limit": 5,
+    }
+    assert json.loads(route.calls[1].request.content) == {"text": "linen"}
+    result = page.results[0]
+    assert result.store.primary_domain == "thereformation.com"
+    assert result.matched_department is not None
+    assert result.matched_department.product_count == 3118
+
+
+async def test_search_stores_rejects_blank_text() -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(ValueError, match="text must be a non-empty string"):
+            await client.search_stores("  ")
+
+
 @respx.mock
 async def test_get_store_not_covered_is_a_not_found_error() -> None:
     respx.get(f"{BASE_URL}/stores/example.com").mock(

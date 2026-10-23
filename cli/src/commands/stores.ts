@@ -1,20 +1,28 @@
 /**
- * `storerouter stores show <domain|url>` — one covered store's coverage snapshot.
+ * `storerouter stores <search|show>` — store discovery and one store's coverage.
  *
- * One domain in, one snapshot out (`GET /v1/stores/{domain}`). There is
- * deliberately no list mode and no local host cache: the full covered-host
- * list is not public, and nothing here may rebuild it. Ask about the store you
- * have.
+ * `stores search <description>` ranks profiled stores by observed assortment
+ * (`POST /v1/stores/search`); an empty answer exits `6`.
  *
- * Exit `0` covered, `6` when the server answers `404 domain_not_covered`, and
- * never `6` for any other reason.
+ * `stores show <domain|url>` is one domain in, one snapshot out
+ * (`GET /v1/stores/{domain}`). There is deliberately no list mode and no local
+ * host cache: the full covered-host list is not public, and nothing here may
+ * rebuild it. Ask about the store you have. Exit `0` covered, `6` when the
+ * server answers `404 domain_not_covered`, and never `6` for any other reason.
  */
 
-import { normalizeHost, type StoreCoverageResponse } from "@octogen-ai/sdk";
+import {
+  normalizeHost,
+  type SearchStoresParams,
+  type StoreCoverageResponse,
+  type StoreSearchResult,
+} from "@octogen-ai/sdk";
 
 import { call } from "../client.js";
+import { contractFlags, contractRequest } from "../contract.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
+import { STORE_SEARCH_FIELDS } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 
 type CatalogCoverage = StoreCoverageResponse["catalogs"][number];
@@ -204,4 +212,104 @@ export const storesShowCommand = {
   run: runShow,
   summary: "Show one store's coverage: catalogs, product counts, fields, prices",
   usage: "stores show <domain|url>",
+} satisfies CommandSpec;
+
+// ── stores search ───────────────────────────────────────────────────────────
+
+async function runSearch(context: CommandContext): Promise<ExitCode> {
+  const text = context.positionals.join(" ").trim();
+  if (text.length === 0) {
+    throw usageError(
+      "storerouter stores search <description> requires a description, such as 'linen dresses'.",
+      "missing_argument",
+    );
+  }
+  const params = contractRequest<SearchStoresParams>(
+    "searchStores",
+    STORE_SEARCH_FIELDS,
+    context.args,
+    { text },
+  );
+
+  const api = context.api();
+  const response = await call(api, "POST /stores/search", () =>
+    api.client.searchStores(params),
+  );
+  if (response.results.length === 0) {
+    throw noResult({
+      answeredWith: "200 POST /stores/search with an empty results[]",
+      code: "no_matches",
+      data: { query: text, stores: [] },
+      message: `No profiled stores matched ${JSON.stringify(text)}.`,
+      serverAnswered: true,
+    });
+  }
+  const count = response.results.length;
+  context.writer.emit({
+    command: context.command,
+    data: { query: text, count, stores: response.results.map(withoutDistributions) },
+    exitCode: ExitCode.Success,
+    human: () =>
+      [
+        `${String(count)} store${count === 1 ? "" : "s"} for ${JSON.stringify(text)}`,
+        ...response.results.map(storeLine),
+      ].join("\n"),
+    ok: true,
+  });
+  return ExitCode.Success;
+}
+
+/**
+ * A matched department carries every field distribution of its profile, about
+ * 100 KB per store, so `--json` keeps its identity, size and summary;
+ * `stores show <domain> --json` has the full profile.
+ */
+function withoutDistributions(result: StoreSearchResult): Record<string, unknown> {
+  const department = result.matchedDepartment;
+  if (department === null || department === undefined) {
+    return { ...result, matchedDepartment: null };
+  }
+  return {
+    ...result,
+    matchedDepartment: {
+      departmentId: department.departmentId,
+      categoryPath: department.categoryPath,
+      productCount: department.productCount,
+      summary: department.summary,
+    },
+  };
+}
+
+/** Name and domain, then the department that matched and its profiled size. */
+function storeLine(result: StoreSearchResult): string {
+  const line = `  ${result.store.displayName} · ${result.store.primaryDomain}`;
+  const department = result.matchedDepartment;
+  if (department === null || department === undefined) {
+    return line;
+  }
+  return `${line}\n    ${department.categoryPath.join(" > ")} · ${formatCount(
+    department.productCount,
+  )} products profiled`;
+}
+
+export const storesSearchCommand = {
+  flags: contractFlags("searchStores", STORE_SEARCH_FIELDS),
+  name: "stores search",
+  notes: [
+    "Ranks stores by how well their observed assortment matches a plain-language",
+    "description, plus an exact store-name or domain match. Searches the stores",
+    "with published profiles, not every covered store, so fewer than --limit",
+    "results is normal and there is no next page.",
+    "",
+    "Product counts describe the store's profiled department, not products that",
+    "match the description: use `storerouter search` for products, and",
+    "`storerouter stores show <domain>` for one store's coverage and full profile.",
+    "--json omits each matched department's distributions, which `stores show` has.",
+    "",
+    "Exit 6 means the server searched and no profiled store matched.",
+  ],
+  operations: ["searchStores"] as const,
+  run: runSearch,
+  summary: "Find stores from a plain-language description of what they sell",
+  usage: "stores search <description> [--limit <n>]",
 } satisfies CommandSpec;

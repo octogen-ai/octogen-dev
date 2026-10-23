@@ -1965,8 +1965,38 @@ export const PUBLIC_CONTRACT = {
       "method": "POST",
       "parameters": [],
       "path": "/brands/similar"
+    },
+    "searchStores": {
+      "body": {
+        "additionalProperties": false,
+        "description": "POST /v1/stores/search: profile discovery, without product-facet promises.",
+        "properties": {
+          "limit": {
+            "default": 24,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "text": {
+            "description": "Describe the kind of store to discover.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "StoreSearchRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/stores/search"
     }
   },
-  "sha256": "5017ca816a13ed498edf164ae0150556715760bb0eda2ecc5539ad16faa355fe",
+  "sha256": "50e4e32df4857edce606fe9ff9b0b0d3b0af3db7c786197d371826c6bfdaf68c",
   "version": "1.0.0"
 } as const;

@@ -2,6 +2,8 @@
 
 ## 0.9.0 (unreleased)
 
+- Add `searchStores({ text, limit })` for `POST /v1/stores/search`, returning
+  `StoreSearchResponse` (`StoreSearchResult` per store).
 - **Breaking:** `getDomain` is now `getStore` (`GET /v1/stores/{domain}`),
   returning `StoreCoverageResponse`; `DomainCoverageResponse` and
   `DomainCatalogCoverage` are now `StoreCoverageResponse` and

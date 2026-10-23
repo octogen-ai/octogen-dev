@@ -457,12 +457,41 @@ export interface paths {
          *
          *     ``domain`` is a bare host (not a URL), lowercased with a leading ``www.``
          *     removed. Unbilled; coverage snapshots are cached per catalog for about a day.
-         *     Each catalog's profile is null until precomputed profiles are published.
+         *     Profiles are read from published artifacts and checked against live catalog
+         *     eligibility. Missing, revoked, expired, or unavailable profiles are null.
+         *     Empty profiles retain their zero-product evidence. Observation timestamps
+         *     belong to the profile generation, independently of the coverage snapshot.
          *     Profile counts describe observed assortment, not live product-query matches.
          */
         get: operations["getStore"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stores/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discover stores by observed assortment
+         * @description Rank unique stores using semantic profiles and exact store name/domain.
+         *
+         *     Unbilled, authenticated and rate-limited. Searches an explicitly configured
+         *     pilot cohort, not every store. Counts are observed profile populations;
+         *     use products/search to establish product-level requirements or conjunctions.
+         *     Missing, ineligible, empty, expired or unindexed current generations are
+         *     omitted, so results may underfill. No total or pagination is promised.
+         */
+        post: operations["searchStores"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2797,7 +2826,7 @@ export interface components {
              * @description Indexed product groups in the catalog.
              */
             productCount: number;
-            /** @description Precomputed discovery profile for this catalog, or null when no profile is published. Coverage is still available when null. The initial contracts release does not build or publish profiles. Profile counts and timestamps belong to its own generation. */
+            /** @description Precomputed discovery profile for this catalog, or null when no usable profile is published: missing, revoked, expired, invalid, or temporarily unavailable profiles are null. Current public catalog eligibility and registry identity are rechecked. Coverage is still available when null. Empty profiles retain their zero-product evidence. Profile counts and timestamps belong to its own generation. */
             profile?: components["schemas"]["StoreProfile"] | null;
         };
         /**
@@ -2969,6 +2998,51 @@ export interface components {
              * @description Canonical value identifier.
              */
             value: string;
+        };
+        /**
+         * StoreSearchRequest
+         * @description POST /v1/stores/search: profile discovery, without product-facet promises.
+         */
+        StoreSearchRequest: {
+            /**
+             * Limit
+             * @default 24
+             */
+            limit: number;
+            /**
+             * Text
+             * @description Describe the kind of store to discover.
+             */
+            text: string;
+        };
+        /**
+         * StoreSearchResponse
+         * @description Ranked unique stores; no exhaustive total or pagination promise.
+         */
+        StoreSearchResponse: {
+            /** Results */
+            results: components["schemas"]["StoreSearchResult"][];
+        };
+        /**
+         * StoreSearchResult
+         * @description One unique store, with profile evidence rather than live query counts.
+         */
+        StoreSearchResult: {
+            /**
+             * Computedat
+             * Format: date-time
+             */
+            computedAt: string;
+            /** @description Relevant department evidence, if any. Its counts describe that department's profile population, not matches to the query text. */
+            matchedDepartment?: components["schemas"]["StoreDepartmentProfile"] | null;
+            /** Profileversion */
+            profileVersion: string;
+            store: components["schemas"]["StoreIdentity"];
+            /**
+             * Summary
+             * @description Published overall profile summary.
+             */
+            summary: string;
         };
         /**
          * TaxonomyAttribute
@@ -5060,6 +5134,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    searchStores: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreSearchResponse"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Organization cannot use the programmatic API. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Store search is unconfigured or its backend is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": "store_search_unavailable"
+                     *     }
+                     */
+                    "application/json": unknown;
                 };
             };
         };
