@@ -1,5 +1,5 @@
 /**
- * `storerouter stores <search|show>` — store discovery and one store's coverage.
+ * `storerouter stores <search|show|categories>` — store discovery and one store's coverage.
  *
  * `stores search <description>` ranks profiled stores by observed assortment
  * (`POST /v1/stores/search`); an empty answer exits `6`.
@@ -9,6 +9,9 @@
  * host cache: the full covered-host list is not public, and nothing here may
  * rebuild it. Ask about the store you have. Exit `0` covered, `6` when the
  * server answers `404 domain_not_covered`, and never `6` for any other reason.
+ *
+ * `stores categories <domain|url>` ranks the `category_path.depth_<n>` fields of
+ * that same snapshot, so it needs no profile and no second request.
  */
 
 import {
@@ -33,18 +36,18 @@ export type CoverageSnapshot = Pick<
   "computedAt" | "fields" | "price" | "productCount"
 >;
 
-async function runShow(context: CommandContext): Promise<ExitCode> {
-  const { writer } = context;
+/** The one `<domain|url>` positional, normalized the way the API normalizes hosts. */
+function hostArgument(context: CommandContext, command: string): string {
   const input = context.positionals[0];
   if (input === undefined || input.length === 0) {
     throw usageError(
-      "storerouter stores show <domain|url> requires a store domain, such as thereformation.com.",
+      `storerouter ${command} <domain|url> requires a store domain, such as thereformation.com.`,
       "missing_argument",
     );
   }
   if (context.positionals.length > 1) {
     throw usageError(
-      "storerouter stores show takes one domain. For several, run it once per domain.",
+      `storerouter ${command} takes one domain. For several, run it once per domain.`,
       "too_many_arguments",
     );
   }
@@ -57,17 +60,26 @@ async function runShow(context: CommandContext): Promise<ExitCode> {
       "invalid_host",
     );
   }
+  return host;
+}
 
+async function getStore(
+  context: CommandContext,
+  host: string,
+): Promise<StoreCoverageResponse> {
   const api = context.api();
-
-  let response: StoreCoverageResponse;
   try {
-    response = await call(api, `GET /stores/${host}`, () => api.client.getStore(host), {
+    return await call(api, `GET /stores/${host}`, () => api.client.getStore(host), {
       coverageAdjacent: true,
     });
   } catch (error) {
     throw asNotCoveredOrRethrow(error, host);
   }
+}
+
+async function runShow(context: CommandContext): Promise<ExitCode> {
+  const { writer } = context;
+  const response = await getStore(context, hostArgument(context, "stores show"));
 
   writer.emit({
     command: context.command,
@@ -212,6 +224,131 @@ export const storesShowCommand = {
   run: runShow,
   summary: "Show one store's coverage: catalogs, product counts, fields, prices",
   usage: "stores show <domain|url>",
+} satisfies CommandSpec;
+
+// ── stores categories ───────────────────────────────────────────────────────
+
+/** `category_path.depth_<n>` coverage fields carry one taxonomy level each. */
+const CATEGORY_FIELD = /^category_path\.depth_(\d+)$/;
+
+/**
+ * Coverage keeps each field's top 10 values, so ranking across levels is exact
+ * only up to 10: an 11th value at one level could outrank another's 10th.
+ */
+const MAX_CATEGORIES = 10;
+
+interface StoreCategory {
+  name: string;
+  level: number;
+  count: number;
+  share: number;
+}
+
+/** A catalog's categories at `minLevel` or deeper, most products first. */
+function topCategories(
+  catalog: CatalogCoverage,
+  minLevel: number,
+  limit: number,
+): StoreCategory[] {
+  const categories: StoreCategory[] = [];
+  for (const field of catalog.fields) {
+    const level = Number(CATEGORY_FIELD.exec(field.name)?.[1]);
+    if (!Number.isInteger(level) || level < minLevel) {
+      continue;
+    }
+    for (const value of field.topValues) {
+      categories.push({
+        name: value.label,
+        level,
+        count: value.count,
+        share: catalog.productCount === 0 ? 0 : value.count / catalog.productCount,
+      });
+    }
+  }
+  // Ties go to the deeper, more specific level, then to the name.
+  return categories
+    .sort(
+      (a, b) => b.count - a.count || b.level - a.level || a.name.localeCompare(b.name),
+    )
+    .slice(0, limit);
+}
+
+async function runCategories(context: CommandContext): Promise<ExitCode> {
+  const host = hostArgument(context, "stores categories");
+  const minLevel = context.args.integer("min-level", { min: 0, max: 10 }) ?? 0;
+  const limit = context.args.integer("limit", { min: 1, max: MAX_CATEGORIES }) ?? 3;
+  const response = await getStore(context, host);
+
+  const catalogs = response.catalogs.map((catalog) => ({
+    catalog: catalog.catalog,
+    catalogDisplayName: catalog.catalogDisplayName,
+    productCount: catalog.productCount,
+    computedAt: catalog.computedAt,
+    categories: topCategories(catalog, minLevel, limit),
+  }));
+  if (catalogs.every((catalog) => catalog.categories.length === 0)) {
+    throw noResult({
+      answeredWith: "200 GET /stores/{domain} with no category coverage",
+      code: "no_matches",
+      data: { host: response.host, catalogs },
+      message: `No categories are counted for ${response.host} at level ${String(minLevel)} or deeper.`,
+      serverAnswered: true,
+    });
+  }
+  context.writer.emit({
+    command: context.command,
+    data: { host: response.host, catalogs },
+    exitCode: ExitCode.Success,
+    human: () =>
+      [
+        `Top categories for ${response.host}`,
+        ...catalogs.flatMap((catalog) => [
+          "",
+          `${catalog.catalogDisplayName} (${catalog.catalog}) · ${formatCount(
+            catalog.productCount,
+          )} products`,
+          ...(catalog.categories.length === 0
+            ? ["  —"]
+            : catalog.categories.map(
+                (category) =>
+                  `  ${category.name} (level ${String(category.level)})  ${formatCount(
+                    category.count,
+                  )} · ${String(Math.round(category.share * 100))}%`,
+              )),
+        ]),
+      ].join("\n"),
+    ok: true,
+  });
+  return ExitCode.Success;
+}
+
+export const storesCategoriesCommand = {
+  flags: {
+    "min-level": {
+      describe:
+        "Skip shallower taxonomy levels, e.g. 2 for Dresses over Clothing. Default: 0. Maximum: 10.",
+      kind: "number",
+      placeholder: "n",
+    },
+    limit: {
+      describe: `Categories per catalog. Default: 3. Maximum: ${String(MAX_CATEGORIES)}.`,
+      kind: "number",
+      placeholder: "n",
+    },
+  },
+  name: "stores categories",
+  notes: [
+    "Categories ranked by how many of the store's indexed products they hold,",
+    "with each one's share of the catalog. Read from the same coverage snapshot",
+    "as `stores show`, one list per catalog serving the domain.",
+    "",
+    "Exit 6 means the domain is not covered, or no category is counted at",
+    "--min-level or deeper.",
+  ],
+  operations: ["getStore"] as const,
+  run: runCategories,
+  summary: "Show a store's top categories by product count",
+  usage: "stores categories <domain|url> [--min-level <n>] [--limit <n>]",
 } satisfies CommandSpec;
 
 // ── stores search ───────────────────────────────────────────────────────────

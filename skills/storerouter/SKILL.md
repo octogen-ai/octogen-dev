@@ -43,6 +43,7 @@ conversation.
 | A product, and want alternatives           | `storerouter similar <url-or-uuid>`             |
 | A store, and want its coverage and filters | `storerouter stores show <domain>`              |
 | A kind of store, but no domain             | `storerouter stores search '<description>'`     |
+| A store, and want what it mostly sells     | `storerouter stores categories <domain>`        |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
 | A brand, and want its details and coverage | `storerouter brands show <brand>`               |
@@ -134,7 +135,8 @@ storerouter stores search 'linen dresses' --limit 10
   the store's profile, not a count of products matching the description. To
   find the products, run `storerouter search` with `--catalog <store.catalog>`.
 - Pass `store.primaryDomain` to `storerouter stores show` for its coverage and
-  facet names.
+  facet names, or to `storerouter stores categories` for what it mostly sells
+  (`--min-level 2` skips broad levels such as Clothing).
 
 ## Discover brands
 

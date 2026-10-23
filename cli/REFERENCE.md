@@ -178,6 +178,29 @@ Calls: getStore (through @octogen-ai/sdk 0.9.0)
 Global options: storerouter --help
 ```
 
+## stores categories
+
+```text
+storerouter stores categories <domain|url> [--min-level <n>] [--limit <n>]
+
+  Show a store's top categories by product count
+
+  Categories ranked by how many of the store's indexed products they hold,
+  with each one's share of the catalog. Read from the same coverage snapshot
+  as `stores show`, one list per catalog serving the domain.
+
+  Exit 6 means the domain is not covered, or no category is counted at
+  --min-level or deeper.
+
+Options:
+  --min-level <n>  Skip shallower taxonomy levels, e.g. 2 for Dresses over Clothing. Default: 0. Maximum: 10.
+  --limit <n>      Categories per catalog. Default: 3. Maximum: 10.
+
+Calls: getStore (through @octogen-ai/sdk 0.9.0)
+
+Global options: storerouter --help
+```
+
 ## brands search
 
 ```text

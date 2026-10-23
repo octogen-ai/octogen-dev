@@ -718,6 +718,150 @@ describe("storerouter stores show", () => {
   });
 });
 
+/** Coverage with taxonomy levels, values as the live route returns them (2026-10-23). */
+function categoryField(level: number, values: [string, number][]) {
+  return {
+    name: `category_path.depth_${String(level)}`,
+    displayName: `Category level ${String(level)}`,
+    source: "product",
+    populated: 3518,
+    coverage: 1,
+    distinct: values.length,
+    truncated: false,
+    topValues: values.map(([label, count]) => ({
+      value: label.toLowerCase(),
+      label,
+      count,
+    })),
+  };
+}
+
+const CATEGORY_STORE_BODY = {
+  host: "thereformation.com",
+  catalogs: [
+    {
+      ...STORE_BODY.catalogs[0],
+      productCount: 3518,
+      fields: [
+        ...(STORE_BODY.catalogs[0]?.fields ?? []),
+        categoryField(0, [["Apparel & Accessories", 3518]]),
+        categoryField(1, [
+          ["Clothing", 3116],
+          ["Shoes", 259],
+        ]),
+        categoryField(2, [
+          ["Dresses", 1027],
+          ["Tops", 974],
+          ["Pants", 315],
+        ]),
+      ],
+    },
+  ],
+};
+
+describe("storerouter stores categories", () => {
+  const routes = { "GET /stores/thereformation.com": { body: CATEGORY_STORE_BODY } };
+
+  it("issues the one stores show request", async () => {
+    const result = await runCli({
+      argv: ["stores", "categories", "https://www.thereformation.com/products/x"],
+      env: KEYED,
+      routes,
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]?.url).toBe(
+      "https://api.storerouter.ai/v1/stores/thereformation.com",
+    );
+  });
+
+  it("ranks category levels at --min-level or deeper, with shares", async () => {
+    const result = await runCli({
+      argv: [
+        "stores",
+        "categories",
+        "thereformation.com",
+        "--min-level",
+        "1",
+        "--limit",
+        "4",
+      ],
+      env: KEYED,
+      routes,
+    });
+    const body = result.json();
+    expect(body["command"]).toBe("stores categories");
+    expect(body["host"]).toBe("thereformation.com");
+    const catalogs = body["catalogs"] as { categories: unknown[] }[];
+    expect(catalogs[0]?.categories).toEqual([
+      { name: "Clothing", level: 1, count: 3116, share: 3116 / 3518 },
+      { name: "Dresses", level: 2, count: 1027, share: 1027 / 3518 },
+      { name: "Tops", level: 2, count: 974, share: 974 / 3518 },
+      { name: "Pants", level: 2, count: 315, share: 315 / 3518 },
+    ]);
+  });
+
+  it("prints one list per catalog on a terminal", async () => {
+    const result = await runCli({
+      argv: ["stores", "categories", "thereformation.com", "--min-level", "2"],
+      env: KEYED,
+      isTty: true,
+      routes,
+    });
+    expect(result.stdout).toBe(
+      [
+        "Top categories for thereformation.com",
+        "",
+        "Reformation (reformation) · 3,518 products",
+        "  Dresses (level 2)  1,027 · 29%",
+        "  Tops (level 2)  974 · 28%",
+        "  Pants (level 2)  315 · 9%",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("exits 6 when no category is counted that deep", async () => {
+    const result = await runCli({
+      argv: ["stores", "categories", "thereformation.com", "--min-level", "5"],
+      env: KEYED,
+      routes,
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("no_matches");
+  });
+
+  it("exits 6 with covered: false on 404 domain_not_covered", async () => {
+    const result = await runCli({
+      argv: ["stores", "categories", "example.com"],
+      env: KEYED,
+      routes: {
+        "GET /stores/example.com": {
+          body: { detail: "domain_not_covered" },
+          status: 404,
+        },
+      },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["code"]).toBe("domain_not_covered");
+  });
+
+  it.each([
+    [["stores", "categories"], "missing_argument"],
+    [["stores", "categories", "a.example", "b.example"], "too_many_arguments"],
+    [["stores", "categories", "a.example", "--limit", "11"], "invalid_option_value"],
+    [
+      ["stores", "categories", "a.example", "--min-level", "-1"],
+      "invalid_option_value",
+    ],
+  ])("refuses %j before any request", async (argv, code) => {
+    const result = await runCli({ argv, env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe(code);
+    expect(result.requests).toHaveLength(0);
+  });
+});
+
 const STORE_SEARCH_BODY = {
   results: [
     {
