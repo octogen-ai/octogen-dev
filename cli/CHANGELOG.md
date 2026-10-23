@@ -2,6 +2,12 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- Add `storerouter stores categories <domain|url>` (`--min-level`, `--limit`):
+  each catalog's top categories by product count, with their share of the
+  catalog, ranked from the `category_path.depth_<n>` fields of the same
+  `GET /v1/stores/{domain}` snapshot as `stores show`. Every covered store has
+  them; no profile is needed. Uncovered domains and empty answers exit `6`.
+
 - Add `storerouter stores search <description>` (`--limit`) for `POST
 /v1/stores/search`: profiled stores ranked by observed assortment, each with
   the department that matched. An empty answer exits `6` with `no_matches`.

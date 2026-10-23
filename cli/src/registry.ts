@@ -88,6 +88,18 @@ export const EXCLUDED_OPERATIONS = {
 
 export type ExcludedOperation = keyof typeof EXCLUDED_OPERATIONS;
 
+/**
+ * Operations more than one command issues, and why.
+ *
+ * Each operation normally has one owning command. A second command may issue
+ * it when it answers a different question from the same response, never as a
+ * second spelling of the first. As with exclusions, the reason is the record.
+ */
+export const SHARED_OPERATIONS = {
+  getStore:
+    "`stores categories` ranks the category fields of the snapshot `stores show` prints, so it needs no second request.",
+} as const satisfies Partial<Record<OperationId, string>>;
+
 /** Build the lookup table, rejecting a duplicate name rather than shadowing. */
 export function commandTable(
   commands: readonly CommandSpec[],

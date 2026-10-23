@@ -21,7 +21,11 @@ import { OPERATIONS, type OperationId } from "@octogen-ai/sdk";
 import { describe, expect, it } from "vitest";
 
 import { ALL_COMMANDS, COMMAND_LIST } from "../src/commands/index.js";
-import { EXCLUDED_OPERATIONS, mappedOperations } from "../src/registry.js";
+import {
+  EXCLUDED_OPERATIONS,
+  mappedOperations,
+  SHARED_OPERATIONS,
+} from "../src/registry.js";
 
 const published = Object.keys(OPERATIONS) as OperationId[];
 const mapped = mappedOperations(COMMAND_LIST);
@@ -112,7 +116,7 @@ describe("command coverage of the published operation set", () => {
   });
 
   it("has no command claiming an operation another command already owns for a different purpose", () => {
-    // Each operation is owned by one command.
+    // Each operation is owned by one command, unless SHARED_OPERATIONS says why not.
     const counts = new Map<OperationId, number>();
     for (const command of ALL_COMMANDS) {
       for (const operationId of command.operations) {
@@ -123,7 +127,7 @@ describe("command coverage of the published operation set", () => {
       .filter(([, count]) => count > 1)
       .map(([operationId]) => operationId)
       .sort();
-    expect(shared).toEqual([]);
+    expect(shared).toEqual(Object.keys(SHARED_OPERATIONS).sort());
   });
 });
 

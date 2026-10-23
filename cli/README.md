@@ -156,6 +156,21 @@ Exit `6` with `covered: false` means the server answered `404
 domain_not_covered`: no catalog serves that host. It asks about one host at a
 time; there is no list of covered hosts.
 
+### `storerouter stores categories <domain|url>`
+
+```bash
+storerouter stores categories thereformation.com --min-level 2 --limit 5
+```
+
+Each catalog's top categories by product count and their share of the catalog,
+from the same `GET /v1/stores/{domain}` snapshot as `stores show` (its
+`category_path.depth_<n>` fields), so every covered store has them.
+`--min-level` skips shallower taxonomy levels, as in `brands categories`;
+`--limit` is at most 10, the values each level's coverage keeps. `--json` emits
+`host` and `catalogs`, each with `categories` of `name`, `level`, `count` and
+`share`. Exit `6` means the domain is not covered, or no category is counted at
+that depth.
+
 ### `storerouter stores search <description>`
 
 ```bash
