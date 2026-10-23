@@ -58,6 +58,7 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "searchBrandsFromText": Operation("POST", "/brands/search"),
     "searchProducts": Operation("POST", "/products/search"),
     "searchSimilarBrands": Operation("POST", "/brands/similar"),
+    "searchSimilarStores": Operation("POST", "/stores/similar"),
     "searchStores": Operation("POST", "/stores/search"),
 }
 

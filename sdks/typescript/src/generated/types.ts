@@ -498,6 +498,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stores/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find stores similar to one or more stores
+         * @description Rank profiled stores by similarity to the given stores' whole assortment.
+         *
+         *     Unbilled, authenticated and rate-limited, like stores/search, and over the
+         *     same pilot cohort. Compares overall store profiles, averaged across the
+         *     given stores, which never appear in their own results. Results may
+         *     underfill; no total or pagination is promised.
+         */
+        post: operations["searchSimilarStores"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/taxonomy/attributes": {
         parameters: {
             query?: never;
@@ -2496,8 +2521,8 @@ export interface components {
          * @description Search indexed products by free text, filters, or both.
          *
          *     Each field controls one thing. ``q`` says what to find; ``facets``,
-         *     ``exclude_facets`` and the bounds say what to keep; ``catalogs`` says
-         *     where to look; ``limit`` and ``cursor`` page. Combinations that would
+         *     ``exclude_facets`` and the bounds say what to keep; ``catalogs`` or
+         *     ``stores`` says where to look; ``limit`` and ``cursor`` page. Combinations that would
          *     contradict each other are rejected with 422 rather than resolved silently.
          */
         ProgrammaticProductSearchRequest: {
@@ -2585,6 +2610,11 @@ export interface components {
              * @description Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.
              */
             similar_to_brands?: string[] | null;
+            /**
+             * Stores
+             * @description Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.
+             */
+            stores?: string[] | null;
             /**
              * Understand
              * @description Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.
@@ -2781,6 +2811,22 @@ export interface components {
              * @description Primary website domain for the brand.
              */
             domain?: string | null;
+        };
+        /**
+         * SimilarStoresRequest
+         * @description POST /v1/stores/similar: profiled stores like the given ones.
+         */
+        SimilarStoresRequest: {
+            /**
+             * Limit
+             * @default 24
+             */
+            limit: number;
+            /**
+             * Stores
+             * @description Store domains to find neighbours for, as `GET /stores/{domain}` takes them. Each needs a published profile; several are averaged.
+             */
+            stores: string[];
         };
         /** StoreAssortmentProfile */
         StoreAssortmentProfile: {
@@ -5183,6 +5229,98 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Store search is unconfigured or its backend is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": "store_search_unavailable"
+                     *     }
+                     */
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    searchSimilarStores: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimilarStoresRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreSearchResponse"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Organization cannot use the programmatic API. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A store is not covered (`domain_not_covered`) or has no published profile to compare (`store_not_profiled`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": "store_not_profiled"
+                     *     }
+                     */
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

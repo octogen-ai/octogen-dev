@@ -10,6 +10,7 @@ export const DEMO_OPERATIONS = [
   "moreLikeThisProducts",
   "getStore",
   "searchStores",
+  "searchSimilarStores",
   // `/brands/prefix` before `/brands/{brand}`, which would also match it.
   "searchBrandPrefix",
   "searchBrandsFromText",
@@ -23,6 +24,8 @@ export const DEMO_OPERATIONS = [
  * port, percent-encoding or path. Matched on the raw path segment, so nothing
  * decodes into a different route, and it names one host — never a list.
  */
+/** Stores one `stores similar` request may compare in the demo. */
+const MAX_SIMILAR_STORES = 5;
 const NORMALIZED_HOST =
   /^(?!www\.)(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 /**
@@ -124,6 +127,18 @@ export function checkDemoRequest(request: TransportRequest): OperationId {
   }
   const body: unknown = JSON.parse(request.body ?? "null");
   validate(requestSchema(operation), body, "body");
+  // Store domains follow getStore's rule: normalized hosts, a few at a time,
+  // so the demo cannot sweep the covered-host list. One store per search page.
+  const stores = (body as Record<string, unknown>)["stores"];
+  if (stores !== undefined) {
+    const max = operation === "searchProducts" ? 1 : MAX_SIMILAR_STORES;
+    if (
+      !Array.isArray(stores) ||
+      stores.length > max ||
+      stores.some((store) => typeof store !== "string" || !NORMALIZED_HOST.test(store))
+    )
+      throw new Error("Browser policy: stores denied");
+  }
   // Lookup's auto/refresh modes can populate or refresh server-side caches.
   if (operation === "lookupProduct" || operation === "parseProductAlias") {
     const lookup = body as Record<string, unknown>;

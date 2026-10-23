@@ -1,5 +1,6 @@
 /**
- * `storerouter stores <search|show|categories>` — store discovery and one store's coverage.
+ * `storerouter stores <search|similar|show|products|categories>` — store discovery
+ * and one store's coverage and products.
  *
  * `stores search <description>` ranks profiled stores by observed assortment
  * (`POST /v1/stores/search`); an empty answer exits `6`.
@@ -12,12 +13,19 @@
  *
  * `stores categories <domain|url>` ranks the `category_path.depth_<n>` fields of
  * that same snapshot, so it needs no profile and no second request.
+ *
+ * `stores products <domain|url> [query]` is `POST /v1/products/search` with
+ * `stores: [domain]`; `stores similar <domain|url>…` is `POST /v1/stores/similar`.
  */
 
 import {
   normalizeHost,
+  type MerchantProductListPage,
+  type SearchProductsParams,
+  type SearchSimilarStoresParams,
   type SearchStoresParams,
   type StoreCoverageResponse,
+  type StoreSearchResponse,
   type StoreSearchResult,
 } from "@octogen-ai/sdk";
 
@@ -25,8 +33,13 @@ import { call } from "../client.js";
 import { contractFlags, contractRequest } from "../contract.js";
 import type { CommandContext } from "../context.js";
 import { ExitCode, noResult, usageError } from "../exit.js";
-import { STORE_SEARCH_FIELDS } from "../fields.js";
+import {
+  STORE_PRODUCTS_FIELDS,
+  STORE_SEARCH_FIELDS,
+  STORE_SIMILAR_FIELDS,
+} from "../fields.js";
 import type { CommandSpec } from "../registry.js";
+import { parseFacets } from "./search.js";
 
 type CatalogCoverage = StoreCoverageResponse["catalogs"][number];
 
@@ -51,8 +64,14 @@ function hostArgument(context: CommandContext, command: string): string {
       "too_many_arguments",
     );
   }
-  // Normalized the way the API normalizes `source_hosts`: lowercased, port and
-  // leading `www.` dropped, so a product URL asks about its store.
+  return parseHost(input);
+}
+
+/**
+ * Normalized the way the API normalizes `source_hosts`: lowercased, port and
+ * leading `www.` dropped, so a product URL asks about its store.
+ */
+function parseHost(input: string): string {
   const host = normalizeHost(input);
   if (host === undefined) {
     throw usageError(
@@ -101,7 +120,11 @@ async function runShow(context: CommandContext): Promise<ExitCode> {
  * a decided answer, exit `6`. A `404` with any other body is left to the
  * taxonomy: an unrecognized shape must not borrow the meaning of `6`.
  */
-function asNotCoveredOrRethrow(error: unknown, host: string): unknown {
+function asNotCoveredOrRethrow(
+  error: unknown,
+  host: string,
+  route = "GET /stores/{domain}",
+): unknown {
   if (typeof error !== "object" || error === null) {
     return error;
   }
@@ -109,7 +132,7 @@ function asNotCoveredOrRethrow(error: unknown, host: string): unknown {
   const code: unknown = (error as { code?: unknown }).code;
   if (status === 404 && code === "domain_not_covered") {
     return noResult({
-      answeredWith: "404 domain_not_covered from GET /stores/{domain}",
+      answeredWith: `404 domain_not_covered from ${route}`,
       code: "domain_not_covered",
       coverage: "not_covered",
       data: { host, covered: false, catalogs: [] },
@@ -449,4 +472,223 @@ export const storesSearchCommand = {
   run: runSearch,
   summary: "Find stores from a plain-language description of what they sell",
   usage: "stores search <description> [--limit <n>]",
+} satisfies CommandSpec;
+
+// ── stores products ─────────────────────────────────────────────────────────
+
+async function runProducts(context: CommandContext): Promise<ExitCode> {
+  const [input, ...words] = context.positionals;
+  if (input === undefined || input.length === 0) {
+    throw usageError(
+      "storerouter stores products <domain|url> [query] requires a store domain, such as thereformation.com.",
+      "missing_argument",
+    );
+  }
+  const host = parseHost(input);
+  const query = words.join(" ").trim();
+  const facets = parseFacets(context.args.strings("facet"), "--facet");
+  const params = contractRequest<SearchProductsParams>(
+    "searchProducts",
+    STORE_PRODUCTS_FIELDS,
+    context.args,
+    {
+      stores: [host],
+      ...(query.length === 0 ? {} : { q: query }),
+      ...(facets.length === 0 ? {} : { facets }),
+    },
+  );
+  if (
+    params.priceMin !== undefined &&
+    params.priceMax !== undefined &&
+    params.priceMin > params.priceMax
+  ) {
+    throw usageError(
+      `--price-min ${String(params.priceMin)} is above --price-max ${String(params.priceMax)}.`,
+      "conflicting_options",
+    );
+  }
+
+  const api = context.api();
+  let page: MerchantProductListPage;
+  try {
+    // One request per page: the server resolves the domain to its catalogs.
+    page = await call(api, "POST /products/search", () =>
+      api.client.searchProducts(params),
+    );
+  } catch (error) {
+    throw asNotCoveredOrRethrow(error, host, "POST /products/search");
+  }
+  if (page.items.length === 0) {
+    throw noResult({
+      answeredWith: "200 POST /products/search with an empty items[]",
+      code: "no_matches",
+      data: { host, query: query || null, items: [], nextCursor: null },
+      message:
+        query.length === 0
+          ? `No products are available from ${host} with these filters.`
+          : `No products from ${host} matched ${JSON.stringify(query)}.`,
+      serverAnswered: true,
+    });
+  }
+  context.writer.emit({
+    command: context.command,
+    data: {
+      host,
+      query: query || null,
+      count: page.items.length,
+      nextCursor: page.nextCursor ?? null,
+      items: page.items.map((item) => ({
+        uuid: item.uuid,
+        catalog: item.catalogKey ?? null,
+        title: item.title ?? null,
+        brand: item.brand?.name ?? null,
+        currentPrice: item.currentPrice ?? null,
+        productUrl: item.productUrl,
+      })),
+    },
+    exitCode: ExitCode.Success,
+    human: () =>
+      [
+        `${String(page.items.length)} ${host} products${
+          query.length === 0 ? "" : ` for ${JSON.stringify(query)}`
+        }`,
+        ...page.items.map(
+          (item) =>
+            `  ${item.brand?.name ?? "—"} · ${item.title ?? "(untitled)"} · ${
+              item.currentPrice === null || item.currentPrice === undefined
+                ? "—"
+                : String(item.currentPrice)
+            }\n    ${item.productUrl}`,
+        ),
+        page.nextCursor === null || page.nextCursor === undefined
+          ? ""
+          : `  next: --cursor ${page.nextCursor}`,
+      ]
+        .filter((line) => line.length > 0)
+        .join("\n"),
+    ok: true,
+  });
+  return ExitCode.Success;
+}
+
+export const storesProductsCommand = {
+  flags: contractFlags("searchProducts", STORE_PRODUCTS_FIELDS),
+  name: "stores products",
+  notes: [
+    "Products from every catalog serving the domain, in one request per page:",
+    "the API resolves the domain the way `stores show` does. Words after the",
+    "domain are the query; with none, it browses by the filters alone.",
+    "Continue with --cursor <nextCursor> and the same arguments.",
+    "",
+    "Exit 6 means the domain is not covered (`domain_not_covered`), or nothing",
+    "matched (`no_matches`).",
+  ],
+  operations: ["searchProducts"] as const,
+  run: runProducts,
+  summary: "Browse or search one store's products",
+  usage:
+    "stores products <domain|url> [query] [--facet k=v]… [--price-min <n>] [--price-max <n>] [--limit <n>] [--cursor <c>]",
+} satisfies CommandSpec;
+
+// ── stores similar ──────────────────────────────────────────────────────────
+
+/** Both of similar's `404`s are decided answers; anything else is the taxonomy's. */
+function similarMissOrRethrow(error: unknown, hosts: readonly string[]): unknown {
+  if (typeof error !== "object" || error === null) {
+    return error;
+  }
+  const status: unknown = (error as { status?: unknown }).status;
+  const code: unknown = (error as { code?: unknown }).code;
+  const named = hosts.length === 1 ? hosts[0] : `One of ${hosts.join(", ")}`;
+  if (status === 404 && code === "domain_not_covered") {
+    return noResult({
+      answeredWith: "404 domain_not_covered from POST /stores/similar",
+      code: "domain_not_covered",
+      coverage: "not_covered",
+      data: { stores: hosts, covered: false },
+      message: `${String(named)} is not covered: no StoreRouter catalog serves it.`,
+      remediation: { url: "https://storerouter.ai/contact" },
+      serverAnswered: true,
+    });
+  }
+  if (status === 404 && code === "store_not_profiled") {
+    return noResult({
+      answeredWith: "404 store_not_profiled from POST /stores/similar",
+      code: "store_not_profiled",
+      data: { stores: hosts },
+      message: `${String(named)} has no published store profile to compare.`,
+      serverAnswered: true,
+    });
+  }
+  return error;
+}
+
+async function runSimilar(context: CommandContext): Promise<ExitCode> {
+  if (context.positionals.length === 0) {
+    throw usageError(
+      "storerouter stores similar <domain|url>… requires at least one store domain, such as thereformation.com.",
+      "missing_argument",
+    );
+  }
+  const hosts = [...new Set(context.positionals.map(parseHost))];
+  const params = contractRequest<SearchSimilarStoresParams>(
+    "searchSimilarStores",
+    STORE_SIMILAR_FIELDS,
+    context.args,
+    { stores: hosts },
+  );
+
+  const api = context.api();
+  let response: StoreSearchResponse;
+  try {
+    response = await call(api, "POST /stores/similar", () =>
+      api.client.searchSimilarStores(params),
+    );
+  } catch (error) {
+    throw similarMissOrRethrow(error, hosts);
+  }
+  if (response.results.length === 0) {
+    throw noResult({
+      answeredWith: "200 POST /stores/similar with an empty results[]",
+      code: "no_matches",
+      data: { similarTo: hosts, stores: [] },
+      message: `No other profiled stores to compare with ${hosts.join(", ")}.`,
+      serverAnswered: true,
+    });
+  }
+  const count = response.results.length;
+  context.writer.emit({
+    command: context.command,
+    data: {
+      similarTo: hosts,
+      count,
+      stores: response.results.map(withoutDistributions),
+    },
+    exitCode: ExitCode.Success,
+    human: () =>
+      [
+        `${String(count)} store${count === 1 ? "" : "s"} like ${hosts.join(", ")}`,
+        ...response.results.map(storeLine),
+      ].join("\n"),
+    ok: true,
+  });
+  return ExitCode.Success;
+}
+
+export const storesSimilarCommand = {
+  flags: contractFlags("searchSimilarStores", STORE_SIMILAR_FIELDS),
+  name: "stores similar",
+  notes: [
+    "Ranks profiled stores by how much their whole assortment resembles the",
+    "given stores'; several stores are averaged. Compares the same profiled",
+    "stores as `stores search`, so fewer than --limit results is normal, and",
+    "the given stores never appear in their own results.",
+    "",
+    "Exit 6 means a store is not covered (`domain_not_covered`), has no",
+    "published profile (`store_not_profiled`), or nothing else is profiled.",
+  ],
+  operations: ["searchSimilarStores"] as const,
+  run: runSimilar,
+  summary: "Find stores similar to one or more stores",
+  usage: "stores similar <domain|url>… [--limit <n>]",
 } satisfies CommandSpec;

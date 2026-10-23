@@ -2,6 +2,10 @@
 
 ## 0.11.0 (unreleased)
 
+- Add `search_similar_stores(stores, limit=...)` for `POST /v1/stores/similar`,
+  returning `StoreSearchResponse`.
+- `search_products` accepts `stores` (1-20 domains), searching every catalog
+  serving each; send it or `catalogs`, not both.
 - Add `search_stores(text, limit=...)` for `POST /v1/stores/search`, returning
   `StoreSearchResponse` (`StoreSearchResult` per store).
 - **Breaking:** `get_domain` is now `get_store` (`GET /v1/stores/{domain}`),

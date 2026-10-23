@@ -57,6 +57,7 @@ export const OPERATIONS = {
   searchBrandsFromText: { method: "POST", path: "/brands/search" },
   searchProducts: { method: "POST", path: "/products/search" },
   searchSimilarBrands: { method: "POST", path: "/brands/similar" },
+  searchSimilarStores: { method: "POST", path: "/stores/similar" },
   searchStores: { method: "POST", path: "/stores/search" },
 } as const satisfies Record<string, OperationDefinition>;
 

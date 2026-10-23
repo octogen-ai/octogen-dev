@@ -66,10 +66,12 @@ if that stops being true — see
 - `search_stores(text, limit=...)` ranks profiled stores against a
   plain-language description (`POST /v1/stores/search`). It searches the stores
   with published profiles, not every covered store, so results may underfill;
-  there is no pagination.
+  there is no pagination. `search_similar_stores(stores, limit=...)` ranks the
+  same stores by resemblance to one or more stores (`POST /v1/stores/similar`).
 
 - `search_products(...)` searches every active catalog by default, or only the
-  catalogs in `catalogs` (1–500 keys) when it is provided. The query field is
+  catalogs in `catalogs` (1–500 keys) when it is provided, or every catalog
+  serving each domain in `stores` (1–20). The query field is
   `q`, understood by default; `understand`, `facets`, `exclude_facets`, the
   price and brand-quality bounds, `relax`, and `debug` refine it (see below).
   Results come back as `items` + `next_cursor`, each item carrying
