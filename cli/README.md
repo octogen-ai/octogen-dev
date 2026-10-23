@@ -156,6 +156,21 @@ Exit `6` with `covered: false` means the server answered `404
 domain_not_covered`: no catalog serves that host. It asks about one host at a
 time; there is no list of covered hosts.
 
+### `storerouter stores products <domain|url> [query]`
+
+```bash
+storerouter stores products thereformation.com
+storerouter stores products thereformation.com 'linen dress' --price-max 300 --limit 12
+```
+
+One store's products in one request per page: `POST /v1/products/search` with
+`stores: [domain]`, so the server searches every catalog serving the domain.
+Words after the domain are the query; with none, it browses by the filters
+alone. Takes `search`'s `--facet`, `--price-min`, `--price-max`, `--limit` and
+`--cursor`. `--json` emits `host`, `query`, `count`, `nextCursor` and `items`.
+Exit `6` means the domain is not covered (`domain_not_covered`) or nothing
+matched (`no_matches`).
+
 ### `storerouter stores categories <domain|url>`
 
 ```bash
@@ -186,6 +201,21 @@ department, not a count of matching products. `--json` emits `query`, `count`
 and `stores`, the results without each matched department's `distributions`
 (about 100 KB per store); `stores show --json` has the full profile. Exit `6` with `code: no_matches` means no
 profiled store matched.
+
+### `storerouter stores similar <domain|url>…`
+
+```bash
+storerouter stores similar thereformation.com --limit 10
+storerouter stores similar thereformation.com everlane.com
+```
+
+Profiled stores ranked by how much their whole assortment resembles the given
+stores' (`POST /v1/stores/similar`); several stores are averaged, and they never
+appear in their own results. It ranks the same profiled stores as `stores
+search`, so fewer than `--limit` results is normal. `--json` emits
+`similarTo`, `count` and `stores`. Exit `6` means a store is not covered
+(`domain_not_covered`), has no published profile (`store_not_profiled`), or no
+other store is profiled (`no_matches`).
 
 ### `storerouter brands <search|similar|show|products|categories|prefix>`
 

@@ -193,6 +193,12 @@ def _validate_catalog_keys(catalogs: list[str] | None) -> list[str] | None:
     return catalogs
 
 
+def _validate_store_domains(stores: list[str] | None) -> list[str] | None:
+    if stores is not None and any(not store.strip() for store in stores):
+        raise ValueError("stores must contain only non-empty domains")
+    return stores
+
+
 def _validate_brand_names(brands: list[str] | None) -> list[str] | None:
     if brands is not None and any(not brand.strip() for brand in brands):
         raise ValueError("similar_to_brands must contain only non-empty brand names")
@@ -247,6 +253,8 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     # An empty list is refused rather than sent: omitting the field already
     # means every catalog.
     catalogs: list[str] | None = Field(default=None, min_length=1, max_length=500)
+    #: Store domains, each searching every catalog serving it; not with ``catalogs``.
+    stores: list[str] | None = Field(default=None, min_length=1, max_length=20)
     limit: int = Field(default=50, ge=1, le=100)
     cursor: str | None = None
     relax: bool | None = None
@@ -254,6 +262,7 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     debug: bool | None = None
 
     _check_catalog_keys = field_validator("catalogs")(_validate_catalog_keys)
+    _check_store_domains = field_validator("stores")(_validate_store_domains)
     _check_brand_names = field_validator("similar_to_brands")(_validate_brand_names)
     _check_fallback_category = field_validator("fallback_category")(
         _validate_fallback_category
@@ -266,6 +275,8 @@ class ProgrammaticProductSearchRequest(_RequestModel):
         understood = self.understand is not False
         if not understood and not has_query:
             raise ValueError("understand=False requires q")
+        if self.catalogs is not None and self.stores is not None:
+            raise ValueError("send catalogs or stores, not both")
         if self.relax and not (has_query and understood):
             raise ValueError(
                 "relax requires an understood q (q set, understand not False)"

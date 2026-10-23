@@ -40,7 +40,7 @@ from octogen_ai_sdk import (
     ValidationErrorModel,
 )
 from octogen_ai_sdk.generated import models as contract
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 BASE_URL = "https://api.octogen.ai/v1"
 
@@ -1500,6 +1500,52 @@ async def test_search_stores_rejects_blank_text() -> None:
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(ValueError, match="text must be a non-empty string"):
             await client.search_stores("  ")
+
+
+@respx.mock
+async def test_search_similar_stores_posts_stores_and_limit() -> None:
+    route = respx.post(f"{BASE_URL}/stores/similar").mock(
+        return_value=httpx.Response(200, json=STORE_SEARCH_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.search_similar_stores(["thereformation.com"], limit=5)
+        await client.search_similar_stores(["a.example", "b.example"])
+
+    assert json.loads(route.calls[0].request.content) == {
+        "stores": ["thereformation.com"],
+        "limit": 5,
+    }
+    assert json.loads(route.calls[1].request.content) == {
+        "stores": ["a.example", "b.example"]
+    }
+    assert page.results[0].store.primary_domain == "thereformation.com"
+
+
+@pytest.mark.parametrize("stores", [[], [" "], "thereformation.com"])
+async def test_search_similar_stores_rejects_bad_stores(stores) -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises((ValueError, TypeError)):
+            await client.search_similar_stores(stores)
+
+
+@respx.mock
+async def test_search_products_sends_stores_but_not_with_catalogs() -> None:
+    route = respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.search_products(stores=["thereformation.com"])
+        with pytest.raises(ValidationError):
+            await client.search_products(stores=["a.example"], catalogs=["acme"])
+        with pytest.raises(ValidationError):
+            await client.search_products(stores=[" "])
+
+    assert len(route.calls) == 1
+    body = json.loads(route.calls[0].request.content)
+    assert body["stores"] == ["thereformation.com"]
+    assert "catalogs" not in body
 
 
 @respx.mock

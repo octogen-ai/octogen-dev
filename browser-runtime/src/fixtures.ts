@@ -71,7 +71,7 @@ export const fixtureTransport: Transport = (request, signal) => {
       ],
       catalogsTruncated: false,
     };
-  else if (path === "/v1/stores/search")
+  else if (path === "/v1/stores/search" || path === "/v1/stores/similar")
     data = {
       results: [
         {

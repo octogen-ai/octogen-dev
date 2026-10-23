@@ -98,6 +98,8 @@ export type ExcludedOperation = keyof typeof EXCLUDED_OPERATIONS;
 export const SHARED_OPERATIONS = {
   getStore:
     "`stores categories` ranks the category fields of the snapshot `stores show` prints, so it needs no second request.",
+  searchProducts:
+    "`stores products` is `search` scoped by store domain (`stores`) rather than catalog key, with an optional query.",
 } as const satisfies Partial<Record<OperationId, string>>;
 
 /** Build the lookup table, rejecting a duplicate name rather than shadowing. */

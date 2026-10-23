@@ -260,6 +260,42 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
         `${request.method} ${request.url} ${request.body ?? ""}`,
       ).toThrow();
   });
+  it("stores similar and stores products each run one POST through the policy", async () => {
+    for (const line of [
+      "storerouter stores similar thereformation.com --json | jq -r '.stores[0].store.primaryDomain'",
+      "storerouter stores products thereformation.com dress --json | jq -r '.host'",
+    ]) {
+      const result = await shell(line);
+      expect(result.code, line).toBe(0);
+      expect(result.calls, line).toBe(1);
+    }
+  });
+  it("allows store domains only as a few normalized hosts", () => {
+    const similar = "https://api.storerouter.ai/v1/stores/similar";
+    const search = "https://api.storerouter.ai/v1/products/search";
+    const post = (url: string, body: unknown) => ({
+      url,
+      method: "POST",
+      headers: {},
+      body: JSON.stringify(body),
+    });
+    expect(
+      checkDemoRequest(post(similar, { stores: ["a.example", "b.example"] })),
+    ).toBe("searchSimilarStores");
+    expect(checkDemoRequest(post(search, { stores: ["a.example"], limit: 5 }))).toBe(
+      "searchProducts",
+    );
+    for (const request of [
+      post(similar, {
+        stores: Array.from({ length: 6 }, (_, i) => `s${String(i)}.example`),
+      }),
+      post(similar, { stores: ["www.a.example"] }),
+      post(similar, { stores: ["A.example"] }),
+      post(search, { stores: ["a.example", "b.example"], limit: 5 }),
+      post(search, { stores: ["a.example/x"], limit: 5 }),
+    ])
+      expect(() => checkDemoRequest(request), request.body).toThrow();
+  });
   it("raw api cannot list stores or smuggle a host through store's route", async () => {
     for (const line of [
       "storerouter api GET /stores --no-retry",

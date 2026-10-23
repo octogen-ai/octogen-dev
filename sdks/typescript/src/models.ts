@@ -172,6 +172,13 @@ export interface SearchProductsParams {
    * grants simply matches nothing.
    */
   catalogs?: readonly string[];
+  /**
+   * Restrict results to these store domains (1–20), as {@link getStore} takes
+   * them: each searches every catalog serving it. A domain no catalog serves
+   * is a `404` with `detail` `domain_not_covered`. Send `catalogs` or
+   * `stores`, not both.
+   */
+  stores?: readonly string[];
   /** Maximum results per page, 1–100 (default 50). */
   limit?: number;
   /** `nextCursor` from the previous page, with the same request otherwise. */
@@ -210,6 +217,7 @@ export interface ProgrammaticProductSearchRequest {
   similar_to_brands?: string[];
   fallback_category?: string[];
   catalogs?: string[];
+  stores?: string[];
   limit: number;
   cursor?: string;
   relax?: boolean;
@@ -778,6 +786,19 @@ export type StoreSearchRequest = Omit<
 export interface SearchStoresParams {
   /** Plain-language description of the kind of store, 1-500 characters. */
   text: string;
+  /** 1-100; the server defaults to 24. */
+  limit?: number;
+}
+
+/** Wire body of `POST /v1/stores/similar`; `limit` has a server default. */
+export type SimilarStoresRequest = Omit<
+  components["schemas"]["SimilarStoresRequest"],
+  "limit"
+> & { limit?: number };
+
+export interface SearchSimilarStoresParams {
+  /** Store domains to find neighbours for (1–10); each needs a published profile. */
+  stores: readonly string[];
   /** 1-100; the server defaults to 24. */
   limit?: number;
 }

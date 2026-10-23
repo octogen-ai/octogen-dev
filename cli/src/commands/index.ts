@@ -32,8 +32,10 @@ import { skillCommand } from "./skill.js";
 import { statusCommand } from "./status.js";
 import {
   storesCategoriesCommand,
+  storesProductsCommand,
   storesSearchCommand,
   storesShowCommand,
+  storesSimilarCommand,
 } from "./stores.js";
 
 /**
@@ -48,7 +50,9 @@ export const ALL_COMMANDS = [
   searchCommand,
   similarCommand,
   storesSearchCommand,
+  storesSimilarCommand,
   storesShowCommand,
+  storesProductsCommand,
   storesCategoriesCommand,
   brandsSearchCommand,
   brandsSimilarCommand,
