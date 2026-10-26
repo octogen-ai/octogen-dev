@@ -76,9 +76,12 @@ Global options: storerouter --help
 ## search
 
 ```text
-storerouter search <query> [--catalog <key>] [--facet k=v]… [--price-min <n>] [--price-max <n>] [--limit <n>] [--cursor <c>]
+storerouter search [query] [--catalog <key>] [--facet k=v]… [--price-min <n>] [--price-max <n>] [--limit <n>] [--cursor <c>]
 
   Search products by text
+
+  With no query, it browses by the filters alone; give at least one of
+  --catalog, --facet, --price-min or --price-max.
 
   Exit 6 means the corpus was searched and nothing matched — the answer was
   empty, not refused.

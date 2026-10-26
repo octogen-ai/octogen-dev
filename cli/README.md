@@ -121,16 +121,18 @@ storerouter lookup https://www.etro.com/us-en/cashmere-overshirt-MRBA008599TU2K3
 Exit `6` means the server looked and found nothing _for this URL_ — which is not
 proof that every product from the merchant is unavailable.
 
-### `storerouter search <query>`
+### `storerouter search [query]`
 
 ```bash
 storerouter search 'paisley jackets' --limit 3
 storerouter search dress --facet color=red,blue --price-max 300 --catalog macys
+storerouter search --catalog yoox --facet category_path.depth_2=boots --limit 12
 ```
 
 `--catalog` (sent as a one-key `catalogs` allowlist), `--facet k=v`
 (repeatable; comma-separate values), `--price-min`, `--price-max`, `--limit`,
-`--cursor`. Exit `6` when nothing matched.
+`--cursor`. With no query it browses by the filters alone, which needs at least
+one of them. Exit `6` when nothing matched.
 
 ### `storerouter similar <url|uuid>`
 

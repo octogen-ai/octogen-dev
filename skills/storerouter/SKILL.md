@@ -99,6 +99,7 @@ alone, so a miss is a fast exit `6`. On-demand results can be partial.
 storerouter search 'linen dress' --limit 10
 storerouter stores show macys.com --json
 storerouter search dress --catalog macys --facet color_family=red,blue --price-max 300
+storerouter search --catalog macys --facet category_path.depth_2=boots --limit 12
 ```
 
 - Keep the user's words as the query, and don't add qualifiers they didn't ask
@@ -111,6 +112,8 @@ storerouter search dress --catalog macys --facet color_family=red,blue --price-m
   `fields`, where `name` is the facet name and each of `topValues` has the
   `value` to pass. Categories are `category_path.depth_0` to
   `category_path.depth_6`, and `brand_name` filters by brand.
+- With no query, `search` browses by the filters alone; it needs at least one
+  of `--catalog`, `--facet`, `--price-min` or `--price-max`.
 - For the next page, pass `nextCursor` back with `--cursor`, keeping the same
   query and flags.
 
