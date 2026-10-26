@@ -2,6 +2,11 @@
 
 ## 0.5.0 (unreleased, `next`)
 
+- `storerouter search [query]` no longer requires a query when at least one of
+  `--catalog`, `--facet`, `--price-min` or `--price-max` is given: it omits `q`
+  and browses by the filters alone, like `stores products`. `--json` reports
+  `query: null` then. With neither a query nor a filter it still exits `2`.
+
 - Add `storerouter stores similar <domain|url>…` (`--limit`) for `POST
 /v1/stores/similar`: profiled stores ranked by how much their whole assortment
   resembles the given stores'. Uncovered or unprofiled stores and empty answers

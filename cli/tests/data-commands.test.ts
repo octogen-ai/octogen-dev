@@ -184,6 +184,63 @@ describe("storerouter search", () => {
     );
   });
 
+  it("browses by filters alone, sending no `q`", async () => {
+    const result = await runCli({
+      argv: [
+        "search",
+        "--catalog",
+        "yoox",
+        "--facet",
+        "category_path.depth_2=boots",
+        "--limit",
+        "12",
+      ],
+      env: KEYED,
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("q");
+    expect(body["catalogs"]).toEqual(["yoox"]);
+    expect(body["facets"]).toEqual([
+      { name: "category_path.depth_2", values: ["boots"] },
+    ]);
+    expect(result.json()["query"]).toBeNull();
+  });
+
+  it("browses by a price bound alone", async () => {
+    const result = await runCli({
+      argv: ["search", "--price-max", "100"],
+      env: KEYED,
+      routes: { "POST /products/search": { body: SEARCH_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    const body = result.requests[0]?.body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("q");
+    expect(body["price_max"]).toBe(100);
+  });
+
+  it("requires a query or a filter, before the request", async () => {
+    const result = await runCli({ argv: ["search", "--limit", "5"], env: KEYED });
+    expect(result.exitCode).toBe(ExitCode.Usage);
+    expect(result.json()["code"]).toBe("missing_argument");
+    expect(result.json()["message"]).toMatch(/a query or at least one filter/);
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it("names the filters, not a query, when a filter-only search matches nothing", async () => {
+    const result = await runCli({
+      argv: ["search", "--catalog", "yoox", "--facet", "color=red"],
+      env: KEYED,
+      routes: { "POST /products/search": { body: { items: [], nextCursor: null } } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["message"]).toBe(
+      "No products matched these filters in catalog yoox.",
+    );
+    expect(result.json()["query"]).toBeNull();
+  });
+
   it("turns repeated --facet into the API's {name, values} shape", async () => {
     const result = await runCli({
       argv: [

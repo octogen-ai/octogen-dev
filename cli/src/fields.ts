@@ -81,7 +81,7 @@ export const SEARCH_FIELDS = {
   ),
   price_max: { flag: "--price-max", sdkName: "priceMax" },
   price_min: { flag: "--price-min", sdkName: "priceMin" },
-  q: { flag: "<query> (positional)" },
+  q: { flag: "[query] (positional)" },
   relax: unsupported(
     "Opt-in query relaxation changes matching. Use `storerouter api` when you need it.",
   ),

@@ -1,5 +1,6 @@
 /**
- * `storerouter search <query>` — text search across the indexed corpus.
+ * `storerouter search [query]` — text search across the indexed corpus, or a
+ * browse by filters alone when no query is given.
  *
  * The request field is **`q`**, not `query`; the response returns `items` plus
  * `nextCursor`, and each item carries `productUrl`. Bodies are
@@ -64,13 +65,6 @@ export function parseFacets(entries: readonly string[], flag: string): Facet[] {
 async function runSearch(context: CommandContext): Promise<ExitCode> {
   const { args, writer } = context;
   const query = context.positionals.join(" ").trim();
-  if (query.length === 0) {
-    throw usageError(
-      "storerouter search <query> requires a query. Quote it if it has spaces.",
-      "missing_argument",
-    );
-  }
-
   const catalog = args.string("catalog");
   const facets = parseFacets(args.strings("facet"), "--facet");
   const params = contractRequest<SearchProductsParams>(
@@ -78,12 +72,25 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
     SEARCH_FIELDS,
     args,
     {
-      q: query,
+      ...(query.length === 0 ? {} : { q: query }),
       ...(facets.length === 0 ? {} : { facets }),
     },
   );
   const priceMin = params.priceMin;
   const priceMax = params.priceMax;
+  if (
+    query.length === 0 &&
+    catalog === undefined &&
+    facets.length === 0 &&
+    priceMin === undefined &&
+    priceMax === undefined
+  ) {
+    throw usageError(
+      "storerouter search requires a query or at least one filter " +
+        "(--catalog, --facet, --price-min, --price-max). Quote a query with spaces.",
+      "missing_argument",
+    );
+  }
   if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
     throw usageError(
       `--price-min ${String(priceMin)} is above --price-max ${String(priceMax)}.`,
@@ -103,10 +110,12 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
     throw noResult({
       answeredWith: "200 POST /products/search with an empty items[]",
       code: "no_matches",
-      data: { items: [], nextCursor: null, query },
-      message: `No products matched ${JSON.stringify(query)}${
-        catalog === undefined ? "" : ` in catalog ${catalog}`
-      }.`,
+      data: { items: [], nextCursor: null, query: query || null },
+      message: `${
+        query.length === 0
+          ? "No products matched these filters"
+          : `No products matched ${JSON.stringify(query)}`
+      }${catalog === undefined ? "" : ` in catalog ${catalog}`}.`,
       serverAnswered: true,
     });
   }
@@ -114,7 +123,7 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
   writer.emit({
     command: context.command,
     data: {
-      query,
+      query: query || null,
       catalog: catalog ?? null,
       count: page.items.length,
       nextCursor: page.nextCursor ?? null,
@@ -130,7 +139,9 @@ async function runSearch(context: CommandContext): Promise<ExitCode> {
     exitCode: ExitCode.Success,
     human: () =>
       [
-        `${String(page.items.length)} results for ${JSON.stringify(query)}`,
+        `${String(page.items.length)} results${
+          query.length === 0 ? "" : ` for ${JSON.stringify(query)}`
+        }`,
         ...page.items.map(
           (item) =>
             `  ${item.brand?.name ?? "—"} · ${item.title ?? "(untitled)"} · ${
@@ -154,6 +165,9 @@ export const searchCommand = {
   flags: contractFlags("searchProducts", SEARCH_FIELDS),
   name: "search",
   notes: [
+    "With no query, it browses by the filters alone; give at least one of",
+    "--catalog, --facet, --price-min or --price-max.",
+    "",
     "Exit 6 means the corpus was searched and nothing matched — the answer was",
     "empty, not refused.",
     "",
@@ -164,5 +178,5 @@ export const searchCommand = {
   run: runSearch,
   summary: "Search products by text",
   usage:
-    "search <query> [--catalog <key>] [--facet k=v]… [--price-min <n>] [--price-max <n>] [--limit <n>] [--cursor <c>]",
+    "search [query] [--catalog <key>] [--facet k=v]… [--price-min <n>] [--price-max <n>] [--limit <n>] [--cursor <c>]",
 } satisfies CommandSpec;
