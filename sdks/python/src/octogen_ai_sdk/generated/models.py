@@ -1236,6 +1236,7 @@ class BrandFacet(BaseModel):
     name: (
         str
         | Literal[
+            "brand_name",
             "facet_types",
             "facet_tags",
             "facet_styles",

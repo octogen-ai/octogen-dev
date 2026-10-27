@@ -153,6 +153,15 @@ describe("the status envelope", () => {
     expect((body["org"] as Record<string, unknown>)["typeLabel"]).toBe("Merchant");
     const problems = body["problems"] as { code: string }[];
     expect(problems.map((problem) => problem.code)).toContain("not_entitled");
+    expect(problems).toContainEqual(
+      expect.objectContaining({
+        code: "not_entitled",
+        fix: "https://platform.storerouter.ai",
+      }),
+    );
+    expect(body["remediation"]).toEqual({
+      url: "https://platform.storerouter.ai",
+    });
   });
 
   it("handles a super-admin bearer, which is org-less by construction", async () => {

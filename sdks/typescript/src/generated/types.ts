@@ -772,7 +772,7 @@ export interface components {
          *     aliases for depth-based category paths.
          * @enum {string}
          */
-        BrandFacetName: "facet_types" | "facet_tags" | "facet_styles" | "facet_style_identity" | "facet_genders" | "facet_age_groups" | "facet_categories" | "facet_origin_country" | "facet_price_tier" | "facet_target_audience" | "facet_sustainability" | "facet_brand_ethics" | "facet_brand_inclusivity" | "facet_brand_cultural_anchors" | "facet_key_people_names" | "facet_key_people_nationalities" | "facet_brand_hype_cycle_stage" | "facet_category_path.depth_0" | "facet_category_path.depth_1" | "facet_category_path.depth_2" | "facet_category_path.depth_3" | "facet_category_path.depth_4" | "facet_category_path.depth_5" | "facet_category_path.depth_6";
+        BrandFacetName: "brand_name" | "facet_types" | "facet_tags" | "facet_styles" | "facet_style_identity" | "facet_genders" | "facet_age_groups" | "facet_categories" | "facet_origin_country" | "facet_price_tier" | "facet_target_audience" | "facet_sustainability" | "facet_brand_ethics" | "facet_brand_inclusivity" | "facet_brand_cultural_anchors" | "facet_key_people_names" | "facet_key_people_nationalities" | "facet_brand_hype_cycle_stage" | "facet_category_path.depth_0" | "facet_category_path.depth_1" | "facet_category_path.depth_2" | "facet_category_path.depth_3" | "facet_category_path.depth_4" | "facet_category_path.depth_5" | "facet_category_path.depth_6";
         /**
          * BrandProductsPage
          * @description One page of a brand's active indexed products.

@@ -1419,6 +1419,7 @@ export const PUBLIC_CONTRACT = {
                         {
                           "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
                           "enum": [
+                            "brand_name",
                             "facet_types",
                             "facet_tags",
                             "facet_styles",
@@ -1831,6 +1832,7 @@ export const PUBLIC_CONTRACT = {
                         {
                           "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
                           "enum": [
+                            "brand_name",
                             "facet_types",
                             "facet_tags",
                             "facet_styles",
@@ -1903,6 +1905,7 @@ export const PUBLIC_CONTRACT = {
                         {
                           "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
                           "enum": [
+                            "brand_name",
                             "facet_types",
                             "facet_tags",
                             "facet_styles",
@@ -2049,6 +2052,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "ec6c8fb0f52853f6bfd6ea5895d5ab165e65f377b9e47af3c9a43c0652d6c263",
+  "sha256": "48cf1743467aba59660fc0c6f633c6ae8b95090cdd5852816e12ad0c58f4d35e",
   "version": "1.0.0"
 } as const;

@@ -9,7 +9,7 @@ import {
   type FetchLike,
 } from "../src/index.js";
 
-const BASE_URL = "https://api.octogen.ai/v1";
+const BASE_URL = "https://api.storerouter.ai/v1";
 
 interface FetchCall {
   input: string;

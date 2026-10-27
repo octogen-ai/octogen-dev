@@ -162,7 +162,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
   if (type !== null && type !== DEVELOPER_ORG_TYPE) {
     writer.problem({
       code: "not_entitled",
-      fix: "https://platform.octogen.ai",
+      fix: "https://platform.storerouter.ai",
       message: `This organization is type ${type}; /v1 requires a Developer organization.`,
       severity: "error",
     });
@@ -170,7 +170,7 @@ async function runStatus(context: CommandContext): Promise<ExitCode> {
       code: "not_entitled",
       data: envelope,
       exitCode: ExitCode.NotEntitled,
-      remediation: { url: "https://platform.octogen.ai" },
+      remediation: { url: "https://platform.storerouter.ai" },
     });
   }
 
