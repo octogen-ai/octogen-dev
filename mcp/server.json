@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.storerouter/mcp",
+  "title": "StoreRouter",
+  "description": "Search products across online stores, look up any product URL, and discover brands and stores.",
+  "version": "1.0.0",
+  "websiteUrl": "https://storerouter.ai/docs/mcp/overview",
+  "icons": [
+    {
+      "src": "https://storerouter.ai/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    },
+    {
+      "src": "https://storerouter.ai/apple-icon.png",
+      "mimeType": "image/png",
+      "sizes": ["180x180"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.storerouter.ai/mcp"
+    }
+  ]
+}
