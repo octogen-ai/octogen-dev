@@ -1,6 +1,7 @@
 import RELEASE_SYNC from "@jitl/quickjs-wasmfile-release-sync";
 import {
   newQuickJSWASMModuleFromVariant,
+  type QuickJSContext,
   type QuickJSWASMModule,
   type QuickJSDeferredPromise,
 } from "quickjs-emscripten-core";
@@ -26,6 +27,22 @@ export interface EngineOptions {
   runId: string;
   version: { version: string; sdkVersion: string; node: string };
   emit: (event: ExecutionEvent) => void;
+}
+/**
+ * quickjs-emscripten 0.32's `executePendingJobs` reads the finished job's
+ * context pointer through a typed-array view taken before the call. A job that
+ * grows WASM memory (say, stringifying a 2 MB response) detaches that view,
+ * the lookup misses, and it wraps a brand-new JSContext that nothing disposes;
+ * `JS_FreeRuntime` then aborts on it and takes the whole module down. Ours is
+ * the runtime's only context, so dispose any other one it holds.
+ */
+function disposeStrayContexts(vm: QuickJSContext): void {
+  const { contextMap } = vm.runtime as unknown as {
+    contextMap: Map<number, QuickJSContext>;
+  };
+  for (const context of [...contextMap.values()]) {
+    if (context !== vm && context.alive) context.dispose();
+  }
 }
 /** Standard (non-Asyncify) QuickJS, a real WASM interpreter with promise bridges. */
 export async function loadEngine(): Promise<QuickJSWASMModule> {
@@ -62,6 +79,7 @@ export async function executeWasm(options: EngineOptions): Promise<ExecutionResu
       result.error.dispose();
       fail(new Error(JSON.stringify(error)));
     }
+    disposeStrayContexts(vm);
   };
   const abort = (): void => {
     fail(new DOMException("Execution cancelled", "AbortError"));
