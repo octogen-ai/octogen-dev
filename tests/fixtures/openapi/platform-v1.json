@@ -315,6 +315,7 @@
       "BrandFacetName": {
         "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
         "enum": [
+          "brand_name",
           "facet_types",
           "facet_tags",
           "facet_styles",
