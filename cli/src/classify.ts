@@ -39,7 +39,8 @@ import {
 import { CliError, ExitCode, type CoverageVerdict } from "./exit.js";
 
 /** Where an agent is told to go when it has no usable credential. */
-export const ONBOARDING_URL = "https://platform.octogen.ai/agent-onboarding/SKILL.md";
+export const ONBOARDING_URL =
+  "https://platform.storerouter.ai/agent-onboarding/SKILL.md";
 
 const NEVER_RETRY_429 = new Set(["keyless_trial_exhausted", "voyage_quota_exceeded"]);
 
@@ -177,7 +178,7 @@ function classifyApiError(
         ...base,
         code: "not_entitled",
         exitCode: ExitCode.NotEntitled,
-        remediation: { url: "https://platform.octogen.ai" },
+        remediation: { url: "https://platform.storerouter.ai" },
       },
     );
   }
@@ -266,7 +267,7 @@ function keylessExhaustedMessage(retryAfter: number | undefined): string {
     "This says nothing about whether StoreRouter covers this merchant — the",
     "request was refused before any catalog was consulted. Coverage is unknown.",
     retry,
-    "Get a key at https://platform.octogen.ai/agent-onboarding/SKILL.md; set STOREROUTER_API_KEY.",
+    `Get a key at ${ONBOARDING_URL}; set STOREROUTER_API_KEY.`,
   ].join("\n");
 }
 

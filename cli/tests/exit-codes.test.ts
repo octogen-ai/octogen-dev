@@ -198,6 +198,25 @@ describe("classify", () => {
     }
   });
 
+  it("directs credential and entitlement failures to StoreRouter", () => {
+    for (const row of ROWS.filter((row) =>
+      [
+        "no_credential",
+        "keyless_endpoint_not_included",
+        "keyless_capability_not_included",
+        "keyless_quota_exhausted",
+        "keyless_unavailable",
+      ].includes(row.code),
+    )) {
+      expect(classify(row.error).remediation?.url, row.what).toBe(
+        "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+      );
+    }
+    expect(
+      classify(apiError(403, "programmatic_access_forbidden")).remediation?.url,
+    ).toBe("https://platform.storerouter.ai");
+  });
+
   it("never produces exit 6 for a throttle in particular", () => {
     const throttles = ROWS.filter((row) => row.exit === ExitCode.Throttled);
     expect(throttles.length).toBeGreaterThan(4);

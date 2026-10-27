@@ -117,6 +117,9 @@ describe("the keyless trial", () => {
     expect((body["remediation"] as Record<string, string>)["command"]).toBe(
       "storerouter status --api-key-file <path>",
     );
+    expect((body["remediation"] as Record<string, string>)["url"]).toBe(
+      "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+    );
   });
 
   it("says in words that this is not a coverage answer", async () => {
@@ -133,6 +136,9 @@ describe("the keyless trial", () => {
     );
     expect(message).toMatch(/Coverage is unknown/);
     expect(message).toMatch(/STOREROUTER_API_KEY/);
+    expect(message).toContain(
+      "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+    );
     expect(message).not.toMatch(/not covered/i);
   });
 

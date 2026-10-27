@@ -9,7 +9,7 @@ import {
   type TaxonomyCategoryPage,
 } from "../src/index.js";
 
-const BASE_URL = "https://api.octogen.ai/v1";
+const BASE_URL = "https://api.storerouter.ai/v1";
 
 const DRESSES_FACETS = [
   { name: "category_path.depth_0", values: ["apparel & accessories"] },

@@ -19,7 +19,7 @@ import {
   type OperationId,
 } from "../src/index.js";
 
-const BASE_URL = "https://api.octogen.ai/v1";
+const BASE_URL = "https://api.storerouter.ai/v1";
 
 interface FetchCall {
   input: string;
@@ -52,6 +52,19 @@ afterEach(() => {
 });
 
 describe("OctogenClient", () => {
+  it("preserves an explicit legacy API base URL override", async () => {
+    const { calls, fetchMock } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({
+      apiKey: "explicit_key",
+      baseUrl: "https://api.octogen.ai/v1/",
+      fetch: fetchMock,
+    });
+
+    await client.searchProducts({ q: "shirt", limit: 1 });
+
+    expect(lastCall(calls).input).toBe("https://api.octogen.ai/v1/products/search");
+  });
+
   it("requires an API key", () => {
     expect(() => new OctogenClient({ fetch: createFetchMock().fetchMock })).toThrow(
       MissingAPIKeyError,

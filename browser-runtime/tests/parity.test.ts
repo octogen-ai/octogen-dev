@@ -118,6 +118,40 @@ describe("actual QuickJS WASM / installed Node parity", () => {
       }),
     );
   });
+  it("uses StoreRouter onboarding in a keyless WASM quota failure", async () => {
+    const result = await executeWasm({
+      module: await module,
+      argv: ["lookup", "https://example.com/p", "--json"],
+      files: new VirtualFiles(),
+      signal: new AbortController().signal,
+      runId: "keyless-quota",
+      version: nodeHost.version,
+      emit: () => {
+        /* Inspect the collected result below. */
+      },
+      transport: (request) => {
+        expect(request.url).toBe("https://api.storerouter.ai/v1/products/lookup");
+        return Promise.resolve({
+          status: 429,
+          headers: {},
+          body: JSON.stringify({
+            detail: { code: "keyless_trial_exhausted" },
+          }),
+        });
+      },
+    });
+    expect(result.code).toBe(5);
+    const body = JSON.parse(result.stdout) as {
+      coverage: string;
+      message: string;
+      remediation: { url: string };
+    };
+    expect(body.coverage).toBe("unknown");
+    expect(body.remediation.url).toBe(
+      "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+    );
+    expect(body.message).toContain(body.remediation.url);
+  });
   it("timeout uses the SDK abort and exit semantics", async () => {
     await parity(
       ["search", "dress", "--timeout", "0.01", "--no-retry", "--json"],

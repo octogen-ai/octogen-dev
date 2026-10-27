@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { OctogenClient, OctogenNotFoundError, type FetchLike } from "../src/index.js";
 
-const BASE_URL = "https://api.octogen.ai/v1";
+const BASE_URL = "https://api.storerouter.ai/v1";
 
 const REFORMATION = {
   brandUuid: "6f1c2c47-8f2e-4d8e-9a4f-3c1f0c9b2a11",
