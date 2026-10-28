@@ -1478,7 +1478,7 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "description": "Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
             "title": "Facets"
           },
           "limit": {
@@ -1512,6 +1512,12 @@ export const PUBLIC_CONTRACT = {
             "minLength": 1,
             "title": "Text",
             "type": "string"
+          },
+          "understand": {
+            "default": true,
+            "description": "Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+            "title": "Understand",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2059,6 +2065,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "920f3acd402a388b41a90e0d835346bbcd462a35a5affa9f6680b7497343d320",
+  "sha256": "1f47e196d69d90f693d1dff0a74f3f152b72602f796825b8627a4ed6949bfa1d",
   "version": "1.0.0"
 } as const;

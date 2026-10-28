@@ -856,11 +856,14 @@ export type BrandTopCategoriesPage = components["schemas"]["BrandTopCategoriesPa
 /** One category and its taxonomy depth. */
 export type BrandTopCategoryView = components["schemas"]["BrandTopCategoryView"];
 
-/** Wire body of `POST /v1/brands/search`; `limit` has a server default. */
+/**
+ * Wire body of `POST /v1/brands/search`; `limit` and `understand` have server
+ * defaults.
+ */
 export type BrandTextSearchRequest = Omit<
   components["schemas"]["BrandTextSearchRequest"],
-  "limit"
-> & { limit?: number };
+  "limit" | "understand"
+> & { limit?: number; understand?: boolean };
 
 /** Wire body of `POST /v1/brands/similar`; `limit` has a server default. */
 export type SimilarBrandsRequest = Omit<
@@ -878,8 +881,17 @@ export interface SearchBrandsFromTextParams {
   text: string;
   /** Up to 20 canonical brand names whose embeddings guide the search. */
   referenceBrands?: string[];
-  /** Up to 20 filters; they override facets generated from `text` by name. */
+  /**
+   * Up to 20 filters; they override facets generated from `text` by name and
+   * are never relaxed.
+   */
   facets?: BrandFacet[];
+  /**
+   * Run query understanding on `text` (the server default). Set `false` to
+   * match `text` as written, with no generated facets, filtering only by the
+   * facets you send; reference brands still apply.
+   */
+  understand?: boolean;
   /** 1-100; the server defaults to 24. */
   limit?: number;
 }

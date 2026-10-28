@@ -13,6 +13,10 @@
 - `ProgrammaticProductSearchEffectiveFacet` declares `relaxable`, present as
   `True` on a caller facet marked relaxable, in `facets` and in
   `relaxation.dropped_facets`.
+- `search_brands_from_text` takes `understand` (octogen#14245): `False`
+  matches `text` as written with no query understanding and no generated
+  facets, filtering only by the facets you send; reference brands still
+  apply. Omitted unless set; the server defaults it to `True`.
 - Add `search_similar_stores(stores, limit=...)` for `POST /v1/stores/similar`,
   returning `StoreSearchResponse`.
 - `search_products` accepts `stores` (1-20 domains), searching every catalog

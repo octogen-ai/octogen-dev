@@ -334,6 +334,7 @@ export class OctogenClient {
     if (params.referenceBrands !== undefined)
       body.referenceBrands = params.referenceBrands;
     if (params.facets !== undefined) body.facets = params.facets;
+    if (params.understand !== undefined) body.understand = params.understand;
     if (params.limit !== undefined) body.limit = params.limit;
     const data = await this.json("searchBrandsFromText", {
       context: options.context,

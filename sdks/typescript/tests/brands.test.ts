@@ -75,6 +75,7 @@ describe("brand discovery", () => {
       text: "sustainable dresses",
       referenceBrands: ["Everlane"],
       facets: [{ name: "facet_price_tier", values: ["premium"] }],
+      understand: false,
     });
 
     const call = lastCall(calls);
@@ -84,6 +85,7 @@ describe("brand discovery", () => {
       text: "sustainable dresses",
       referenceBrands: ["Everlane"],
       facets: [{ name: "facet_price_tier", values: ["premium"] }],
+      understand: false,
     });
     expect(page.results[0]?.brandName).toBe("Reformation");
   });

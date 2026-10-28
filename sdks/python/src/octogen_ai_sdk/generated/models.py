@@ -1212,7 +1212,7 @@ class BrandTextSearchRequest(BaseModel):
     )
     facets: list[BrandFacet] | None = Field(
         None,
-        description="Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+        description="Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
         title="Facets",
     )
     limit: int | None = Field(
@@ -1226,6 +1226,11 @@ class BrandTextSearchRequest(BaseModel):
     )
     text: str = Field(
         ..., description="Natural-language brand discovery query.", title="Text"
+    )
+    understand: bool | None = Field(
+        True,
+        description="Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+        title="Understand",
     )
 
 

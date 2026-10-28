@@ -421,7 +421,7 @@
                 "type": "null"
               }
             ],
-            "description": "Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
+            "description": "Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
             "title": "Facets"
           },
           "limit": {
@@ -455,6 +455,12 @@
             "minLength": 1,
             "title": "Text",
             "type": "string"
+          },
+          "understand": {
+            "default": true,
+            "description": "Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+            "title": "Understand",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6536,7 +6542,7 @@
     },
     "/brands/search": {
       "post": {
-        "description": "Discover brands from text and optional reference brands.\n\nSearches corpus-wide brand identities, not stores or sellers. Brand matches\ndo not promise products in your catalog scope. Returns 400 for an unusable\ngenerated query or reference brands without embeddings.",
+        "description": "Discover brands from text and optional reference brands.\n\nSearches corpus-wide brand identities, not stores or sellers. Brand matches\ndo not promise products in your catalog scope. By default the text is\nunderstood (rewritten, with facets and similar brands derived from it); set\n`understand` to false to search the text as written with only your facets.\nReturns 400 for an unusable generated query or reference brands without\nembeddings.",
         "operationId": "searchBrandsFromText",
         "parameters": [
           {
