@@ -1619,3 +1619,22 @@ def test_effective_facet_reports_relaxable() -> None:
         {"name": "gender", "values": ["female"], "source": "caller"}
     )
     assert plain.relaxable is None
+
+
+def test_search_request_accepts_plain_facets_in_facets() -> None:
+    """A ``Facet`` built the pre-0.11 way, or one a response returned, still
+    goes into ``facets``; it is sent unchanged, with no ``relaxable`` key."""
+    # Typed loosely on purpose: the point is what a caller that built a
+    # ``Facet`` under an older release hands over at runtime.
+    plain: list[Any] = [Facet(name="gender", values=["female"])]
+    request = ProgrammaticProductSearchRequest(
+        q="dress",
+        facets=plain,
+        exclude_facets=[Facet(name="brand_name", values=["acme"])],
+    )
+
+    assert request.facets is not None
+    assert isinstance(request.facets[0], SearchFacet)
+    assert request.model_dump(mode="json", exclude_none=True)["facets"] == [
+        {"name": "gender", "values": ["female"]}
+    ]
