@@ -164,6 +164,7 @@ async def test_search_brands_from_text_sends_wire_names() -> None:
                 BrandFacet(name="facet_price_tier", values=["premium"]),
                 {"name": "facet_genders", "values": ["female"]},
             ],
+            understand=False,
             limit=5,
         )
 
@@ -174,6 +175,7 @@ async def test_search_brands_from_text_sends_wire_names() -> None:
             {"name": "facet_price_tier", "values": ["premium"]},
             {"name": "facet_genders", "values": ["female"]},
         ],
+        "understand": False,
         "limit": 5,
     }
     assert isinstance(response, SimilarBrandsResponse)

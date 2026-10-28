@@ -177,6 +177,10 @@ export const BRAND_SEARCH_FIELDS = {
   limit: { flag: "--limit" },
   referenceBrands: { flag: "--like", multiple: true, placeholder: "brand" },
   text: { flag: "<description> (positional)" },
+  understand: unsupported(
+    "Literal matching changes what the positional description means; reach it " +
+      "with `storerouter api`.",
+  ),
 } satisfies FieldMap<BrandTextSearchRequest>;
 
 export const BRAND_SIMILAR_FIELDS = {

@@ -102,7 +102,8 @@ if that stops being true — see
 
 - `search_brand_prefix(prefix)` completes a canonical brand name from its
   first characters. `search_brands_from_text(text, ...)` finds brands from a
-  description, optionally steered by `reference_brands`;
+  description, optionally steered by `reference_brands` (`understand=False`
+  matches the text as written, with only the facets you send);
   `search_similar_brands(brands, ...)` finds brands like 1–20 source brands.
   Both take `facets` (and similar, `exclusion_facets`) as `BrandFacet`s, whose
   names are `facet_*` keys such as `facet_price_tier`.

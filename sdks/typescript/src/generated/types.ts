@@ -114,8 +114,11 @@ export interface paths {
          * @description Discover brands from text and optional reference brands.
          *
          *     Searches corpus-wide brand identities, not stores or sellers. Brand matches
-         *     do not promise products in your catalog scope. Returns 400 for an unusable
-         *     generated query or reference brands without embeddings.
+         *     do not promise products in your catalog scope. By default the text is
+         *     understood (rewritten, with facets and similar brands derived from it); set
+         *     `understand` to false to search the text as written with only your facets.
+         *     Returns 400 for an unusable generated query or reference brands without
+         *     embeddings.
          */
         post: operations["searchBrandsFromText"];
         delete?: never;
@@ -821,7 +824,7 @@ export interface components {
         BrandTextSearchRequest: {
             /**
              * Facets
-             * @description Up to 20 explicit filters that override generated facets by name. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
+             * @description Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
              */
             facets?: components["schemas"]["BrandFacet"][] | null;
             /**
@@ -840,6 +843,12 @@ export interface components {
              * @description Natural-language brand discovery query.
              */
             text: string;
+            /**
+             * Understand
+             * @description Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.
+             * @default true
+             */
+            understand: boolean;
         };
         /**
          * BrandTopCategoriesPage

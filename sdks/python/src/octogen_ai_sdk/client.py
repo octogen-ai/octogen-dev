@@ -760,6 +760,7 @@ class OctogenClient:
         *,
         reference_brands: Sequence[str] | None = None,
         facets: Sequence[BrandFacetInput] | None = None,
+        understand: bool | None = None,
         limit: int | None = None,
         context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
@@ -770,7 +771,11 @@ class OctogenClient:
         outerwear"``. ``reference_brands`` (1-20 canonical names) steers the
         search toward those brands. ``facets`` (up to 20) are
         :class:`BrandFacet` filters that override the facets generated from
-        ``text`` by name. ``limit`` is 1-100 (server default 24).
+        ``text`` by name and are never relaxed. ``understand=False`` matches
+        ``text`` as written, with no query understanding and no generated
+        facets, filtering only by the facets you send; reference brands still
+        apply. The server default is ``True``. ``limit`` is 1-100 (server
+        default 24).
         """
         operation = "search_brands_from_text"
         _require_text(operation, "text", text)
@@ -781,6 +786,7 @@ class OctogenClient:
                     operation, "reference_brands", reference_brands
                 ),
                 "facets": _brand_facet_list(facets),
+                "understand": understand,
                 "limit": limit,
             }
         )
