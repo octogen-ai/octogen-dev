@@ -165,9 +165,17 @@ for (const facet of page.effectiveQuery?.facets ?? []) {
 - `omitGeneratedFacets: ["fit"]` drops an understood facet that is wrong when
   you have no value of your own for it; to replace one, send a facet of that
   name instead. Use the names `effectiveQuery` reports.
+- A facet sent as `{ name: "color_family", values: ["Red"], relaxable: true }`
+  may be dropped by `relax`; every other facet you send never is. This is how a
+  caller doing its own query understanding gets the server's staged fallback:
+  `understand: false`, its guesses as `relaxable` facets, and `relax: true`.
+  Only names a relaxation stage covers may be marked (brand profile facets,
+  taxonomy attributes, `color`, `color_family`, `category_path.depth_2` and
+  deeper).
 - `debug: true` adds `effectiveQuery`, the search that actually ran.
 
-Contradictions the API would refuse — `relax` or `understand: false` without a
+Contradictions the API would refuse — `relax` without a `q` or with
+`understand: false` and no `relaxable` facet, `understand: false` without a
 `q`, a facet name sent twice, `priceMin` above `priceMax` — throw a `TypeError`
 before any request.
 

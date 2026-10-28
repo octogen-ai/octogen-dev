@@ -34,9 +34,11 @@ from octogen_ai_sdk import (
     ProgrammaticMoreLikeThisSourceImageResponse,
     ProgrammaticMoreLikeThisSourceResponse,
     ProgrammaticProductLookupRequest,
+    ProgrammaticProductSearchEffectiveFacet,
     ProgrammaticProductSearchEffectiveQuery,
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
+    SearchFacet,
     ValidationErrorModel,
 )
 from octogen_ai_sdk.generated import models as contract
@@ -283,8 +285,18 @@ def test_text_search_query_model_is_gone() -> None:
     [
         ({"understand": False}, "understand=False requires q"),
         ({"q": "   ", "understand": False}, "understand=False requires q"),
-        ({"relax": True}, "relax requires an understood q"),
-        ({"q": "dress", "understand": False, "relax": True}, "relax requires"),
+        ({"relax": True}, "relax requires q"),
+        (
+            {"q": "dress", "understand": False, "relax": True},
+            "relax requires an understood q .* or a facet marked relaxable",
+        ),
+        (
+            {
+                "relax": True,
+                "facets": [{"name": "color", "values": ["red"], "relaxable": True}],
+            },
+            "relax requires q",
+        ),
         ({"omit_generated_facets": ["color"]}, "omit_generated_facets requires"),
         (
             {"q": "dress", "understand": False, "omit_generated_facets": ["color"]},
@@ -1560,3 +1572,50 @@ async def test_get_store_not_covered_is_a_not_found_error() -> None:
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "domain_not_covered"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_products_sends_relaxable_facets_with_a_literal_q() -> None:
+    """``understand=False`` with ``relax=True`` is allowed once a facet is
+    marked relaxable; the mark goes out only on that facet."""
+    route = respx.post(f"{BASE_URL}/products/search").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.search_products(
+            q="linen midi dress",
+            understand=False,
+            relax=True,
+            facets=[
+                Facet(name="gender", values=["female"]),
+                SearchFacet(name="color_family", values=["Red"], relaxable=True),
+                {"name": "fit", "values": ["relaxed"], "relaxable": False},
+            ],
+        )
+
+    body = json.loads(route.calls.last.request.read())
+    assert body["facets"] == [
+        {"name": "gender", "values": ["female"]},
+        {"name": "color_family", "values": ["Red"], "relaxable": True},
+        {"name": "fit", "values": ["relaxed"], "relaxable": False},
+    ]
+    assert body["relax"] is True
+    assert body["understand"] is False
+
+
+def test_effective_facet_reports_relaxable() -> None:
+    facet = ProgrammaticProductSearchEffectiveFacet.model_validate(
+        {
+            "name": "color_family",
+            "values": ["Red"],
+            "source": "caller",
+            "relaxable": True,
+        }
+    )
+    assert facet.relaxable is True
+    plain = ProgrammaticProductSearchEffectiveFacet.model_validate(
+        {"name": "gender", "values": ["female"], "source": "caller"}
+    )
+    assert plain.relaxable is None

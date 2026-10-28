@@ -1639,11 +1639,18 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "description": "A filter a product must match, with the caller's say on relaxation.",
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
                       "title": "Name",
                       "type": "string"
+                    },
+                    "relaxable": {
+                      "default": false,
+                      "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+                      "title": "Relaxable",
+                      "type": "boolean"
                     },
                     "values": {
                       "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
@@ -1659,7 +1666,7 @@ export const PUBLIC_CONTRACT = {
                     "name",
                     "values"
                   ],
-                  "title": "Facet",
+                  "title": "SearchFacet",
                   "type": "object"
                 },
                 "maxItems": 50,
@@ -1669,7 +1676,7 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
+            "description": "Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed unless you mark it `relaxable`. Each name at most once.",
             "title": "Facets"
           },
           "fallback_category": {
@@ -1754,7 +1761,7 @@ export const PUBLIC_CONTRACT = {
           },
           "relax": {
             "default": false,
-            "description": "When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.",
+            "description": "When `q` returns nothing, retry with filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Drops understood filters and facets you marked `relaxable`; any other facet you send is never dropped. Requires `q`, and either `understand: true` or at least one `relaxable` facet. A relaxed page's cursor continues the same relaxed results.",
             "title": "Relax",
             "type": "boolean"
           },
@@ -2052,6 +2059,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "48cf1743467aba59660fc0c6f633c6ae8b95090cdd5852816e12ad0c58f4d35e",
+  "sha256": "920f3acd402a388b41a90e0d835346bbcd462a35a5affa9f6680b7497343d320",
   "version": "1.0.0"
 } as const;

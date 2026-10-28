@@ -65,6 +65,7 @@ from octogen_ai_sdk.models import (
     ProgrammaticProductSearchPage,
     ProgrammaticProductSearchRequest,
     ProgrammaticResolveFromHtmlRequest,
+    SearchFacet,
     SimilarBrandsResponse,
     StoreCoverageResponse,
     StoreSearchResponse,
@@ -119,6 +120,7 @@ _warned_deprecated_api_key_env_var = False
 #: A facet as a method accepts it: a :class:`Facet`, a ``{"name", "values"}``
 #: dict, or a facet a response returned, such as a ``TaxonomyCategory``'s.
 FacetInput = Facet | BaseModel | dict[str, Any]
+SearchFacetInput = SearchFacet | Facet | BaseModel | dict[str, Any]
 
 #: A brand facet as a brand search accepts it: a :class:`BrandFacet` or a
 #: ``{"name", "values"}`` dict. Brand facet names are ``facet_*`` keys such as
@@ -437,7 +439,7 @@ class OctogenClient:
         *,
         q: str | None = None,
         understand: bool | None = None,
-        facets: Sequence[FacetInput] | None = None,
+        facets: Sequence[SearchFacetInput] | None = None,
         exclude_facets: Sequence[FacetInput] | None = None,
         omit_generated_facets: Sequence[str] | None = None,
         price_min: float | None = None,
@@ -481,10 +483,19 @@ class OctogenClient:
         facet, and a cursor continues only with the setting it was minted
         under.
 
+        ``relax=True`` retries a ``q`` that returns nothing with filters
+        dropped in stages: the understood filters, and any facet you sent as
+        a :class:`SearchFacet` with ``relaxable=True``; every other facet you
+        send is never dropped. It needs ``q``, and either ``understand`` left
+        on or at least one ``relaxable`` facet — that is how a caller doing
+        its own query understanding gets the server's staged fallback over
+        its own guesses. A relaxable facet is reported in ``effective_query``
+        as ``source="caller"`` with ``relaxable=True``.
+
         Contradictions the server would refuse with a ``422`` — ``relax``
-        without an understood ``q``, a facet name sent twice, ``price_min``
-        above ``price_max`` — raise ``pydantic.ValidationError`` before any
-        request.
+        without a ``q``, or with ``understand=False`` and no ``relaxable``
+        facet, a facet name sent twice, ``price_min`` above ``price_max`` —
+        raise ``pydantic.ValidationError`` before any request.
 
         Pass ``request`` instead of the keywords to send a prebuilt
         :class:`ProgrammaticProductSearchRequest` as is. A subclass's extra
@@ -525,7 +536,7 @@ class OctogenClient:
             resolved = ProgrammaticProductSearchRequest(
                 q=q,
                 understand=understand,
-                facets=_facet_list(facets),
+                facets=_search_facet_list(facets),
                 exclude_facets=_facet_list(exclude_facets),
                 omit_generated_facets=_string_list(
                     omit_generated_facets, "omit_generated_facets"
@@ -1432,6 +1443,23 @@ def _coerce_facet(value: FacetInput) -> Facet:
         # into a request unchanged.
         value = value.model_dump(mode="json", by_alias=True, exclude_none=True)
     return Facet.model_validate(value)
+
+
+def _search_facet_list(
+    facets: Sequence[SearchFacetInput] | None,
+) -> list[SearchFacet] | None:
+    return None if facets is None else [_coerce_search_facet(facet) for facet in facets]
+
+
+def _coerce_search_facet(value: SearchFacetInput) -> SearchFacet:
+    """As :func:`_coerce_facet`, for search's ``facets``, which may carry
+    ``relaxable``. A plain :class:`Facet` becomes a :class:`SearchFacet` that
+    sends exactly what it did."""
+    if isinstance(value, SearchFacet):
+        return value
+    if isinstance(value, BaseModel):
+        value = value.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return SearchFacet.model_validate(value)
 
 
 def _coerce_count_category(

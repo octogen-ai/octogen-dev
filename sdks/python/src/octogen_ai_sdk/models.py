@@ -10,6 +10,7 @@ here so a bad call fails locally instead of as a server ``422``.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
@@ -185,6 +186,22 @@ class Facet(_RequestModel):
     values: list[str]
 
 
+class SearchFacet(Facet):
+    """A search ``facets`` entry: a :class:`Facet` with the caller's say on
+    relaxation.
+
+    ``relaxable=True`` lets ``relax`` drop the facet. It still replaces an
+    understood facet of the same name and filters until a relaxation stage
+    drops it; with ``relax=False`` it is never dropped. Only a name a
+    relaxation stage covers may be marked (brand profile facets, taxonomy
+    attributes, ``color``, ``color_family``, ``category_path.depth_2`` and
+    deeper); the server refuses any other name with a ``422``. Sent only when
+    set, so a plain facet goes out as before.
+    """
+
+    relaxable: bool | None = None
+
+
 def _validate_catalog_keys(catalogs: list[str] | None) -> list[str] | None:
     # Length bounds live on the field; this rejects the blank key the contract
     # would accept and then match nothing with. Keys are otherwise sent as given.
@@ -211,7 +228,7 @@ def _validate_fallback_category(path: list[str] | None) -> list[str] | None:
     return path
 
 
-def _facet_names(facets: list[Facet] | None, field: str) -> set[str]:
+def _facet_names(facets: Sequence[Facet] | None, field: str) -> set[str]:
     """Reject a repeated facet name; return the names for cross-field checks."""
     names: set[str] = set()
     for facet in facets or ():
@@ -228,14 +245,15 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     """Body for ``POST /v1/products/search``: free text, filters, or both.
 
     Each field controls one thing. The combinations the server refuses with a
-    ``422`` and that are cheap to mirror — ``relax`` without an understood
-    ``q``, a facet name sent twice, ``price_min`` above ``price_max`` — fail
-    here instead. The server stays the source of truth for everything else.
+    ``422`` and that are cheap to mirror — ``relax`` without a ``q``, or with
+    ``understand=False`` and no ``relaxable`` facet, a facet name sent twice,
+    ``price_min`` above ``price_max`` — fail here instead. The server stays
+    the source of truth for everything else.
     """
 
     q: str | None = None
     understand: bool | None = None
-    facets: list[Facet] | None = Field(default=None, max_length=50)
+    facets: list[SearchFacet] | None = Field(default=None, max_length=50)
     exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
     omit_generated_facets: list[str] | None = Field(default=None, max_length=50)
     price_min: float | None = Field(default=None, ge=0)
@@ -277,9 +295,13 @@ class ProgrammaticProductSearchRequest(_RequestModel):
             raise ValueError("understand=False requires q")
         if self.catalogs is not None and self.stores is not None:
             raise ValueError("send catalogs or stores, not both")
-        if self.relax and not (has_query and understood):
+        if self.relax and not has_query:
+            raise ValueError("relax requires q")
+        relaxable_sent = any(facet.relaxable for facet in self.facets or ())
+        if self.relax and not understood and not relaxable_sent:
             raise ValueError(
-                "relax requires an understood q (q set, understand not False)"
+                "relax requires an understood q (q set, understand not False) "
+                "or a facet marked relaxable"
             )
         if self.omit_generated_facets and not (has_query and understood):
             raise ValueError(

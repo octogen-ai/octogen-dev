@@ -2,6 +2,17 @@
 
 ## 0.11.0 (unreleased)
 
+- Search `facets` take `SearchFacet`, a `Facet` with `relaxable`. A facet sent
+  with `relaxable=True` may be dropped by `relax`; it still replaces an
+  understood facet of the same name and is never dropped with `relax=False`.
+  Only a name a relaxation stage covers may be marked (the server answers
+  `422` otherwise). Plain facets and dicts still work and are sent unchanged.
+- `relax` now requires `q`, and either an understood `q` or at least one
+  `relaxable` facet, so `understand=False` with `relax=True` is valid when a
+  facet is relaxable (octogen#14239). The client-side check mirrors that.
+- `ProgrammaticProductSearchEffectiveFacet` declares `relaxable`, present as
+  `True` on a caller facet marked relaxable, in `facets` and in
+  `relaxation.dropped_facets`.
 - Add `search_similar_stores(stores, limit=...)` for `POST /v1/stores/similar`,
   returning `StoreSearchResponse`.
 - `search_products` accepts `stores` (1-20 domains), searching every catalog

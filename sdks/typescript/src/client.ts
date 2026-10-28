@@ -1034,9 +1034,14 @@ function assertSearchControls(params: SearchProductsParams): void {
     throw new TypeError("understand: false requires q");
   }
   if (params.relax === true) {
-    if (!hasQuery || !understood) {
+    if (!hasQuery) {
+      throw new TypeError("relax requires q");
+    }
+    const relaxableSent = params.facets?.some((facet) => facet.relaxable === true);
+    if (!understood && !relaxableSent) {
       throw new TypeError(
-        "relax requires an understood q (q set, understand not false)",
+        "relax requires an understood q (q set, understand not false) " +
+          "or a facet marked relaxable",
       );
     }
   }
