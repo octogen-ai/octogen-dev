@@ -1,6 +1,13 @@
 # Changelog — `octogen-ai-sdk`
 
-## 0.11.0 (unreleased)
+## 0.11.1 (unreleased)
+
+- `ProgrammaticProductSearchRequest(facets=...)` accepts plain `Facet`
+  instances again, as every release before 0.11.0 did; each becomes a
+  `SearchFacet` that sends exactly what it did. 0.11.0 rejected them with a
+  `model_type` validation error.
+
+## 0.11.0
 
 - Search `facets` take `SearchFacet`, a `Facet` with `relaxable`. A facet sent
   with `relaxable=True` may be dropped by `relax`; it still replaces an

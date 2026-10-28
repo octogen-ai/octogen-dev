@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -255,6 +255,28 @@ class ProgrammaticProductSearchRequest(_RequestModel):
     understand: bool | None = None
     facets: list[SearchFacet] | None = Field(default=None, max_length=50)
     exclude_facets: list[Facet] | None = Field(default=None, max_length=50)
+
+    @field_validator("facets", mode="before")
+    @classmethod
+    def _plain_facets_become_search_facets(cls, facets: Any) -> Any:
+        """Accept plain :class:`Facet` instances in ``facets``.
+
+        The field is typed :class:`SearchFacet` so an entry can carry
+        ``relaxable``, but a :class:`Facet` — what every release before 0.11
+        took here, and what responses hand back — must keep working. Each
+        becomes a :class:`SearchFacet` that sends exactly what it did.
+        """
+        if not isinstance(facets, list | tuple):
+            return facets
+        return [
+            SearchFacet.model_validate(
+                facet.model_dump(mode="json", by_alias=True, exclude_none=True)
+            )
+            if isinstance(facet, Facet) and not isinstance(facet, SearchFacet)
+            else facet
+            for facet in facets
+        ]
+
     omit_generated_facets: list[str] | None = Field(default=None, max_length=50)
     price_min: float | None = Field(default=None, ge=0)
     price_max: float | None = Field(default=None, ge=0)
