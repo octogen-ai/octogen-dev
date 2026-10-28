@@ -746,6 +746,11 @@ class ProgrammaticProductSearchEffectiveFacet(BaseModel):
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
+    relaxable: bool | None = Field(
+        None,
+        description="`true` for a facet you sent marked `relaxable`, which `relax` may drop. Absent otherwise.",
+        title="Relaxable",
+    )
     source: Literal["caller", "generated"] | str | None = Field(
         None,
         description="`caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.",
@@ -775,101 +780,6 @@ class ProgrammaticProductSearchRelaxation(BaseModel):
         ...,
         description="Stages applied to produce this page; 0 if none.",
         title="Rounds",
-    )
-
-
-class ProgrammaticProductSearchRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    brand_quality_max: float | None = Field(
-        None,
-        description="Inclusive maximum brand quality score, 1 to 6. Combined with any understood bound by keeping the stricter one.",
-        title="Brand Quality Max",
-    )
-    brand_quality_min: float | None = Field(
-        None,
-        description="Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). Combined with any understood bound by keeping the stricter one.",
-        title="Brand Quality Min",
-    )
-    catalogs: list[str] | None = Field(
-        None,
-        description="Catalog keys to search. Omit to search every catalog your key can access. Keys your key cannot access match nothing.",
-        title="Catalogs",
-    )
-    cursor: str | None = Field(
-        None,
-        description="`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
-        title="Cursor",
-    )
-    debug: bool | None = Field(
-        False,
-        description="Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
-        title="Debug",
-    )
-    diversity: bool | None = Field(
-        False,
-        description="Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
-        title="Diversity",
-    )
-    exclude_facets: list[Facet] | None = Field(
-        None,
-        description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
-        title="Exclude Facets",
-    )
-    facets: list[Facet] | None = Field(
-        None,
-        description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.",
-        title="Facets",
-    )
-    fallback_category: list[str] | None = Field(
-        None,
-        description='Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.',
-        title="Fallback Category",
-    )
-    limit: int | None = Field(
-        50, description="Maximum results per page.", title="Limit"
-    )
-    omit_generated_facets: list[str] | None = Field(
-        None,
-        description="Names of understood facets to drop before searching, for a derived filter that is wrong and that you have no value of your own for. To replace a derived filter instead, send a facet of that name. Use the names shown in `effectiveQuery`; colour is omitted per axis (`color` or `color_family`). Requires understood `q`; a name may not also appear in `facets`.",
-        title="Omit Generated Facets",
-    )
-    price_max: float | None = Field(
-        None,
-        description="Inclusive maximum price. Combined with any understood maximum by keeping the lower one.",
-        title="Price Max",
-    )
-    price_min: float | None = Field(
-        None,
-        description="Inclusive minimum price. Combined with any understood minimum by keeping the higher one.",
-        title="Price Min",
-    )
-    q: str | None = Field(
-        None,
-        description="Free-text query. Omit to browse by filters alone. By default it is understood: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it. Blank is the same as omitted.",
-        title="Q",
-    )
-    relax: bool | None = Field(
-        False,
-        description="When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.",
-        title="Relax",
-    )
-    similar_to_brands: list[str] | None = Field(
-        None,
-        description="Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
-        title="Similar To Brands",
-    )
-    stores: list[str] | None = Field(
-        None,
-        description="Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.",
-        title="Stores",
-    )
-    understand: bool | None = Field(
-        True,
-        description="Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
-        title="Understand",
     )
 
 
@@ -932,6 +842,27 @@ class ReviewView(BaseModel):
         None, alias="publishedAt", title="Publishedat"
     )
     rating: float | None = Field(None, title="Rating")
+
+
+class SearchFacet(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    name: str = Field(
+        ...,
+        description="Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+        title="Name",
+    )
+    relaxable: bool | None = Field(
+        False,
+        description="Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+        title="Relaxable",
+    )
+    values: list[str] = Field(
+        ...,
+        description="Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
+        title="Values",
+    )
 
 
 class SimilarBrandView(BaseModel):
@@ -2025,6 +1956,101 @@ class ProgrammaticProductSearchPage(BaseModel):
         alias="requestId",
         description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
         title="Requestid",
+    )
+
+
+class ProgrammaticProductSearchRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    brand_quality_max: float | None = Field(
+        None,
+        description="Inclusive maximum brand quality score, 1 to 6. Combined with any understood bound by keeping the stricter one.",
+        title="Brand Quality Max",
+    )
+    brand_quality_min: float | None = Field(
+        None,
+        description="Inclusive minimum brand quality score, 1 (very poor) to 6 (exceptional). Combined with any understood bound by keeping the stricter one.",
+        title="Brand Quality Min",
+    )
+    catalogs: list[str] | None = Field(
+        None,
+        description="Catalog keys to search. Omit to search every catalog your key can access. Keys your key cannot access match nothing.",
+        title="Catalogs",
+    )
+    cursor: str | None = Field(
+        None,
+        description="`nextCursor` from the previous page, passed back verbatim with the same request body. Later pages reuse the understanding of `q` that page 1 ran rather than understanding it again.",
+        title="Cursor",
+    )
+    debug: bool | None = Field(
+        False,
+        description="Reserved for diagnostic detail. `effectiveQuery` is returned on every response with or without it.",
+        title="Debug",
+    )
+    diversity: bool | None = Field(
+        False,
+        description="Spread page 1 across retailers and drop products whose image repeats one already on the page. Page 1 only. No effect when you send `catalogs`, when your key is limited to specific catalogs, or with a `brand_name` facet. A cursor continues only with the `diversity` value it was minted under.",
+        title="Diversity",
+    )
+    exclude_facets: list[Facet] | None = Field(
+        None,
+        description="Filters a product must not match: products with any listed value of any listed facet are removed. Each name at most once.",
+        title="Exclude Facets",
+    )
+    facets: list[SearchFacet] | None = Field(
+        None,
+        description="Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed unless you mark it `relaxable`. Each name at most once.",
+        title="Facets",
+    )
+    fallback_category: list[str] | None = Field(
+        None,
+        description='Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.',
+        title="Fallback Category",
+    )
+    limit: int | None = Field(
+        50, description="Maximum results per page.", title="Limit"
+    )
+    omit_generated_facets: list[str] | None = Field(
+        None,
+        description="Names of understood facets to drop before searching, for a derived filter that is wrong and that you have no value of your own for. To replace a derived filter instead, send a facet of that name. Use the names shown in `effectiveQuery`; colour is omitted per axis (`color` or `color_family`). Requires understood `q`; a name may not also appear in `facets`.",
+        title="Omit Generated Facets",
+    )
+    price_max: float | None = Field(
+        None,
+        description="Inclusive maximum price. Combined with any understood maximum by keeping the lower one.",
+        title="Price Max",
+    )
+    price_min: float | None = Field(
+        None,
+        description="Inclusive minimum price. Combined with any understood minimum by keeping the higher one.",
+        title="Price Min",
+    )
+    q: str | None = Field(
+        None,
+        description="Free-text query. Omit to browse by filters alone. By default it is understood: rewritten for retrieval, with category, gender, colour, brand, price and attribute filters derived from it. Blank is the same as omitted.",
+        title="Q",
+    )
+    relax: bool | None = Field(
+        False,
+        description="When `q` returns nothing, retry with filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Drops understood filters and facets you marked `relaxable`; any other facet you send is never dropped. Requires `q`, and either `understand: true` or at least one `relaxable` facet. A relaxed page's cursor continues the same relaxed results.",
+        title="Relax",
+    )
+    similar_to_brands: list[str] | None = Field(
+        None,
+        description="Brand names whose style to favour. Ranks products by similarity to these brands' aesthetic; it does not filter. Replaces any brands understood from `q`.",
+        title="Similar To Brands",
+    )
+    stores: list[str] | None = Field(
+        None,
+        description="Store domains to search, as `GET /stores/{domain}` takes them: bare hosts, matched without case or a leading `www.`. Each searches every catalog serving it; a domain no catalog serves is a 404 `domain_not_covered`. Send `catalogs` or `stores`, not both.",
+        title="Stores",
+    )
+    understand: bool | None = Field(
+        True,
+        description="Run query understanding on `q`. Set false to match `q` as written and filter only by the facets and bounds you send. Requires `q`.",
+        title="Understand",
     )
 
 

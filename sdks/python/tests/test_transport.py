@@ -65,7 +65,7 @@ async def test_search_products_sends_a_subclass_field() -> None:
 
 
 def test_a_search_request_subclass_keeps_the_sdk_validators() -> None:
-    with pytest.raises(ValueError, match="relax requires an understood q"):
+    with pytest.raises(ValueError, match="relax requires q"):
         _SearchWithNewControl(relax=True, newControl=True)
 
 

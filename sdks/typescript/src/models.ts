@@ -115,6 +115,20 @@ export interface Facet {
   values: string[];
 }
 
+/**
+ * A search `facets` entry: a {@link Facet} with the caller's say on relaxation.
+ *
+ * `relaxable: true` lets `relax` drop the facet. It still replaces an
+ * understood facet of the same name and filters until a relaxation stage drops
+ * it; with `relax: false` it is never dropped. Only a name a relaxation stage
+ * covers may be marked (brand profile facets, taxonomy attributes, `color`,
+ * `color_family`, `category_path.depth_2` and deeper); the server refuses any
+ * other name with a `422`. Sent as given, so a plain facet goes out as before.
+ */
+export interface SearchFacet extends Facet {
+  relaxable?: boolean;
+}
+
 export interface SearchProductsParams {
   /**
    * Free-text query. Omit to browse by filters alone. By default it is
@@ -130,10 +144,11 @@ export interface SearchProductsParams {
   understand?: boolean;
   /**
    * Filters a product must match: every facet, and any value within a facet.
-   * A facet you send replaces any understood facet of the same name. Each name
+   * A facet you send replaces any understood facet of the same name and is
+   * never relaxed unless you mark it {@link SearchFacet.relaxable}. Each name
    * at most once.
    */
-  facets?: Facet[];
+  facets?: SearchFacet[];
   /**
    * Filters a product must not match: products with any listed value of any
    * listed facet are removed. Each name at most once.
@@ -184,9 +199,10 @@ export interface SearchProductsParams {
   /** `nextCursor` from the previous page, with the same request otherwise. */
   cursor?: string;
   /**
-   * When an understood `q` returns nothing, retry with understood filters
-   * dropped in stages. Facets you send are never dropped. Requires understood
-   * `q`; replay a relaxed page's cursor with `relax: true`.
+   * When `q` returns nothing, retry with filters dropped in stages: understood
+   * filters and facets you marked `relaxable`; any other facet you send is
+   * never dropped. Requires `q`, and either `understand` left on or at least
+   * one `relaxable` facet; replay a relaxed page's cursor with `relax: true`.
    */
   relax?: boolean;
   /**
@@ -207,7 +223,7 @@ export interface SearchProductsParams {
 export interface ProgrammaticProductSearchRequest {
   q?: string;
   understand?: boolean;
-  facets?: Facet[];
+  facets?: SearchFacet[];
   exclude_facets?: Facet[];
   omit_generated_facets?: string[];
   price_min?: number;
@@ -225,7 +241,11 @@ export interface ProgrammaticProductSearchRequest {
   debug?: boolean;
 }
 
-/** One facet that ran, and where it came from (`caller` or `generated`). */
+/**
+ * One facet that ran, and where it came from (`caller` or `generated`). A
+ * caller facet sent with `relaxable: true` carries `relaxable: true` here, in
+ * `facets` and in `relaxation.droppedFacets`.
+ */
 export type ProgrammaticProductSearchEffectiveFacet =
   components["schemas"]["ProgrammaticProductSearchEffectiveFacet"];
 

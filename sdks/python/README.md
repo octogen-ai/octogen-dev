@@ -198,10 +198,18 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
 - `omit_generated_facets=["fit"]` drops an understood facet that is wrong when
   you have no value of your own for it; to replace one, send a facet of that
   name instead. Use the names `effective_query` reports.
+- A facet sent as `{"name": "color_family", "values": ["Red"], "relaxable": True}`
+  (or `SearchFacet(..., relaxable=True)`) may be dropped by `relax`; every other
+  facet you send never is. This is how a caller doing its own query
+  understanding gets the server's staged fallback: `understand=False`, its
+  guesses as `relaxable` facets, and `relax=True`. Only names a relaxation
+  stage covers may be marked (brand profile facets, taxonomy attributes,
+  `color`, `color_family`, `category_path.depth_2` and deeper).
 - `debug=True` adds `effective_query`, the search that actually ran.
 
-Contradictions the API would refuse — `relax` or `understand=False` without a
-`q`, a facet name sent twice, `price_min` above `price_max` — raise
+Contradictions the API would refuse — `relax` without a `q` or with
+`understand=False` and no `relaxable` facet, `understand=False` without a `q`,
+a facet name sent twice, `price_min` above `price_max` — raise
 `pydantic.ValidationError` before any request.
 
 **Removed in 0.5.0** (the API now answers them with `422`): `catalog=` → use

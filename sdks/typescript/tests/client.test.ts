@@ -209,6 +209,32 @@ describe("OctogenClient", () => {
     });
   });
 
+  it("sends relaxable facets with a literal q and relax", async () => {
+    const { fetchMock, calls } = createFetchMock({ items: [], nextCursor: null });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.searchProducts({
+      q: "linen midi dress",
+      understand: false,
+      relax: true,
+      facets: [
+        { name: "gender", values: ["female"] },
+        { name: "color_family", values: ["Red"], relaxable: true },
+      ],
+    });
+
+    expect(requestBodyJson(lastCall(calls))).toEqual({
+      q: "linen midi dress",
+      understand: false,
+      relax: true,
+      facets: [
+        { name: "gender", values: ["female"] },
+        { name: "color_family", values: ["Red"], relaxable: true },
+      ],
+      limit: 50,
+    });
+  });
+
   it("reads the card fields on search list items", async () => {
     const { fetchMock } = createFetchMock({
       items: [
@@ -301,8 +327,15 @@ describe("OctogenClient", () => {
     ],
     [{ understand: false }, "understand: false requires q"],
     [{ q: "   ", understand: false }, "understand: false requires q"],
-    [{ relax: true }, "relax requires an understood q"],
-    [{ q: "dress", understand: false, relax: true }, "relax requires an understood q"],
+    [{ relax: true }, "relax requires q"],
+    [
+      { q: "dress", understand: false, relax: true },
+      "relax requires an understood q (q set, understand not false) or a facet marked relaxable",
+    ],
+    [
+      { relax: true, facets: [{ name: "color", values: ["red"], relaxable: true }] },
+      "relax requires q",
+    ],
     [
       { omitGeneratedFacets: ["color"] },
       "omitGeneratedFacets requires an understood q",

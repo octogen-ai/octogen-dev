@@ -2425,6 +2425,11 @@ export interface components {
             /** Name */
             name: string;
             /**
+             * Relaxable
+             * @description `true` for a facet you sent marked `relaxable`, which `relax` may drop. Absent otherwise.
+             */
+            relaxable?: boolean | null;
+            /**
              * Source
              * @description `caller` for a facet you sent, `generated` for one understood from `q`. A `generated` name can go in `omit_generated_facets`.
              */
@@ -2565,9 +2570,9 @@ export interface components {
             exclude_facets?: components["schemas"]["Facet"][] | null;
             /**
              * Facets
-             * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed. Each name at most once.
+             * @description Filters a product must match: every facet, and any value within a facet. A facet you send replaces any understood facet of the same name (a colour facet replaces both understood colour facets) and is never relaxed unless you mark it `relaxable`. Each name at most once.
              */
-            facets?: components["schemas"]["Facet"][] | null;
+            facets?: components["schemas"]["SearchFacet"][] | null;
             /**
              * Fallback Category
              * @description Category path, root first, to search when understanding finds no category in `q`, e.g. `["apparel & accessories", "clothing"]`. Each entry is a category name as the `category_path.depth_N` facets accept it, and the path must exist in the taxonomy. Not applied when the understood query has a `category_path.depth_0` facet or `facets` has any `category_path` facet. Applied levels are reported in `effectiveQuery` as `generated`, so `relax` can drop them and `omit_generated_facets` can remove them. Requires `q` with `understand: true`.
@@ -2601,7 +2606,7 @@ export interface components {
             q?: string | null;
             /**
              * Relax
-             * @description When an understood `q` returns nothing, retry with understood filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Facets you send are never dropped. Requires understood `q`. A relaxed page's cursor continues the same relaxed results.
+             * @description When `q` returns nothing, retry with filters dropped in stages (inferred brand attributes, then attributes, then colour and deep categories) and return the first stage with results. Drops understood filters and facets you marked `relaxable`; any other facet you send is never dropped. Requires `q`, and either `understand: true` or at least one `relaxable` facet. A relaxed page's cursor continues the same relaxed results.
              * @default false
              */
             relax: boolean;
@@ -2732,6 +2737,28 @@ export interface components {
             publishedAt?: string | null;
             /** Rating */
             rating?: number | null;
+        };
+        /**
+         * SearchFacet
+         * @description A filter a product must match, with the caller's say on relaxation.
+         */
+        SearchFacet: {
+            /**
+             * Name
+             * @description Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.
+             */
+            name: string;
+            /**
+             * Relaxable
+             * @description Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.
+             * @default false
+             */
+            relaxable: boolean;
+            /**
+             * Values
+             * @description Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.
+             */
+            values: string[];
         };
         /**
          * SimilarBrandsRequest
