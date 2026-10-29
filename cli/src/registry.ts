@@ -56,6 +56,14 @@ const CATALOG_DISCOVERY: string =
   "agent tools; no dedicated command yet. Reachable here via `storerouter api`.";
 
 /**
+ * Retrieve reads back products by an id an integration stored from an earlier
+ * search or lookup; a shell user starts from a URL or a query instead.
+ */
+const RETRIEVE: string =
+  "Read-back by stored product id is an SDK surface for integrations; no " +
+  "dedicated command yet. Reachable here via `storerouter api`.";
+
+/**
  * Published operations with no command, and why.
  *
  * A reason is required, and it has to be a real one: this is the record of a
@@ -84,6 +92,8 @@ export const EXCLUDED_OPERATIONS = {
   parseProductAlias:
     "Exact alias of lookupProduct, already exposed by `storerouter lookup` and its `parse` command alias. Use `storerouter api POST /products/parse` for the alias path.",
   removeUrlListUrls: URL_LISTS,
+  retrieveProduct: RETRIEVE,
+  retrieveProducts: RETRIEVE,
 } as const satisfies Partial<Record<OperationId, string>>;
 
 export type ExcludedOperation = keyof typeof EXCLUDED_OPERATIONS;

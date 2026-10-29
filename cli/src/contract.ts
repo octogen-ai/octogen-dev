@@ -20,6 +20,8 @@ export interface Schema {
   maxLength?: number;
   minItems?: number;
   maxItems?: number;
+  /** Only `uuid`; codegen rejects any other format. */
+  format?: string;
 }
 export interface RequestOperation {
   method: string;
@@ -166,6 +168,8 @@ function matchesType(schema: Schema, value: unknown): boolean {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+
 /** Validate the resolved public request schema, including nested facets/source. */
 export function validate(schema: Schema, value: unknown, label: string): void {
   const fail = (detail: string): never => {
@@ -205,6 +209,7 @@ export function validate(schema: Schema, value: unknown, label: string): void {
       fail(`must have at least ${String(schema.minLength)} characters`);
     if (schema.maxLength !== undefined && length > schema.maxLength)
       fail(`must have at most ${String(schema.maxLength)} characters`);
+    if (schema.format === "uuid" && !UUID.test(value as string)) fail("must be a UUID");
   }
   if (
     schema.type === "number" ||

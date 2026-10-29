@@ -14,6 +14,7 @@ from email.utils import parsedate_to_datetime
 from pprint import pformat
 from types import TracebackType
 from typing import Any, Self, TypeVar
+from uuid import UUID
 
 import httpx
 from pydantic import BaseModel, TypeAdapter
@@ -55,6 +56,8 @@ from octogen_ai_sdk.models import (
     ProductLookupMatchMode,
     ProductLookupResolutionMode,
     ProductMarkdownLookupResult,
+    ProductRetrieveBatchResponse,
+    ProductRetrieveResult,
     ProgrammaticFacetCountCategory,
     ProgrammaticFacetCountsRequest,
     ProgrammaticFacetCountsResponse,
@@ -100,6 +103,9 @@ DEPRECATED_API_KEY_ENV_VAR = "OCTO_API_KEY"
 #: A per-call ``timeout``: seconds, or an ``httpx.Timeout`` for finer control.
 Timeout = float | httpx.Timeout
 
+#: ``POST /v1/products/retrieve`` takes 1-50 ids.
+MAX_RETRIEVE_IDS = 50
+
 _MAX_AGE = re.compile(r"(?:^|[\s,])max-age\s*=\s*(\d+)", re.IGNORECASE)
 
 _RequestT = TypeVar("_RequestT", bound=BaseModel)
@@ -134,7 +140,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.11.1"
+        return "0.12.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -304,6 +310,70 @@ class OctogenClient:
             "parseProductAlias", json=body, context=context, timeout=timeout
         )
         return MerchantProductUrlLookupResponse.model_validate(data)
+
+    async def retrieve_product(
+        self,
+        uuid: str | UUID,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> ProductRetrieveResult:
+        """Read back one product you already hold an id for.
+
+        ``GET /v1/products/retrieve/{uuid}``, for a ``uuid`` from search or
+        lookup. Index-only and unbilled: nothing is fetched from the merchant,
+        so a miss is final. An older id for the same product resolves to it,
+        and the result's ``uuid`` is the current one to store.
+
+        Unlike lookup, a product that is no longer offered is returned, with
+        ``is_active=False`` and ``last_deactivated_at``. An unknown id, a
+        product that left the index, and a product outside your key's catalog
+        access all raise :class:`OctogenNotFoundError` with
+        ``detail == "product_not_found"``. A malformed id raises
+        :class:`OctogenValidationError`.
+        """
+        product_id = str(uuid).strip()
+        if not product_id:
+            raise ValueError("retrieve_product: uuid is required")
+        data = await self._json(
+            "retrieveProduct",
+            path_params={"uuid": product_id},
+            context=context,
+            timeout=timeout,
+        )
+        return ProductRetrieveResult.model_validate(data)
+
+    async def retrieve_products(
+        self,
+        uuids: Sequence[str | UUID],
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> ProductRetrieveBatchResponse:
+        """Read back 1-50 products by id in one call (``POST /v1/products/retrieve``).
+
+        Returns one result per id, in request order, duplicates included:
+        ``found`` with the product (and its current ``uuid``), or
+        ``not_found``. Same rules as :meth:`retrieve_product`; misses never
+        raise.
+        """
+        if isinstance(uuids, (str, UUID)):
+            raise TypeError("retrieve_products: pass a sequence of ids, not one id")
+        product_ids = [str(uuid).strip() for uuid in uuids]
+        if not 1 <= len(product_ids) <= MAX_RETRIEVE_IDS:
+            raise ValueError(
+                f"retrieve_products: uuids accepts 1 to {MAX_RETRIEVE_IDS} ids, "
+                f"got {len(product_ids)}"
+            )
+        if not all(product_ids):
+            raise ValueError("retrieve_products: every uuid must be non-empty")
+        data = await self._json(
+            "retrieveProducts",
+            json={"uuids": product_ids},
+            context=context,
+            timeout=timeout,
+        )
+        return ProductRetrieveBatchResponse.model_validate(data)
 
     async def resolve_product_from_html(
         self,

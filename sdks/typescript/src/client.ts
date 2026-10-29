@@ -47,6 +47,8 @@ import type {
   ProgrammaticProductSearchPage,
   ProgrammaticProductSearchRequest,
   ProgrammaticResolveFromHtmlRequest,
+  ProductRetrieveBatchResponse,
+  ProductRetrieveResult,
   ResolveProductFromHtmlParams,
   SearchBrandPrefixParams,
   SearchBrandsFromTextParams,
@@ -67,7 +69,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.storerouter.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.9.0";
+export const SDK_VERSION = "0.10.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -194,6 +196,54 @@ export class OctogenClient {
       body,
     });
     return data as MerchantProductUrlLookupResponse;
+  }
+
+  /**
+   * Read back one product you already hold an id for
+   * (`GET /v1/products/retrieve/{uuid}`), such as a `uuid` from search or
+   * lookup. Index-only and unbilled: nothing is fetched from the merchant, so
+   * a miss is final. An older id for the same product resolves to it, and the
+   * result's `uuid` is the current one to store.
+   *
+   * Unlike lookup, a product that is no longer offered is returned, with
+   * `isActive: false` and `lastDeactivatedAt`. An unknown id, a product that
+   * left the index, and a product outside your key's catalog access are all
+   * a `404` with `detail` `product_not_found` ({@link OctogenNotFoundError}).
+   * A malformed id is a `422`.
+   */
+  async retrieveProduct(
+    uuid: string,
+    options: RequestOptions = {},
+  ): Promise<ProductRetrieveResult> {
+    assertNonEmptyString(uuid, "uuid");
+    const data = await this.json("retrieveProduct", {
+      context: options.context,
+      pathParams: { uuid },
+    });
+    return data as ProductRetrieveResult;
+  }
+
+  /**
+   * Read back 1–50 products by id in one call (`POST /v1/products/retrieve`).
+   * Returns one result per id, in request order, duplicates included: `found`
+   * with the product (and its current `uuid`), or `not_found`. Same rules as
+   * {@link retrieveProduct}; misses never raise.
+   */
+  async retrieveProducts(
+    uuids: readonly string[],
+    options: RequestOptions = {},
+  ): Promise<ProductRetrieveBatchResponse> {
+    if (uuids.length === 0 || uuids.length > MAX_RETRIEVE_IDS) {
+      throw new TypeError(
+        `uuids accepts 1 to ${String(MAX_RETRIEVE_IDS)} ids, got ${String(uuids.length)}`,
+      );
+    }
+    for (const uuid of uuids) assertNonEmptyString(uuid, "uuids[]");
+    const data = await this.json("retrieveProducts", {
+      context: options.context,
+      body: { uuids: [...uuids] },
+    });
+    return data as ProductRetrieveBatchResponse;
   }
 
   /**
@@ -943,6 +993,7 @@ const REMOVED_SEARCH_PARAMS: Readonly<Record<string, string>> = Object.freeze({
 });
 
 const MAX_SEARCH_FACETS = 50;
+const MAX_RETRIEVE_IDS = 50;
 
 function toSearchPayload(
   params: SearchProductsParams,

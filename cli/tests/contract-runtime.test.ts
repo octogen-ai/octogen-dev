@@ -145,6 +145,15 @@ describe("contract mutations change runtime behavior", () => {
       validate({ type: "array", maxItems: 1 }, [1, 2], "catalogs");
     }).toThrow();
   });
+  it("validates uuid-format ids the way the server does", () => {
+    const schema = requestSchema("retrieveProducts");
+    expect(() => {
+      validate(schema, { uuids: ["0c0e3bb8-965a-4f2d-919b-182e7a24efc9"] }, "retrieve");
+    }).not.toThrow();
+    expect(() => {
+      validate(schema, { uuids: ["not-a-uuid"] }, "retrieve");
+    }).toThrow("must be a UUID");
+  });
   it("accounts for fields of every mapped operation, including parameters", () => {
     for (const operation of mappedOperations(COMMAND_LIST)) {
       const map = FIELD_MAPS[operation];

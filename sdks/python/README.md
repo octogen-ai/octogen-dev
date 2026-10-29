@@ -91,6 +91,13 @@ if that stops being true — see
   `match_mode` leaves the server on its own default (`loose`).
 - `resolve_product_from_html(html=..., url=...)` resolves a product from page
   HTML you already have — no index read, no outbound fetch.
+- `retrieve_product(uuid)` reads back a product you already hold an id for
+  (from search or lookup), and `retrieve_products(uuids)` does 1-50 at once,
+  in request order. Index-only and unbilled. An older id resolves to the
+  product; store the result's `uuid`. A product no longer offered still comes
+  back, with `is_active=False` and `last_deactivated_at`. A miss raises
+  `OctogenNotFoundError` from `retrieve_product` and is `status="not_found"`
+  in a batch.
 - `list_taxonomy_categories(parent=...)`, `list_taxonomy_attributes(category)`
   and `list_taxonomy_attribute_values(handle)` discover categories, their
   attributes and the attributes' value handles, paged with `offset`/`limit`.

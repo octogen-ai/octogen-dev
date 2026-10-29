@@ -1,5 +1,15 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.12.0 (unreleased)
+
+- Add `retrieve_product(uuid)` for `GET /v1/products/retrieve/{uuid}` and
+  `retrieve_products(uuids)` for `POST /v1/products/retrieve` (1-50 ids),
+  returning `ProductRetrieveResult` and `ProductRetrieveBatchResponse`
+  (octogen#14321). Retrieve reads back products by an id you already hold:
+  index-only, unbilled, older ids resolve to the current one (`uuid`), and a
+  product no longer offered is returned with `is_active=False` and
+  `last_deactivated_at`.
+
 ## 0.11.1 (unreleased)
 
 - `ProgrammaticProductSearchRequest(facets=...)` accepts plain `Facet`

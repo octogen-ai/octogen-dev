@@ -44,6 +44,7 @@ def render(spec: dict) -> str:
             "maxItems",
             "examples",
             "deprecated",
+            "format",
         }
         unknown = schema.keys() - supported
         if unknown:
@@ -61,6 +62,8 @@ def render(spec: dict) -> str:
             "object",
         }:
             raise ValueError("CLI validator needs support for schema type")
+        if schema.get("format", "uuid") != "uuid":
+            raise ValueError("CLI validator needs support for schema format")
         if not isinstance(schema.get("additionalProperties", True), bool):
             raise ValueError(
                 "CLI validator needs support for schema-valued additionalProperties"
