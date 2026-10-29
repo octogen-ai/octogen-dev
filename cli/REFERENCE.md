@@ -25,7 +25,7 @@ storerouter status [--offline]
 Options:
   --offline  Report local state only, with no network calls — for CI, and for 'is it me or the network?'.
 
-Calls: getMe (through @octogen-ai/sdk 0.10.0)
+Calls: getMe (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -68,7 +68,7 @@ Options:
   --on-demand-cache-policy <prefer_cache|refresh>     Cache behavior when the request enters the on-demand path. Default: "prefer_cache".
   --resolution-mode <auto|index_only|on_demand_only>  Source selection policy. auto checks the index before resolving on demand; index_only never performs outbound work; on_demand_only skips the index. Default: "auto".
 
-Calls: lookupProduct (through @octogen-ai/sdk 0.10.0)
+Calls: lookupProduct (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -97,7 +97,7 @@ Options:
   --price-max <n>    Inclusive maximum price. Combined with any understood maximum by keeping the lower one. Minimum: 0.
   --price-min <n>    Inclusive minimum price. Combined with any understood minimum by keeping the higher one. Minimum: 0.
 
-Calls: searchProducts (through @octogen-ai/sdk 0.10.0)
+Calls: searchProducts (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -130,7 +130,7 @@ Options:
   --price-preference <lower|any|higher>  Relative price preference compared with the source product. Default: "any".
   --relax / --no-relax                   Retry with generated facets dropped in stages, least trusted first, when page 1 comes back short, and return the first stage that fills it. For a `uuid` or `url` source, and for `sources`, page 1 is short when it has fewer than `min(5, limit)` results and no `nextCursor`; a stage is adopted only if it reaches that floor, or any result for an empty page. For an `image` source, only an empty page 1 is relaxed. Facets and bounds you send are never dropped. The rule is the same as search's: what you send is never silently dropped, but the server may drop its own inferences. Here the generated facets are Platform's inference from the source product, not words you sent, so `relax` defaults to true; search defaults to false because its generated facets come from your `q`. A relaxed page's cursor continues the same relaxed results and is refused with `relax: false`. Default: true.
 
-Calls: moreLikeThisProducts (through @octogen-ai/sdk 0.10.0)
+Calls: moreLikeThisProducts (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -157,7 +157,7 @@ storerouter stores search <description> [--limit <n>]
 Options:
   --limit <n>  Limit Default: 24. Minimum: 1. Maximum: 100.
 
-Calls: searchStores (through @octogen-ai/sdk 0.10.0)
+Calls: searchStores (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -180,7 +180,7 @@ storerouter stores similar <domain|url>… [--limit <n>]
 Options:
   --limit <n>  Limit Default: 24. Minimum: 1. Maximum: 100.
 
-Calls: searchSimilarStores (through @octogen-ai/sdk 0.10.0)
+Calls: searchSimilarStores (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -199,7 +199,7 @@ storerouter stores show <domain|url>
   Exit 6 means the server answered 404 domain_not_covered: no catalog serves
   that domain. One domain per call; there is no list of covered stores.
 
-Calls: getStore (through @octogen-ai/sdk 0.10.0)
+Calls: getStore (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -226,7 +226,7 @@ Options:
   --price-max <n>   Inclusive maximum price. Combined with any understood maximum by keeping the lower one. Minimum: 0.
   --price-min <n>   Inclusive minimum price. Combined with any understood minimum by keeping the higher one. Minimum: 0.
 
-Calls: searchProducts (through @octogen-ai/sdk 0.10.0)
+Calls: searchProducts (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -249,7 +249,7 @@ Options:
   --min-level <n>  Skip shallower taxonomy levels, e.g. 2 for Dresses over Clothing. Default: 0. Maximum: 10.
   --limit <n>      Categories per catalog. Default: 3. Maximum: 10.
 
-Calls: getStore (through @octogen-ai/sdk 0.10.0)
+Calls: getStore (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -272,7 +272,7 @@ Options:
   --limit <n>     Maximum number of matching brands. Default: 24. Minimum: 1. Maximum: 100.
   --like <brand>  Canonical source brands whose averaged embeddings guide the search.
 
-Calls: searchBrandsFromText (through @octogen-ai/sdk 0.10.0)
+Calls: searchBrandsFromText (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -295,7 +295,7 @@ Options:
   --facet <k=v>          Up to 20 inclusion filters. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
   --limit <n>            Maximum number of similar brands. Default: 24. Minimum: 1. Maximum: 100.
 
-Calls: searchSimilarBrands (through @octogen-ai/sdk 0.10.0)
+Calls: searchSimilarBrands (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -314,7 +314,7 @@ storerouter brands show <brand>
   `stores show` catalog. Pass a listed host to `stores show` for that store's
   coverage.
 
-Calls: getBrandDetails (through @octogen-ai/sdk 0.10.0)
+Calls: getBrandDetails (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -334,7 +334,7 @@ Options:
   --limit <n>   Limit Default: 24. Minimum: 1. Maximum: 100.
   --offset <n>  Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist. Default: 0. Minimum: 0. Maximum: 10000.
 
-Calls: browseBrandProducts (through @octogen-ai/sdk 0.10.0)
+Calls: browseBrandProducts (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -353,7 +353,7 @@ Options:
   --limit <n>      Limit Default: 3. Minimum: 1. Maximum: 20.
   --min-level <n>  Minlevel Default: 0. Minimum: 0. Maximum: 10.
 
-Calls: getBrandTopCategories (through @octogen-ai/sdk 0.10.0)
+Calls: getBrandTopCategories (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -371,7 +371,7 @@ storerouter brands prefix <prefix> [--limit <n>]
 Options:
   --limit <n>  Limit Default: 20. Minimum: 1. Maximum: 50.
 
-Calls: searchBrandPrefix (through @octogen-ai/sdk 0.10.0)
+Calls: searchBrandPrefix (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
@@ -396,7 +396,7 @@ Options:
   --html <file|->  Product page HTML to resolve. Capped at 5 MiB — the same bound the live on-demand fetch path enforces, so any page that path could retrieve is submittable here.
   --url <value>    Optional, but strongly recommended: the page's source URL, ideally location.href read at the same instant the DOM was serialized. It anchors relative image URLs and JSON-LD candidate selection exactly like the live path's final fetched URL, and it is echoed back as requestedUrl — on storefronts that record an in-page variant selection only in the URL's query parameters, this is the only variant-qualified identity the response retains. When absent the page itself must declare its canonical URL (JSON-LD Product/variant url, link rel=canonical, selected Offer.url, or og:url) or resolution fails with product_not_found.
 
-Calls: resolveProductFromHtml (through @octogen-ai/sdk 0.10.0)
+Calls: resolveProductFromHtml (through @octogen-ai/sdk 0.11.0)
 
 Global options: storerouter --help
 ```
