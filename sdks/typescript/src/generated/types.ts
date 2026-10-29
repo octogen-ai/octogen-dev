@@ -422,6 +422,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products/retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retrieve products by id (batch)
+         * @description Batch form of `GET /products/retrieve/{uuid}` for 1-50 ids. Returns one result per requested id, in request order: `found` with the product (and its current `uuid` when a historical id was sent), or `not_found`. Index-only, like the single form. Every id counts toward the organization's daily retrieve item ceiling.
+         */
+        post: operations["retrieveProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/retrieve/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieve a product by id
+         * @description Return a product Octogen already gave you an id for (from search, lookup, or an earlier retrieve). Index-only: nothing is fetched from the merchant, so a miss is final. Historical ids resolve to the current product; store the returned `uuid`. Unlike lookup, an inactive product is returned with `isActive: false` and `lastDeactivatedAt`, so you can tell a product that is gone from one you cannot see. Use `POST /products/search` to find products and `POST /products/lookup` to resolve a URL. Responses carry a weak `ETag`; send `If-None-Match` to revalidate (304).
+         */
+        get: operations["retrieveProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products/search": {
         parameters: {
             query?: never;
@@ -1320,7 +1360,7 @@ export interface components {
             slug: string;
             /**
              * Type
-             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.
+             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.
              * @enum {string}
              */
             type: "merchant" | "catalog_partner";
@@ -1921,6 +1961,67 @@ export interface components {
          * @enum {string}
          */
         ProductResolverCachePolicyV1: "prefer_cache" | "refresh";
+        /**
+         * ProductRetrieveBatchRequest
+         * @description Batch retrieve request: product ids the caller already holds.
+         */
+        ProductRetrieveBatchRequest: {
+            /**
+             * Uuids
+             * @description Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.
+             */
+            uuids: string[];
+        };
+        /**
+         * ProductRetrieveBatchResponse
+         * @description Batch retrieve results, in request order.
+         */
+        ProductRetrieveBatchResponse: {
+            /** Results */
+            results: components["schemas"]["ProductRetrieveResult"][];
+        };
+        /**
+         * ProductRetrieveResult
+         * @description One retrieved product id: the indexed product, or ``not_found``.
+         *
+         *     ``not_found`` covers an unknown id, an id whose product left the index,
+         *     and an id outside the caller's catalog access; the three are deliberately
+         *     indistinguishable.
+         */
+        ProductRetrieveResult: {
+            /** Catalogdisplayname */
+            catalogDisplayName?: string | null;
+            /** Catalogkey */
+            catalogKey?: string | null;
+            /**
+             * Isactive
+             * @description False when the product is no longer offered. Retrieve returns inactive products (lookup does not) so a caller holding an id can learn it is gone.
+             */
+            isActive?: boolean | null;
+            /**
+             * Lastdeactivatedat
+             * @description When the product was last deactivated, if it ever was.
+             */
+            lastDeactivatedAt?: string | null;
+            product?: components["schemas"]["MerchantProductView"] | null;
+            /**
+             * Requesteduuid
+             * @description The id the caller sent, echoed.
+             */
+            requestedUuid: string;
+            /** Sourcebaseurl */
+            sourceBaseUrl?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "found" | "not_found";
+            /**
+             * Uuid
+             * @description The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.
+             */
+            uuid?: string | null;
+        };
         /** ProgrammaticAttributeCounts */
         ProgrammaticAttributeCounts: {
             /**
@@ -2499,7 +2600,7 @@ export interface components {
             items: components["schemas"]["MerchantProductListItem"][];
             /**
              * Nextcursor
-             * @description Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. On search, consecutive pages can repeat a product: the first page is relevance-ranked while later pages are ordered by quality score from the first page's last item, so de-duplicate by `uuid` when concatenating pages.
+             * @description Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.
              */
             nextCursor?: string | null;
             /**
@@ -4548,7 +4649,7 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description API key is valid but its organization may not use `/v1`, or the organization is no longer active. `/me` is not an exception to the org-type gate; the `detail` is the reason. */
+            /** @description API key is valid but its organization may not use `/v1`, or the organization is no longer active. `/me` admits Developer and Merchant organizations; the `detail` is the reason. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5070,6 +5171,168 @@ export interface operations {
             };
             /** @description Product resolution exceeded its deadline. */
             504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retrieveProducts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRetrieveBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRetrieveBatchResponse"];
+                };
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Retrieve rate limit exceeded, or the organization's rolling daily retrieve item ceiling is spent (detail retrieve_daily_item_limit_exceeded). Honor Retry-After. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The product index timed out (retry after the advertised delay). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retrieveProduct: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRetrieveResult"];
+                };
+            };
+            /** @description Not modified since the ETag sent in If-None-Match. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid X-Octogen-Request-Context header */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description API key is valid but not allowed to access this resource. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description No indexed product with this id is visible to your key (detail product_not_found). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request validation failed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Retrieve rate limit exceeded, or the organization's rolling daily retrieve item ceiling is spent (detail retrieve_daily_item_limit_exceeded). Honor Retry-After. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The product index timed out (retry after the advertised delay). */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

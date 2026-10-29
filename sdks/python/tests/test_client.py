@@ -1638,3 +1638,94 @@ def test_search_request_accepts_plain_facets_in_facets() -> None:
     assert request.model_dump(mode="json", exclude_none=True)["facets"] == [
         {"name": "gender", "values": ["female"]}
     ]
+
+
+CURRENT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+OLD_ID = "0c0e3bb8-965a-4f2d-919b-182e7a24efc9"
+RETRIEVED_JSON = {
+    "requestedUuid": OLD_ID,
+    "status": "found",
+    "uuid": CURRENT_ID,
+    "catalogKey": "acme",
+    "catalogDisplayName": "Acme",
+    "sourceBaseUrl": "https://acme.example",
+    "isActive": False,
+    "lastDeactivatedAt": "2026-10-01T08:30:00Z",
+    "product": {
+        "uuid": CURRENT_ID,
+        "catalogKey": "acme",
+        "productUrl": "https://acme.example/p/1",
+        "title": "Widget",
+        "isActive": False,
+    },
+}
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_retrieve_product_gets_one_id_and_returns_its_current_id() -> None:
+    from uuid import UUID
+
+    route = respx.get(f"{BASE_URL}/products/retrieve/{OLD_ID}").mock(
+        return_value=httpx.Response(200, json=RETRIEVED_JSON)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.retrieve_product(UUID(OLD_ID))
+
+    assert route.called
+    assert result.requested_uuid == OLD_ID
+    assert result.uuid == CURRENT_ID
+    assert result.is_active is False
+    assert result.last_deactivated_at is not None
+    assert result.product is not None
+    assert result.product.uuid == CURRENT_ID
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_retrieve_product_miss_is_not_found() -> None:
+    respx.get(f"{BASE_URL}/products/retrieve/{CURRENT_ID}").mock(
+        return_value=httpx.Response(404, json={"detail": "product_not_found"})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenNotFoundError) as exc_info:
+            await client.retrieve_product(CURRENT_ID)
+
+    assert exc_info.value.detail == "product_not_found"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_retrieve_products_posts_ids_in_order_and_keeps_misses() -> None:
+    route = respx.post(f"{BASE_URL}/products/retrieve").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    RETRIEVED_JSON,
+                    {"requestedUuid": CURRENT_ID, "status": "not_found"},
+                ]
+            },
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.retrieve_products([OLD_ID, CURRENT_ID])
+
+    assert json.loads(route.calls.last.request.content) == {
+        "uuids": [OLD_ID, CURRENT_ID]
+    }
+    assert [r.status for r in page.results] == ["found", "not_found"]
+    assert page.results[1].product is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("uuids", [[], [CURRENT_ID] * 51, ["", CURRENT_ID], CURRENT_ID])
+async def test_retrieve_products_rejects_bad_batches_before_any_request(
+    uuids: Any,
+) -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises((ValueError, TypeError)):
+            await client.retrieve_products(uuids)

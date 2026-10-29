@@ -681,6 +681,36 @@ export interface MerchantProductUrlLookupResponse {
   warnings?: string[] | null;
 }
 
+/**
+ * One product id read back by `retrieveProduct` / `retrieveProducts`.
+ *
+ * `not_found` covers an unknown id, a product that left the index, and a
+ * product outside your key's catalog access; the three look the same. A found
+ * product that is no longer offered still comes back, with `isActive: false`
+ * and `lastDeactivatedAt`.
+ */
+export interface ProductRetrieveResult {
+  /** The id you sent, in canonical lowercase form. */
+  requestedUuid: string;
+  status: "found" | "not_found";
+  /**
+   * The product's current id. Differs from `requestedUuid` when you sent an
+   * older id for the same product; store this one.
+   */
+  uuid?: string | null;
+  catalogKey?: string | null;
+  catalogDisplayName?: string | null;
+  sourceBaseUrl?: string | null;
+  isActive?: boolean | null;
+  lastDeactivatedAt?: string | null;
+  product?: MerchantProductView | null;
+}
+
+/** `retrieveProducts` results: one per requested id, in request order. */
+export interface ProductRetrieveBatchResponse {
+  results: ProductRetrieveResult[];
+}
+
 export interface ValidationErrorModel {
   loc: (string | number)[];
   msg: string;

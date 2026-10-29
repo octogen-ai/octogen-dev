@@ -893,6 +893,37 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     warnings: list[str] | None = Field(default_factory=list)
 
 
+class ProductRetrieveResult(_ResponseModel):
+    """One product id read back by ``retrieve_product`` / ``retrieve_products``.
+
+    ``not_found`` covers an unknown id, a product that left the index, and a
+    product outside your key's catalog access; the three look the same. A
+    found product that is no longer offered still comes back, with
+    ``is_active=False`` and ``last_deactivated_at``.
+    """
+
+    #: The id you sent, in canonical lowercase form.
+    requested_uuid: str = Field(alias="requestedUuid")
+    status: Literal["found", "not_found"] | str
+    #: The product's current id. Differs from ``requested_uuid`` when you sent
+    #: an older id for the same product; store this one.
+    uuid: str | None = None
+    catalog_key: str | None = Field(default=None, alias="catalogKey")
+    catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
+    source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
+    is_active: bool | None = Field(default=None, alias="isActive")
+    last_deactivated_at: datetime | None = Field(
+        default=None, alias="lastDeactivatedAt"
+    )
+    product: MerchantProductView | None = None
+
+
+class ProductRetrieveBatchResponse(_ResponseModel):
+    """``retrieve_products`` results: one per requested id, in request order."""
+
+    results: list[ProductRetrieveResult]
+
+
 class ProductMarkdownLookupResult(_ResponseModel):
     """A product rendered as Markdown, with the identity headers that name it.
 

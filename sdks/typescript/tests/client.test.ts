@@ -1557,3 +1557,68 @@ const SEARCH_DEBUG_PAGE = {
     },
   },
 };
+
+describe("OctogenClient retrieve", () => {
+  const CURRENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const OLD = "0c0e3bb8-965a-4f2d-919b-182e7a24efc9";
+  const FOUND = {
+    requestedUuid: OLD,
+    status: "found",
+    uuid: CURRENT,
+    catalogKey: "acme",
+    isActive: false,
+    lastDeactivatedAt: "2026-10-01T08:30:00Z",
+    product: { uuid: CURRENT, productUrl: "https://acme.example/p/1", isActive: false },
+  };
+
+  it("GETs one id and returns its current id", async () => {
+    const { calls, fetchMock } = createFetchMock(FOUND);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const result = await client.retrieveProduct(OLD);
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/products/retrieve/${OLD}`);
+    expect(call.init?.method).toBe("GET");
+    expect(call.init?.body).toBeUndefined();
+    expect(result.uuid).toBe(CURRENT);
+    expect(result.isActive).toBe(false);
+  });
+
+  it("surfaces a miss as a not-found error", async () => {
+    const { fetchMock } = createFetchMock(
+      { detail: "product_not_found" },
+      { status: 404 },
+    );
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await expect(client.retrieveProduct(CURRENT)).rejects.toBeInstanceOf(
+      OctogenNotFoundError,
+    );
+  });
+
+  it("POSTs a batch in request order", async () => {
+    const { calls, fetchMock } = createFetchMock({
+      results: [FOUND, { requestedUuid: CURRENT, status: "not_found" }],
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.retrieveProducts([OLD, CURRENT]);
+
+    const call = lastCall(calls);
+    expect(call.input).toBe(`${BASE_URL}/products/retrieve`);
+    expect(call.init?.method).toBe("POST");
+    expect(requestBodyJson(call)).toEqual({ uuids: [OLD, CURRENT] });
+    expect(page.results.map((r) => r.status)).toEqual(["found", "not_found"]);
+  });
+
+  it("refuses an empty, oversized or blank batch before any request", async () => {
+    const { calls, fetchMock } = createFetchMock({ results: [] });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    for (const uuids of [[], Array<string>(51).fill(CURRENT), ["", CURRENT]]) {
+      await expect(client.retrieveProducts(uuids)).rejects.toThrow(TypeError);
+    }
+    expect(calls).toHaveLength(0);
+  });
+});

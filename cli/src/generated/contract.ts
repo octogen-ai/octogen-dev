@@ -1368,6 +1368,52 @@ export const PUBLIC_CONTRACT = {
       "parameters": [],
       "path": "/products/resolve-from-html"
     },
+    "retrieveProduct": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "uuid",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/products/retrieve/{uuid}"
+    },
+    "retrieveProducts": {
+      "body": {
+        "description": "Batch retrieve request: product ids the caller already holds.",
+        "properties": {
+          "uuids": {
+            "description": "Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Uuids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuids"
+        ],
+        "title": "ProductRetrieveBatchRequest",
+        "type": "object"
+      },
+      "method": "POST",
+      "parameters": [],
+      "path": "/products/retrieve"
+    },
     "searchBrandPrefix": {
       "body": {
         "properties": {},
@@ -2065,6 +2111,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "1f47e196d69d90f693d1dff0a74f3f152b72602f796825b8627a4ed6949bfa1d",
+  "sha256": "823b84611ccf067ebfdaa96b2a65a8be4cd83c93f62c06abb730145ff8054488",
   "version": "1.0.0"
 } as const;

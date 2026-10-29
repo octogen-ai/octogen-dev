@@ -53,6 +53,8 @@ export const OPERATIONS = {
     path: "/coverage/url-lists/{urlListId}/urls/remove",
   },
   resolveProductFromHtml: { method: "POST", path: "/products/resolve-from-html" },
+  retrieveProduct: { method: "GET", path: "/products/retrieve/{uuid}" },
+  retrieveProducts: { method: "POST", path: "/products/retrieve" },
   searchBrandPrefix: { method: "GET", path: "/brands/prefix" },
   searchBrandsFromText: { method: "POST", path: "/brands/search" },
   searchProducts: { method: "POST", path: "/products/search" },

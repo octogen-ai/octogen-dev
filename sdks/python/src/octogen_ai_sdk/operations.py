@@ -54,6 +54,8 @@ OPERATIONS: Final[dict[str, Operation]] = {
         "POST", "/coverage/url-lists/{urlListId}/urls/remove"
     ),
     "resolveProductFromHtml": Operation("POST", "/products/resolve-from-html"),
+    "retrieveProduct": Operation("GET", "/products/retrieve/{uuid}"),
+    "retrieveProducts": Operation("POST", "/products/retrieve"),
     "searchBrandPrefix": Operation("GET", "/brands/prefix"),
     "searchBrandsFromText": Operation("POST", "/brands/search"),
     "searchProducts": Operation("POST", "/products/search"),

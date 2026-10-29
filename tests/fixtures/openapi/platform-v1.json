@@ -1785,7 +1785,7 @@
             "type": "string"
           },
           "type": {
-            "description": "Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.",
+            "description": "Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
             "enum": [
               "merchant",
               "catalog_partner"
@@ -3231,6 +3231,148 @@
         ],
         "title": "ProductResolverCachePolicyV1",
         "type": "string"
+      },
+      "ProductRetrieveBatchRequest": {
+        "description": "Batch retrieve request: product ids the caller already holds.",
+        "properties": {
+          "uuids": {
+            "description": "Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Uuids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuids"
+        ],
+        "title": "ProductRetrieveBatchRequest",
+        "type": "object"
+      },
+      "ProductRetrieveBatchResponse": {
+        "description": "Batch retrieve results, in request order.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ProductRetrieveResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "ProductRetrieveBatchResponse",
+        "type": "object"
+      },
+      "ProductRetrieveResult": {
+        "description": "One retrieved product id: the indexed product, or ``not_found``.\n\n``not_found`` covers an unknown id, an id whose product left the index,\nand an id outside the caller's catalog access; the three are deliberately\nindistinguishable.",
+        "properties": {
+          "catalogDisplayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogdisplayname"
+          },
+          "catalogKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogkey"
+          },
+          "isActive": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "False when the product is no longer offered. Retrieve returns inactive products (lookup does not) so a caller holding an id can learn it is gone.",
+            "title": "Isactive"
+          },
+          "lastDeactivatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the product was last deactivated, if it ever was.",
+            "title": "Lastdeactivatedat"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MerchantProductView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestedUuid": {
+            "description": "The id the caller sent, echoed.",
+            "title": "Requesteduuid",
+            "type": "string"
+          },
+          "sourceBaseUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcebaseurl"
+          },
+          "status": {
+            "enum": [
+              "found",
+              "not_found"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.",
+            "title": "Uuid"
+          }
+        },
+        "required": [
+          "requestedUuid",
+          "status"
+        ],
+        "title": "ProductRetrieveResult",
+        "type": "object"
       },
       "ProgrammaticAttributeCounts": {
         "properties": {
@@ -4700,7 +4842,7 @@
                 "type": "null"
               }
             ],
-            "description": "Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. On search, consecutive pages can repeat a product: the first page is relevance-ranked while later pages are ordered by quality score from the first page's last item, so de-duplicate by `uuid` when concatenating pages.",
+            "description": "Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
             "title": "Nextcursor"
           },
           "requestId": {
@@ -8557,7 +8699,7 @@
                 }
               }
             },
-            "description": "API key is valid but its organization may not use `/v1`, or the organization is no longer active. `/me` is not an exception to the org-type gate; the `detail` is the reason."
+            "description": "API key is valid but its organization may not use `/v1`, or the organization is no longer active. `/me` admits Developer and Merchant organizations; the `detail` is the reason."
           },
           "422": {
             "content": {
@@ -9519,6 +9661,248 @@
           }
         ],
         "summary": "Resolve product from supplied HTML",
+        "tags": [
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/products/retrieve": {
+      "post": {
+        "description": "Batch form of `GET /products/retrieve/{uuid}` for 1-50 ids. Returns one result per requested id, in request order: `found` with the product (and its current `uuid` when a historical id was sent), or `not_found`. Index-only, like the single form. Every id counts toward the organization's daily retrieve item ceiling.",
+        "operationId": "retrieveProducts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductRetrieveBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductRetrieveBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "summary": "Forbidden API key",
+                    "value": {
+                      "detail": "api_key_forbidden"
+                    }
+                  },
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but not allowed to access this resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validationError": {
+                    "summary": "Invalid request body",
+                    "value": {
+                      "detail": [
+                        {
+                          "input": {},
+                          "loc": [
+                            "body",
+                            "url"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Request validation failed."
+          },
+          "429": {
+            "description": "Retrieve rate limit exceeded, or the organization's rolling daily retrieve item ceiling is spent (detail retrieve_daily_item_limit_exceeded). Honor Retry-After."
+          },
+          "503": {
+            "description": "The product index timed out (retry after the advertised delay)."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Retrieve products by id (batch)",
+        "tags": [
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/products/retrieve/{uuid}": {
+      "get": {
+        "description": "Return a product Octogen already gave you an id for (from search, lookup, or an earlier retrieve). Index-only: nothing is fetched from the merchant, so a miss is final. Historical ids resolve to the current product; store the returned `uuid`. Unlike lookup, an inactive product is returned with `isActive: false` and `lastDeactivatedAt`, so you can tell a product that is gone from one you cannot see. Use `POST /products/search` to find products and `POST /products/lookup` to resolve a URL. Responses carry a weak `ETag`; send `If-None-Match` to revalidate (304).",
+        "operationId": "retrieveProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductRetrieveResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Not modified since the ETag sent in If-None-Match."
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden": {
+                    "summary": "Forbidden API key",
+                    "value": {
+                      "detail": "api_key_forbidden"
+                    }
+                  },
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but not allowed to access this resource."
+          },
+          "404": {
+            "description": "No indexed product with this id is visible to your key (detail product_not_found)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validationError": {
+                    "summary": "Invalid request body",
+                    "value": {
+                      "detail": [
+                        {
+                          "input": {},
+                          "loc": [
+                            "body",
+                            "url"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Request validation failed."
+          },
+          "429": {
+            "description": "Retrieve rate limit exceeded, or the organization's rolling daily retrieve item ceiling is spent (detail retrieve_daily_item_limit_exceeded). Honor Retry-After."
+          },
+          "503": {
+            "description": "The product index timed out (retry after the advertised delay)."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Retrieve a product by id",
         "tags": [
           "platform-catalog-api"
         ]

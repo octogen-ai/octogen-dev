@@ -11,6 +11,7 @@ hand-written; these models are what it validates against.
 from __future__ import annotations
 from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
+from uuid import UUID
 
 
 class AttributeValue(BaseModel):
@@ -341,7 +342,7 @@ class MeOrganization(BaseModel):
     slug: str = Field(..., description="URL-safe organization slug.", title="Slug")
     type: Literal["merchant", "catalog_partner"] | str = Field(
         ...,
-        description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) is the only type allowed on `/v1`; a `merchant` key is refused everywhere on `/v1`, including this endpoint, so this field explains a `403` rather than being a way around it.",
+        description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
         title="Type",
     )
 
@@ -512,6 +513,17 @@ class ProductResolutionMetadata(BaseModel):
         None, alias="missingFields", title="Missingfields"
     )
     rendered: bool | None = Field(None, title="Rendered")
+
+
+class ProductRetrieveBatchRequest(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    uuids: list[UUID] = Field(
+        ...,
+        description="Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+        title="Uuids",
+    )
 
 
 class ProgrammaticCategoryCount(BaseModel):
@@ -1953,7 +1965,7 @@ class ProgrammaticProductSearchPage(BaseModel):
     next_cursor: str | None = Field(
         None,
         alias="nextCursor",
-        description="Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. On search, consecutive pages can repeat a product: the first page is relevance-ranked while later pages are ordered by quality score from the first page's last item, so de-duplicate by `uuid` when concatenating pages.",
+        description="Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
         title="Nextcursor",
     )
     request_id: str = Field(
@@ -2374,6 +2386,45 @@ class MerchantProductView(BaseModel):
     videos: list[VideoView] | None = Field([], title="Videos")
 
 
+class ProductRetrieveResult(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog_display_name: str | None = Field(
+        None, alias="catalogDisplayName", title="Catalogdisplayname"
+    )
+    catalog_key: str | None = Field(None, alias="catalogKey", title="Catalogkey")
+    is_active: bool | None = Field(
+        None,
+        alias="isActive",
+        description="False when the product is no longer offered. Retrieve returns inactive products (lookup does not) so a caller holding an id can learn it is gone.",
+        title="Isactive",
+    )
+    last_deactivated_at: AwareDatetime | None = Field(
+        None,
+        alias="lastDeactivatedAt",
+        description="When the product was last deactivated, if it ever was.",
+        title="Lastdeactivatedat",
+    )
+    product: MerchantProductView | None = None
+    requested_uuid: str = Field(
+        ...,
+        alias="requestedUuid",
+        description="The id the caller sent, echoed.",
+        title="Requesteduuid",
+    )
+    source_base_url: str | None = Field(
+        None, alias="sourceBaseUrl", title="Sourcebaseurl"
+    )
+    status: Literal["found", "not_found"] | str = Field(..., title="Status")
+    uuid: str | None = Field(
+        None,
+        description="The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.",
+        title="Uuid",
+    )
+
+
 class ProgrammaticFacetCountsResponse(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2603,6 +2654,14 @@ class MerchantProductUrlLookupResponse(BaseModel):
         description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
         title="Warnings",
     )
+
+
+class ProductRetrieveBatchResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    results: list[ProductRetrieveResult] = Field(..., title="Results")
 
 
 class StoreCatalogCoverage(BaseModel):

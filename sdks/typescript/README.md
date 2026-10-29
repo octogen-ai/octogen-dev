@@ -89,6 +89,13 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   the request field is `url`.
 - `resolveProductFromHtml(params)` resolves a product from page HTML you already
   have — no index read, no outbound fetch.
+- `retrieveProduct(uuid)` reads back a product you already hold an id for (from
+  search or lookup), and `retrieveProducts(uuids)` does 1-50 at once, in
+  request order. Index-only and unbilled. An older id resolves to the product;
+  store the result's `uuid`. A product no longer offered still comes back, with
+  `isActive: false` and `lastDeactivatedAt`. A miss is a `404`
+  (`OctogenNotFoundError`) from `retrieveProduct` and `status: "not_found"` in
+  a batch.
 - `listTaxonomyCategories(params?)`, `listTaxonomyAttributes(category, params?)`
   and `listTaxonomyAttributeValues(handle, params?)` discover categories, their
   attributes and the attributes' value handles, paged with `offset`/`limit`.
