@@ -1585,6 +1585,53 @@ describe("OctogenClient retrieve", () => {
     expect(result.isActive).toBe(false);
   });
 
+  it("types the offer and merchant detail fields on the product", async () => {
+    const { fetchMock } = createFetchMock({
+      ...FOUND,
+      product: {
+        ...FOUND.product,
+        availability: "PreOrder",
+        itemCondition: "NewCondition",
+        offerSku: "MK-1",
+        languageCode: "en-US",
+        additionalAttributes: [{ name: "weight_g", value: 310 }],
+        variants: [
+          {
+            sku: "41375213814022",
+            offerSku: "5348186",
+            availability: "BackOrder",
+            currentPrice: 25.49,
+            originalPrice: 98,
+            currency: "USD",
+          },
+        ],
+        reviews: [{ rating: 4.5, ratingCount: 228, ratingType: "AggregateRating" }],
+        videos: [
+          {
+            contentUrl: "https://v.example/watch",
+            embedUrl: "https://v.example/embed",
+          },
+        ],
+      },
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const { product } = await client.retrieveProduct(CURRENT);
+
+    expect(product?.availability).toBe("PreOrder");
+    expect(product?.itemCondition).toBe("NewCondition");
+    expect(product?.languageCode).toBe("en-US");
+    expect(product?.additionalAttributes?.[0]?.value).toBe(310);
+    const variant = product?.variants?.[0];
+    expect([variant?.offerSku, variant?.currentPrice, variant?.originalPrice]).toEqual([
+      "5348186",
+      25.49,
+      98,
+    ]);
+    expect(product?.reviews?.[0]?.ratingType).toBe("AggregateRating");
+    expect(product?.videos?.[0]?.embedUrl).toBe("https://v.example/embed");
+  });
+
   it("surfaces a miss as a not-found error", async () => {
     const { fetchMock } = createFetchMock(
       { detail: "product_not_found" },

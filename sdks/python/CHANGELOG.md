@@ -1,5 +1,18 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.13.0 (unreleased)
+
+- `MerchantProductView` declares the product-detail fields Platform added in
+  octogen#14347: `availability` (the schema.org term the product's own offer
+  states, e.g. `"PreOrder"`), `item_condition`, `offer_sku`, `language_code`
+  and `additional_attributes` (merchant name/value pairs, as
+  `AdditionalAttributeView`).
+- `MerchantVariantView` gains `current_price`, `original_price` and
+  `currency` from the variant's own offer, `availability` and `offer_sku`.
+- `ReviewView` gains `rating_count` and `rating_type`; `VideoView` gains
+  `content_url` and `embed_url`. `BreadcrumbView.url` now also carries the
+  item's schema.org `@id`.
+
 ## 0.12.0 (unreleased)
 
 - Add `retrieve_product(uuid)` for `GET /v1/products/retrieve/{uuid}` and

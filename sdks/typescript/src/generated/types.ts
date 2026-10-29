@@ -631,6 +631,16 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AdditionalAttributeView
+         * @description One merchant-stated name/value pair, as the merchant's page gives it.
+         */
+        AdditionalAttributeView: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string | number;
+        };
+        /**
          * AgeGroup
          * @enum {string}
          */
@@ -937,7 +947,10 @@ export interface components {
         BreadcrumbView: {
             /** Name */
             name: string;
-            /** Url */
+            /**
+             * Url
+             * @description Link of the breadcrumb item: its `url`, else its schema.org `@id`.
+             */
             url?: string | null;
         };
         /** CanonicalBrand */
@@ -1603,7 +1616,18 @@ export interface components {
          *     Indexed projections continue to populate both fields.
          */
         MerchantProductView: {
+            /**
+             * Additionalattributes
+             * @description Merchant-stated name/value pairs, in the merchant's order; a name with several values repeats. Distinct from `enrichment.attributes`.
+             * @default []
+             */
+            additionalAttributes: components["schemas"]["AdditionalAttributeView"][];
             audience?: components["schemas"]["AudienceView"] | null;
+            /**
+             * Availability
+             * @description Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.
+             */
+            availability?: string | null;
             brand?: components["schemas"]["BrandView"] | null;
             /**
              * Breadcrumbs
@@ -1661,6 +1685,21 @@ export interface components {
             inStock?: boolean | null;
             /** Isactive */
             isActive?: boolean | null;
+            /**
+             * Itemcondition
+             * @description Schema.org OfferItemCondition term of the product's offer, e.g. `NewCondition`.
+             */
+            itemCondition?: string | null;
+            /**
+             * Languagecode
+             * @description Language of the title and description, e.g. `en-US`.
+             */
+            languageCode?: string | null;
+            /**
+             * Offersku
+             * @description SKU on the product's own offer.
+             */
+            offerSku?: string | null;
             /** Originalprice */
             originalPrice?: number | null;
             /** @description The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists. */
@@ -1715,11 +1754,36 @@ export interface components {
          * @description A single variant of a product (size/color/sku combo).
          */
         MerchantVariantView: {
+            /**
+             * Availability
+             * @description Schema.org ItemAvailability term of the variant's offer, e.g. `InStock`, `OutOfStock`, `PreOrder`, `BackOrder`; null when unstated or not a schema.org term.
+             */
+            availability?: string | null;
             color?: components["schemas"]["ColorView"] | null;
+            /**
+             * Currency
+             * @description ISO 4217 currency of this variant's prices.
+             */
+            currency?: string | null;
+            /**
+             * Currentprice
+             * @description Price of this variant: its sale price when it has one.
+             */
+            currentPrice?: number | null;
             /** Imageurl */
             imageUrl?: string | null;
             /** Instock */
             inStock?: boolean | null;
+            /**
+             * Offersku
+             * @description SKU on the variant's offer. Can differ from `sku`, which is the variant's own identifier.
+             */
+            offerSku?: string | null;
+            /**
+             * Originalprice
+             * @description List or regular price of this variant, when stated.
+             */
+            originalPrice?: number | null;
             /** Producturl */
             productUrl?: string | null;
             /** Size */
@@ -2847,6 +2911,16 @@ export interface components {
             publishedAt?: string | null;
             /** Rating */
             rating?: number | null;
+            /**
+             * Ratingcount
+             * @description `reviewRating.ratingCount`, when the review states one.
+             */
+            ratingCount?: number | null;
+            /**
+             * Ratingtype
+             * @description Schema.org type of `reviewRating` (`Rating` or `AggregateRating`), when stated.
+             */
+            ratingType?: string | null;
         };
         /**
          * SearchFacet
@@ -3400,11 +3474,24 @@ export interface components {
         };
         /** VideoView */
         VideoView: {
+            /**
+             * Contenturl
+             * @description Schema.org `contentUrl`: the media file.
+             */
+            contentUrl?: string | null;
+            /**
+             * Embedurl
+             * @description Schema.org `embedUrl`: the embeddable player.
+             */
+            embedUrl?: string | null;
             /** Name */
             name?: string | null;
             /** Thumbnailurl */
             thumbnailUrl?: string | null;
-            /** Url */
+            /**
+             * Url
+             * @description `contentUrl`, else `embedUrl`, else `url`.
+             */
             url?: string | null;
         };
     };

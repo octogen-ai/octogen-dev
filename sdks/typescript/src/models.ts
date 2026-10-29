@@ -464,6 +464,7 @@ export interface AudienceView {
 
 export interface BreadcrumbView {
   name: string;
+  /** The item's `url`, else its schema.org `@id`. */
   url?: string | null;
 }
 
@@ -475,12 +476,20 @@ export interface PromotionView {
 export interface ReviewView {
   author?: string | null;
   rating?: number | null;
+  ratingCount?: number | null;
+  /** Schema.org type of the review's rating: `Rating` or `AggregateRating`. */
+  ratingType?: string | null;
   body?: string | null;
   publishedAt?: string | null;
 }
 
 export interface VideoView {
+  /** `contentUrl`, else `embedUrl`. */
   url?: string | null;
+  /** Schema.org `contentUrl`: the media file. */
+  contentUrl?: string | null;
+  /** Schema.org `embedUrl`: the embeddable player. */
+  embedUrl?: string | null;
   thumbnailUrl?: string | null;
   name?: string | null;
 }
@@ -505,6 +514,22 @@ export interface MerchantVariantView {
   size?: string | null;
   inStock?: boolean | null;
   imageUrl?: string | null;
+  /** Schema.org ItemAvailability term of the variant's offer, e.g. `InStock`, `PreOrder`, `BackOrder`. */
+  availability?: string | null;
+  /** SKU on the variant's offer; `sku` is the variant's own identifier. */
+  offerSku?: string | null;
+  /** This variant's price: its sale price when it has one. */
+  currentPrice?: number | null;
+  /** This variant's list or regular price, when stated. */
+  originalPrice?: number | null;
+  /** ISO 4217 currency of this variant's prices. */
+  currency?: string | null;
+}
+
+/** One merchant-stated name/value pair. */
+export interface AdditionalAttributeView {
+  name: string;
+  value: string | number;
 }
 
 export interface CanonicalBrandEnrichment {
@@ -649,6 +674,16 @@ export interface MerchantProductView extends Omit<
   reviews?: ReviewView[];
   videos?: VideoView[];
   enrichment?: ProductEnrichment | null;
+  /** Schema.org ItemAvailability term the product's own offer states, e.g. `PreOrder`. `inStock` is the rollup over the variants. */
+  availability?: string | null;
+  /** Schema.org OfferItemCondition term, e.g. `NewCondition`. */
+  itemCondition?: string | null;
+  /** SKU on the product's own offer. */
+  offerSku?: string | null;
+  /** Language of the title and description, e.g. `en-US`. */
+  languageCode?: string | null;
+  /** Merchant-stated name/value pairs in the merchant's order; a name with several values repeats. Distinct from `enrichment.attributes`. */
+  additionalAttributes?: AdditionalAttributeView[];
 }
 
 export interface ProductResolutionMetadata {
