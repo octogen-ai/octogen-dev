@@ -9,9 +9,18 @@ hand-written; these models are what it validates against.
 """
 
 from __future__ import annotations
-from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
+from typing import Any, Literal
 from uuid import UUID
+
+
+class AdditionalAttributeView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    name: str = Field(..., title="Name")
+    value: str | float = Field(..., title="Value")
 
 
 class AttributeValue(BaseModel):
@@ -93,7 +102,11 @@ class BreadcrumbView(BaseModel):
         populate_by_name=True,
     )
     name: str = Field(..., title="Name")
-    url: str | None = Field(None, title="Url")
+    url: str | None = Field(
+        None,
+        description="Link of the breadcrumb item: its `url`, else its schema.org `@id`.",
+        title="Url",
+    )
 
 
 class CanonicalBrandEnrichment(BaseModel):
@@ -442,9 +455,37 @@ class MerchantVariantView(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
+    availability: str | None = Field(
+        None,
+        description="Schema.org ItemAvailability term of the variant's offer, e.g. `InStock`, `OutOfStock`, `PreOrder`, `BackOrder`; null when unstated or not a schema.org term.",
+        title="Availability",
+    )
     color: ColorView | None = None
+    currency: str | None = Field(
+        None,
+        description="ISO 4217 currency of this variant's prices.",
+        title="Currency",
+    )
+    current_price: float | None = Field(
+        None,
+        alias="currentPrice",
+        description="Price of this variant: its sale price when it has one.",
+        title="Currentprice",
+    )
     image_url: str | None = Field(None, alias="imageUrl", title="Imageurl")
     in_stock: bool | None = Field(None, alias="inStock", title="Instock")
+    offer_sku: str | None = Field(
+        None,
+        alias="offerSku",
+        description="SKU on the variant's offer. Can differ from `sku`, which is the variant's own identifier.",
+        title="Offersku",
+    )
+    original_price: float | None = Field(
+        None,
+        alias="originalPrice",
+        description="List or regular price of this variant, when stated.",
+        title="Originalprice",
+    )
     product_url: str | None = Field(None, alias="productUrl", title="Producturl")
     size: str | None = Field(None, title="Size")
     sku: str | None = Field(None, title="Sku")
@@ -854,6 +895,18 @@ class ReviewView(BaseModel):
         None, alias="publishedAt", title="Publishedat"
     )
     rating: float | None = Field(None, title="Rating")
+    rating_count: int | None = Field(
+        None,
+        alias="ratingCount",
+        description="`reviewRating.ratingCount`, when the review states one.",
+        title="Ratingcount",
+    )
+    rating_type: str | None = Field(
+        None,
+        alias="ratingType",
+        description="Schema.org type of `reviewRating` (`Rating` or `AggregateRating`), when stated.",
+        title="Ratingtype",
+    )
 
 
 class SearchFacet(BaseModel):
@@ -1157,9 +1210,23 @@ class VideoView(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
+    content_url: str | None = Field(
+        None,
+        alias="contentUrl",
+        description="Schema.org `contentUrl`: the media file.",
+        title="Contenturl",
+    )
+    embed_url: str | None = Field(
+        None,
+        alias="embedUrl",
+        description="Schema.org `embedUrl`: the embeddable player.",
+        title="Embedurl",
+    )
     name: str | None = Field(None, title="Name")
     thumbnail_url: str | None = Field(None, alias="thumbnailUrl", title="Thumbnailurl")
-    url: str | None = Field(None, title="Url")
+    url: str | None = Field(
+        None, description="`contentUrl`, else `embedUrl`, else `url`.", title="Url"
+    )
 
 
 class Attribute(BaseModel):
@@ -2321,7 +2388,18 @@ class MerchantProductView(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
+    additional_attributes: list[AdditionalAttributeView] | None = Field(
+        [],
+        alias="additionalAttributes",
+        description="Merchant-stated name/value pairs, in the merchant's order; a name with several values repeats. Distinct from `enrichment.attributes`.",
+        title="Additionalattributes",
+    )
     audience: AudienceView | None = None
+    availability: str | None = Field(
+        None,
+        description="Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.",
+        title="Availability",
+    )
     brand: BrandView | None = None
     breadcrumbs: list[BreadcrumbView] | None = Field([], title="Breadcrumbs")
     catalog_key: str | None = Field(
@@ -2359,6 +2437,24 @@ class MerchantProductView(BaseModel):
     images: list[MerchantProductImageMetadataView] | None = Field([], title="Images")
     in_stock: bool | None = Field(None, alias="inStock", title="Instock")
     is_active: bool | None = Field(None, alias="isActive", title="Isactive")
+    item_condition: str | None = Field(
+        None,
+        alias="itemCondition",
+        description="Schema.org OfferItemCondition term of the product's offer, e.g. `NewCondition`.",
+        title="Itemcondition",
+    )
+    language_code: str | None = Field(
+        None,
+        alias="languageCode",
+        description="Language of the title and description, e.g. `en-US`.",
+        title="Languagecode",
+    )
+    offer_sku: str | None = Field(
+        None,
+        alias="offerSku",
+        description="SKU on the product's own offer.",
+        title="Offersku",
+    )
     original_price: float | None = Field(
         None, alias="originalPrice", title="Originalprice"
     )

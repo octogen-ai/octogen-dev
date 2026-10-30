@@ -37,6 +37,7 @@ from octogen_ai_sdk.errors import (
 )
 from octogen_ai_sdk.hosts import is_host_covered, normalize_host
 from octogen_ai_sdk.models import (
+    AdditionalAttributeView,
     AgeGroup,
     Attribute,
     AttributeValue,
@@ -156,6 +157,7 @@ __all__ = [
     "RequestVisitor",
     "VisitorClassification",
     "API_KEY_ENV_VAR",
+    "AdditionalAttributeView",
     "AgeGroup",
     "Attribute",
     "AttributeValue",

@@ -1684,6 +1684,80 @@ async def test_retrieve_product_gets_one_id_and_returns_its_current_id() -> None
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_retrieve_product_parses_the_offer_and_merchant_detail_fields() -> None:
+    product = {
+        "uuid": CURRENT_ID,
+        "productUrl": "https://acme.example/p/1",
+        "availability": "PreOrder",
+        "itemCondition": "NewCondition",
+        "offerSku": "MK-1",
+        "languageCode": "en-US",
+        "additionalAttributes": [
+            {"name": "origin", "value": "Imported"},
+            {"name": "weight_g", "value": 310.0},
+        ],
+        "variants": [
+            {
+                "sku": "41375213814022",
+                "offerSku": "5348186",
+                "availability": "BackOrder",
+                "currentPrice": 25.49,
+                "originalPrice": 98.0,
+                "currency": "USD",
+            }
+        ],
+        "reviews": [
+            {"rating": 4.5, "ratingCount": 228, "ratingType": "AggregateRating"}
+        ],
+        "videos": [
+            {
+                "url": "https://v.example/watch",
+                "contentUrl": "https://v.example/watch",
+                "embedUrl": "https://v.example/embed",
+            }
+        ],
+        "breadcrumbs": [{"name": "Men", "url": "https://acme.example/men/"}],
+    }
+    respx.get(f"{BASE_URL}/products/retrieve/{CURRENT_ID}").mock(
+        return_value=httpx.Response(200, json={**RETRIEVED_JSON, "product": product})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        result = await client.retrieve_product(CURRENT_ID)
+
+    view = result.product
+    assert view is not None
+    assert (view.availability, view.item_condition, view.offer_sku) == (
+        "PreOrder",
+        "NewCondition",
+        "MK-1",
+    )
+    assert view.language_code == "en-US"
+    assert [(a.name, a.value) for a in view.additional_attributes] == [
+        ("origin", "Imported"),
+        ("weight_g", 310.0),
+    ]
+    variant = view.variants[0]
+    assert (variant.sku, variant.offer_sku, variant.availability) == (
+        "41375213814022",
+        "5348186",
+        "BackOrder",
+    )
+    assert (variant.current_price, variant.original_price, variant.currency) == (
+        25.49,
+        98.0,
+        "USD",
+    )
+    assert (view.reviews[0].rating_count, view.reviews[0].rating_type) == (
+        228,
+        "AggregateRating",
+    )
+    assert view.videos[0].content_url == "https://v.example/watch"
+    assert view.videos[0].embed_url == "https://v.example/embed"
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_retrieve_product_miss_is_not_found() -> None:
     respx.get(f"{BASE_URL}/products/retrieve/{CURRENT_ID}").mock(
         return_value=httpx.Response(404, json={"detail": "product_not_found"})

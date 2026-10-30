@@ -16,6 +16,32 @@
       }
     },
     "schemas": {
+      "AdditionalAttributeView": {
+        "description": "One merchant-stated name/value pair, as the merchant's page gives it.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "AdditionalAttributeView",
+        "type": "object"
+      },
       "AgeGroup": {
         "enum": [
           "infant",
@@ -575,6 +601,7 @@
                 "type": "null"
               }
             ],
+            "description": "Link of the breadcrumb item: its `url`, else its schema.org `@id`.",
             "title": "Url"
           }
         },
@@ -2389,6 +2416,15 @@
       "MerchantProductView": {
         "description": "Full product detail view returned by product lookup/detail endpoints.\n\n``uuid`` and ``isActive`` are nullable because an on-demand result is\nintentionally ephemeral and has no indexed identity or lifecycle state.\nIndexed projections continue to populate both fields.",
         "properties": {
+          "additionalAttributes": {
+            "default": [],
+            "description": "Merchant-stated name/value pairs, in the merchant's order; a name with several values repeats. Distinct from `enrichment.attributes`.",
+            "items": {
+              "$ref": "#/components/schemas/AdditionalAttributeView"
+            },
+            "title": "Additionalattributes",
+            "type": "array"
+          },
           "audience": {
             "anyOf": [
               {
@@ -2398,6 +2434,18 @@
                 "type": "null"
               }
             ]
+          },
+          "availability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.",
+            "title": "Availability"
           },
           "brand": {
             "anyOf": [
@@ -2556,6 +2604,42 @@
             ],
             "title": "Isactive"
           },
+          "itemCondition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org OfferItemCondition term of the product's offer, e.g. `NewCondition`.",
+            "title": "Itemcondition"
+          },
+          "languageCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Language of the title and description, e.g. `en-US`.",
+            "title": "Languagecode"
+          },
+          "offerSku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "SKU on the product's own offer.",
+            "title": "Offersku"
+          },
           "originalPrice": {
             "anyOf": [
               {
@@ -2697,6 +2781,18 @@
       "MerchantVariantView": {
         "description": "A single variant of a product (size/color/sku combo).",
         "properties": {
+          "availability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org ItemAvailability term of the variant's offer, e.g. `InStock`, `OutOfStock`, `PreOrder`, `BackOrder`; null when unstated or not a schema.org term.",
+            "title": "Availability"
+          },
           "color": {
             "anyOf": [
               {
@@ -2706,6 +2802,30 @@
                 "type": "null"
               }
             ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 4217 currency of this variant's prices.",
+            "title": "Currency"
+          },
+          "currentPrice": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Price of this variant: its sale price when it has one.",
+            "title": "Currentprice"
           },
           "imageUrl": {
             "anyOf": [
@@ -2728,6 +2848,30 @@
               }
             ],
             "title": "Instock"
+          },
+          "offerSku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "SKU on the variant's offer. Can differ from `sku`, which is the variant's own identifier.",
+            "title": "Offersku"
+          },
+          "originalPrice": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "List or regular price of this variant, when stated.",
+            "title": "Originalprice"
           },
           "productUrl": {
             "anyOf": [
@@ -5438,6 +5582,30 @@
               }
             ],
             "title": "Rating"
+          },
+          "ratingCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`reviewRating.ratingCount`, when the review states one.",
+            "title": "Ratingcount"
+          },
+          "ratingType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org type of `reviewRating` (`Rating` or `AggregateRating`), when stated.",
+            "title": "Ratingtype"
           }
         },
         "title": "ReviewView",
@@ -6471,6 +6639,30 @@
       },
       "VideoView": {
         "properties": {
+          "contentUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org `contentUrl`: the media file.",
+            "title": "Contenturl"
+          },
+          "embedUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema.org `embedUrl`: the embeddable player.",
+            "title": "Embedurl"
+          },
           "name": {
             "anyOf": [
               {
@@ -6502,6 +6694,7 @@
                 "type": "null"
               }
             ],
+            "description": "`contentUrl`, else `embedUrl`, else `url`.",
             "title": "Url"
           }
         },

@@ -665,6 +665,7 @@ class AudienceView(_ResponseModel):
 
 class BreadcrumbView(_ResponseModel):
     name: str
+    #: The item's ``url``, else its schema.org ``@id``.
     url: str | None = None
 
 
@@ -676,12 +677,21 @@ class PromotionView(_ResponseModel):
 class ReviewView(_ResponseModel):
     author: str | None = None
     rating: float | None = None
+    rating_count: int | None = Field(default=None, alias="ratingCount")
+    #: Schema.org type of the review's rating: ``"Rating"`` or
+    #: ``"AggregateRating"``.
+    rating_type: str | None = Field(default=None, alias="ratingType")
     body: str | None = None
     published_at: datetime | None = Field(default=None, alias="publishedAt")
 
 
 class VideoView(_ResponseModel):
+    #: ``content_url``, else ``embed_url``.
     url: str | None = None
+    #: Schema.org ``contentUrl``: the media file.
+    content_url: str | None = Field(default=None, alias="contentUrl")
+    #: Schema.org ``embedUrl``: the embeddable player.
+    embed_url: str | None = Field(default=None, alias="embedUrl")
     thumbnail_url: str | None = Field(default=None, alias="thumbnailUrl")
     name: str | None = None
 
@@ -706,6 +716,24 @@ class MerchantVariantView(_ResponseModel):
     size: str | None = None
     in_stock: bool | None = Field(default=None, alias="inStock")
     image_url: str | None = Field(default=None, alias="imageUrl")
+    #: Schema.org ItemAvailability term of the variant's offer, e.g.
+    #: ``"InStock"``, ``"PreOrder"``, ``"BackOrder"``.
+    availability: str | None = None
+    #: SKU on the variant's offer; ``sku`` is the variant's own identifier.
+    offer_sku: str | None = Field(default=None, alias="offerSku")
+    #: This variant's price: its sale price when it has one.
+    current_price: float | None = Field(default=None, alias="currentPrice")
+    #: This variant's list or regular price, when stated.
+    original_price: float | None = Field(default=None, alias="originalPrice")
+    #: ISO 4217 currency of this variant's prices.
+    currency: str | None = None
+
+
+class AdditionalAttributeView(_ResponseModel):
+    """One merchant-stated name/value pair."""
+
+    name: str
+    value: str | float
 
 
 class CanonicalBrandEnrichment(_ResponseModel):
@@ -852,6 +880,20 @@ class MerchantProductView(MerchantProductListItem):
     reviews: list[ReviewView] = Field(default_factory=list)
     videos: list[VideoView] = Field(default_factory=list)
     enrichment: ProductEnrichment | None = None
+    #: Schema.org ItemAvailability term the product's own offer states, e.g.
+    #: ``"PreOrder"``. ``in_stock`` is the rollup over the variants.
+    availability: str | None = None
+    #: Schema.org OfferItemCondition term, e.g. ``"NewCondition"``.
+    item_condition: str | None = Field(default=None, alias="itemCondition")
+    #: SKU on the product's own offer.
+    offer_sku: str | None = Field(default=None, alias="offerSku")
+    #: Language of the title and description, e.g. ``"en-US"``.
+    language_code: str | None = Field(default=None, alias="languageCode")
+    #: Merchant-stated name/value pairs in the merchant's order; a name with
+    #: several values repeats. Distinct from ``enrichment.attributes``.
+    additional_attributes: list[AdditionalAttributeView] = Field(
+        default_factory=list, alias="additionalAttributes"
+    )
 
 
 # Response enums are open — `Literal[...] | str` — so a value the server adds
