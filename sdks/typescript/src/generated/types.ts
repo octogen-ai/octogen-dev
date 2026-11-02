@@ -476,9 +476,15 @@ export interface paths {
          * @description Search indexed products by free text, filters, or both.
          *
          *     Results span every catalog your key can access unless `catalogs` narrows
-         *     them. Page 1 is ranked by relevance; later pages continue in quality-score
-         *     order from page 1's last result, so a product can repeat across pages —
-         *     de-duplicate by `uuid`.
+         *     them. With diversity off, text or brand-similarity searches continue in
+         *     relevance order within a bounded retrieval window. Filter-only browsing
+         *     uses quality-score order on every page. Send `nextCursor` as `cursor` with
+         *     the same request body; later pages reuse page 1's query understanding.
+         *     Retrieval reruns on each page rather than reading a frozen snapshot:
+         *     products can repeat with `diversity: true` or catalog changes between
+         *     requests, so de-duplicate by `uuid` when concatenating pages.
+         *
+         *     Every response includes `effectiveQuery`, with or without `debug`.
          */
         post: operations["searchProducts"];
         delete?: never;
@@ -786,6 +792,11 @@ export interface components {
              * @description Indexed product groups of the brand across catalogs.
              */
             productCount: number;
+            /**
+             * Targetaudience
+             * @description The brand's recorded audience or fit category (for example WOMEN, MEN, UNISEX, KIDS, PLUS, PETITE, or ADAPTIVE). Null or omitted when unavailable; future categories may be returned.
+             */
+            targetAudience?: string | null;
         };
         /**
          * BrandFacet
@@ -2655,7 +2666,7 @@ export interface components {
          * @description One page of search results.
          */
         ProgrammaticProductSearchPage: {
-            /** @description The text, filters and bounds that actually ran, with each facet's origin. Present on every response. */
+            /** @description The text, filters and bounds that actually ran, with each facet's origin. Present on every response, with or without `debug`. */
             effectiveQuery: components["schemas"]["ProgrammaticProductSearchEffectiveQuery"];
             /**
              * Items
@@ -2664,7 +2675,7 @@ export interface components {
             items: components["schemas"]["MerchantProductListItem"][];
             /**
              * Nextcursor
-             * @description Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.
+             * @description Opaque cursor for the next page; pass it back verbatim as `cursor` with the same request body. Null when no further page is available. With diversity off, text or brand-similarity searches continue in relevance order within a bounded retrieval window; filter-only browsing uses quality-score order. Pages rerun retrieval rather than reading a frozen snapshot. Products can repeat with `diversity: true` or catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.
              */
             nextCursor?: string | null;
             /**

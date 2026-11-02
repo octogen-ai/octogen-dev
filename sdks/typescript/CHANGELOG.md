@@ -1,5 +1,14 @@
 # Changelog — `@octogen-ai/sdk`
 
+## 0.12.0 (unreleased)
+
+- `BrandCoverageResponse` declares `targetAudience`, the brand's recorded audience
+  or fit category from `GET /v1/brands/{brand}` (OCT-4729). It remains optional
+  and nullable, accepts future category strings, and preserves older responses
+  that omit the field. The existing profile and coverage fields are unchanged.
+- Release after the approved API contract is deployed and published; this
+  preparation does not publish either SDK.
+
 ## 0.11.0 (unreleased)
 
 - `MerchantProductView` declares the product-detail fields Platform added in

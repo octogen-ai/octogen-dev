@@ -267,12 +267,36 @@ async def test_get_brand_details_encodes_the_brand_name() -> None:
     assert details.founded_year == 2009
     assert details.price_tier == "premium"
     assert details.brand_description is None
+    assert details.target_audience is None
+    assert "targetAudience" not in details.model_dump(by_alias=True, exclude_unset=True)
     assert details.product_count == 4556
     assert details.fields[0].top_values[0].value == "black"
     assert [c.hosts for c in details.catalogs] == [
         ["thereformation.com"],
         ["farfetch.com"],
     ]
+
+
+@pytest.mark.parametrize("audience", ["WOMEN", "PLUS", "FUTURE_CATEGORY", None])
+@respx.mock
+async def test_get_brand_details_preserves_nullable_open_audience(
+    audience: str | None,
+) -> None:
+    respx.get(f"{BASE_URL}/brands/reformation").mock(
+        return_value=httpx.Response(
+            200, json={**BRAND_DETAILS, "targetAudience": audience}
+        )
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        details = await client.get_brand_details("reformation")
+
+    assert details.target_audience == audience
+    assert "target_audience" in details.model_fields_set
+    assert details.model_dump(by_alias=True, exclude_unset=True)["targetAudience"] == (
+        audience
+    )
+    assert details.product_count == BRAND_DETAILS["productCount"]
 
 
 @respx.mock

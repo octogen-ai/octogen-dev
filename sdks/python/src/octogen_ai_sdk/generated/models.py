@@ -2026,13 +2026,13 @@ class ProgrammaticProductSearchPage(BaseModel):
     effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
         ...,
         alias="effectiveQuery",
-        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response.",
+        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response, with or without `debug`.",
     )
     items: list[MerchantProductListItem] | None = Field([], title="Items")
     next_cursor: str | None = Field(
         None,
         alias="nextCursor",
-        description="Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
+        description="Opaque cursor for the next page; pass it back verbatim as `cursor` with the same request body. Null when no further page is available. With diversity off, text or brand-similarity searches continue in relevance order within a bounded retrieval window; filter-only browsing uses quality-score order. Pages rerun retrieval rather than reading a frozen snapshot. Products can repeat with `diversity: true` or catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
         title="Nextcursor",
     )
     request_id: str = Field(
@@ -2341,6 +2341,12 @@ class BrandCoverageResponse(BaseModel):
         alias="productCount",
         description="Indexed product groups of the brand across catalogs.",
         title="Productcount",
+    )
+    target_audience: str | None = Field(
+        None,
+        alias="targetAudience",
+        description="The brand's recorded audience or fit category (for example WOMEN, MEN, UNISEX, KIDS, PLUS, PETITE, or ADAPTIVE). Null or omitted when unavailable; future categories may be returned.",
+        title="Targetaudience",
     )
 
 
