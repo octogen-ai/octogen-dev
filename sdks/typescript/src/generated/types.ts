@@ -2945,7 +2945,7 @@ export interface components {
             name: string;
             /**
              * Relaxable
-             * @description Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.
+             * @description Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: `brand_name` and the brand profile facets (dropped first), taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.
              * @default false
              */
             relaxable: boolean;
@@ -5012,6 +5012,15 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
+            /** @description Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs. */
+            402: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description API key is valid but not allowed to access this resource. */
             403: {
                 headers: {
@@ -5044,6 +5053,15 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Prepaid API access explicitly suspended by an operator (detail.code=billing_temporarily_suspended), or billing startup incomplete. Management/payment access remains available. */
+            503: {
+                headers: {
+                    /** @description Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -297,6 +297,7 @@ class DomainFieldValue(BaseModel):
 
 class Facet(BaseModel):
     model_config = ConfigDict(
+        extra="forbid",
         populate_by_name=True,
     )
     name: str = Field(
@@ -911,6 +912,7 @@ class ReviewView(BaseModel):
 
 class SearchFacet(BaseModel):
     model_config = ConfigDict(
+        extra="forbid",
         populate_by_name=True,
     )
     name: str = Field(
@@ -920,7 +922,7 @@ class SearchFacet(BaseModel):
     )
     relaxable: bool | None = Field(
         False,
-        description="Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+        description="Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: `brand_name` and the brand profile facets (dropped first), taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
         title="Relaxable",
     )
     values: list[str] = Field(

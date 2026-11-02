@@ -1682,6 +1682,7 @@
         "type": "string"
       },
       "Facet": {
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -5624,6 +5625,7 @@
         "type": "object"
       },
       "SearchFacet": {
+        "additionalProperties": false,
         "description": "A filter a product must match, with the caller's say on relaxation.",
         "properties": {
           "name": {
@@ -5633,7 +5635,7 @@
           },
           "relaxable": {
             "default": false,
-            "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+            "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: `brand_name` and the brand profile facets (dropped first), taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
             "title": "Relaxable",
             "type": "boolean"
           },
@@ -9392,6 +9394,18 @@
               }
             }
           },
+          "402": {
+            "description": "Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            }
+          },
           "403": {
             "content": {
               "application/json": {
@@ -9476,6 +9490,18 @@
               }
             },
             "description": "Request validation failed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Prepaid API access explicitly suspended by an operator (detail.code=billing_temporarily_suspended), or billing startup incomplete. Management/payment access remains available.",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",

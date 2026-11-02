@@ -6,8 +6,9 @@
   or fit category from `GET /v1/brands/{brand}` (OCT-4729). It remains optional
   and nullable, accepts future category strings, and preserves older responses
   that omit the field. The existing profile and coverage fields are unchanged.
-- Release after the approved API contract is deployed and published; this
-  preparation does not publish either SDK.
+- Refresh the generated models from the deployed public contract. `Facet` and
+  `SearchFacet` now reject unknown properties instead of silently discarding them,
+  matching server validation; documented `brand_name` relaxation is retained.
 
 ## 0.13.0 (unreleased)
 
