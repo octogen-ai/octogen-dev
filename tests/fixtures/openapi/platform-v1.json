@@ -293,6 +293,18 @@
             "description": "Indexed product groups of the brand across catalogs.",
             "title": "Productcount",
             "type": "integer"
+          },
+          "targetAudience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The brand's recorded audience or fit category (for example WOMEN, MEN, UNISEX, KIDS, PLUS, PETITE, or ADAPTIVE). Null or omitted when unavailable; future categories may be returned.",
+            "title": "Targetaudience"
           }
         },
         "required": [
@@ -1670,6 +1682,7 @@
         "type": "string"
       },
       "Facet": {
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -4967,7 +4980,7 @@
         "properties": {
           "effectiveQuery": {
             "$ref": "#/components/schemas/ProgrammaticProductSearchEffectiveQuery",
-            "description": "The text, filters and bounds that actually ran, with each facet's origin. Present on every response."
+            "description": "The text, filters and bounds that actually ran, with each facet's origin. Present on every response, with or without `debug`."
           },
           "items": {
             "default": [],
@@ -4986,7 +4999,7 @@
                 "type": "null"
               }
             ],
-            "description": "Opaque cursor for the next page; pass it back verbatim as `cursor`. Absent on the last page. Pages of a search are consecutive slices of one ranked list, so they do not overlap. A text search's list is bounded, so it ends after a limited number of pages. A product can still appear twice on a search with `diversity: true` or when the catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
+            "description": "Opaque cursor for the next page; pass it back verbatim as `cursor` with the same request body. Null when no further page is available. With diversity off, text or brand-similarity searches continue in relevance order within a bounded retrieval window; filter-only browsing uses quality-score order. Pages rerun retrieval rather than reading a frozen snapshot. Products can repeat with `diversity: true` or catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
             "title": "Nextcursor"
           },
           "requestId": {
@@ -5612,6 +5625,7 @@
         "type": "object"
       },
       "SearchFacet": {
+        "additionalProperties": false,
         "description": "A filter a product must match, with the caller's say on relaxation.",
         "properties": {
           "name": {
@@ -5621,7 +5635,7 @@
           },
           "relaxable": {
             "default": false,
-            "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+            "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: `brand_name` and the brand profile facets (dropped first), taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
             "title": "Relaxable",
             "type": "boolean"
           },
@@ -9380,6 +9394,18 @@
               }
             }
           },
+          "402": {
+            "description": "Insufficient prepaid credit for this meter. The detail object includes code=insufficient_credit, top_up_url, next_renewal_at, balance (microdollars, observed_at, freshness, revision), balance_age_seconds, pending_usage_count and reconciliation_pending. No local credit reservation or deduction occurs.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            }
+          },
           "403": {
             "content": {
               "application/json": {
@@ -9464,6 +9490,18 @@
               }
             },
             "description": "Request validation failed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Prepaid API access explicitly suspended by an operator (detail.code=billing_temporarily_suspended), or billing startup incomplete. Management/payment access remains available.",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
@@ -10103,7 +10141,7 @@
     },
     "/products/search": {
       "post": {
-        "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. Page 1 is ranked by relevance; later pages continue in quality-score\norder from page 1's last result, so a product can repeat across pages —\nde-duplicate by `uuid`.",
+        "description": "Search indexed products by free text, filters, or both.\n\nResults span every catalog your key can access unless `catalogs` narrows\nthem. With diversity off, text or brand-similarity searches continue in\nrelevance order within a bounded retrieval window. Filter-only browsing\nuses quality-score order on every page. Send `nextCursor` as `cursor` with\nthe same request body; later pages reuse page 1's query understanding.\nRetrieval reruns on each page rather than reading a frozen snapshot:\nproducts can repeat with `diversity: true` or catalog changes between\nrequests, so de-duplicate by `uuid` when concatenating pages.\n\nEvery response includes `effectiveQuery`, with or without `debug`.",
         "operationId": "searchProducts",
         "parameters": [
           {

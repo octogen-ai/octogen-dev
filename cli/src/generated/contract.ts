@@ -189,6 +189,7 @@ export const PUBLIC_CONTRACT = {
                 "facets": {
                   "description": "Facets selecting this category, such as a `GET /taxonomy/categories` entry's `facets`. Each name at most once.",
                   "items": {
+                    "additionalProperties": false,
                     "properties": {
                       "name": {
                         "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -240,6 +241,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -290,6 +292,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -936,6 +939,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -973,6 +977,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -1654,6 +1659,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
@@ -1691,6 +1697,7 @@ export const PUBLIC_CONTRACT = {
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": false,
                   "description": "A filter a product must match, with the caller's say on relaxation.",
                   "properties": {
                     "name": {
@@ -1700,7 +1707,7 @@ export const PUBLIC_CONTRACT = {
                     },
                     "relaxable": {
                       "default": false,
-                      "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: brand profile facets, taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
+                      "description": "Allow `relax` to drop this facet. It still replaces an understood facet of the same name and filters until a relaxation stage drops it; with `relax: false` it is never dropped. Only a name a relaxation stage covers may be marked: `brand_name` and the brand profile facets (dropped first), taxonomy attributes, `color`, `color_family`, and `category_path.depth_2` and deeper. Any other name is rejected.",
                       "title": "Relaxable",
                       "type": "boolean"
                     },
@@ -2111,6 +2118,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "13a29da67b943e500600c2b48f730f1a073c23185e0e43cb1057fb0f12dae475",
+  "sha256": "1c47df4f36498568005e4a5b02cabb0eeb0a48a4d3a7f61c284a369b4064bbdb",
   "version": "1.0.0"
 } as const;

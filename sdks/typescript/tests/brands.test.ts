@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { OctogenClient, OctogenNotFoundError, type FetchLike } from "../src/index.js";
 
@@ -124,6 +124,24 @@ describe("brand discovery", () => {
     expect(call.input).toBe(`${BASE_URL}/brands/Marc%20%26%20Co`);
     expect(details.foundedYear).toBe(2009);
   });
+
+  it.each(["WOMEN", "PLUS", "FUTURE_CATEGORY", null, undefined])(
+    "preserves optional nullable audience %s in brand details",
+    async (audience) => {
+      const { fetchMock } = fetchReturning({
+        ...REFORMATION,
+        ...(audience === undefined ? {} : { targetAudience: audience }),
+      });
+      const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+      const details = await client.getBrandDetails("reformation");
+
+      expectTypeOf(details.targetAudience).toEqualTypeOf<string | null | undefined>();
+      expect(details.targetAudience).toBe(audience);
+      expect(Object.hasOwn(details, "targetAudience")).toBe(audience !== undefined);
+      expect(details.brandName).toBe("Reformation");
+    },
+  );
 
   it("pages a brand's products with limit and offset", async () => {
     const { calls, fetchMock } = fetchReturning({
