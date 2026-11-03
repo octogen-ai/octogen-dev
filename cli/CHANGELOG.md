@@ -1,14 +1,12 @@
 # Changelog — `@storerouter/cli`
 
-## Unreleased — canonical Brand Search preparation
+## 0.5.0 (unreleased, `next`)
 
-- Prepare the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
+- Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
   `understand`, and `limit` request fields, including reference/filter-only modes.
   No public quality controls or ranking changes. Package release requires the
-  canonical server and live-contract parity; versions are unchanged here.
+  canonical server and live-contract parity.
 - `brands search` accepts an optional description and `--exclude-facet`; repeated clauses are preserved.
-
-## 0.5.0 (unreleased, `next`)
 
 - `storerouter search [query]` no longer requires a query when at least one of
   `--catalog`, `--facet`, `--price-min` or `--price-max` is given: it omits `q`
@@ -71,7 +69,7 @@ categories <brand>` (`--min-level`, `--limit`). `404 brand_not_found` and empty
   alone lists the subcommands, like `storerouter brands`.
 - `similar` does not expose more-like-this `sources`; send several source
   products with `storerouter api`.
-- Pin SDK 0.7.0. Publish that SDK before releasing this CLI.
+- Pin SDK 0.13.0. Publish that SDK before releasing this CLI.
 - `storerouter parse --help` and `parse`'s usage errors name `parse` instead
   of `lookup`. Requests, exit codes and the JSON `command` (`lookup`) are
   unchanged.

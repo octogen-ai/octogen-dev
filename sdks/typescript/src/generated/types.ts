@@ -363,13 +363,14 @@ export interface paths {
         put?: never;
         /**
          * Find products similar to a source product
-         * @description Find products similar to a source product with a Catalog partner API key.
+         * @description Find products similar to a source product.
          *
-         *     Full corpus by default: a ``catalogs`` allowlist in the request restricts
+         *     The caller's whole scope by default: a ``catalogs`` allowlist in the request restricts
          *     the RETRIEVAL to those catalogs, while source resolution always spans
          *     every catalog the caller's resolved scope permits (the source may live
          *     outside the allowlist). Every branch carries the scope, so a
-         *     ``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``.
+         *     ``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``
+         *     and a merchant caller to its own and stewarded catalogs.
          */
         post: operations["moreLikeThisProducts"];
         delete?: never;

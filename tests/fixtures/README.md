@@ -5,20 +5,25 @@ SDK tests.
 
 ## `openapi/platform-v1.json`
 
-The complete normalized `/v1` OpenAPI contract. This snapshot currently prepares
-OCT-4757 against the canonical Brand Search **server candidate**, not the deployed
-CDN. [Provenance](openapi/platform-v1.provenance.json) records the exact server
-base, [source patch](openapi/platform-v1.source.patch), generator command and
-SHA-256 hashes. Apply the zero-context patch to the recorded base with
-`git apply --unidiff-zero`, run the checked-in server
-snapshot test, then normalize with `json.dumps(sort_keys=True, indent=2,
-ensure_ascii=False) + "\n"`, as the SDK generator does when fetching. The manifest
-records both the original server bytes and the normalized SDK fixture hashes. Keep the candidate immutable while
-reviewing its SDK diff; do not overwrite it with the older CDN document.
+The complete normalized `/v1` OpenAPI contract. This snapshot comes from the
+merged canonical Brand Search server source at
+`c14f7859c91589e06eb47e22c54e4e1076a87f8e`; it does not claim deployed CDN parity.
+[Provenance](openapi/platform-v1.provenance.json) records the exact server commit,
+generator command and SHA-256 hashes. Check out that server commit, run its
+checked-in snapshot test, then normalize with
+`json.dumps(sort_keys=True, indent=2, ensure_ascii=False) + "\n"`, as the SDK
+generator does when fetching. The manifest records both the original server bytes
+and normalized SDK fixture hashes. No source patch is needed for the merged
+commit. The previous candidate's provenance and patch remain in git at the
+recorded SDK commit.
 
-Publication remains gated on canonical server deployment, a fresh CDN snapshot
-and the unchanged live-contract equality test. Package versions are intentionally
-unchanged in this preparation slice.
+Compared with the reviewed candidate, the merged document changes only the API
+description and the More Like This endpoint description. No schema changes were
+introduced. Do not overwrite this fixture with an older CDN document.
+
+Publication remains gated on canonical server deployment, a fresh complete CDN
+comparison and the unchanged live-contract equality test. The package manifests
+prepare Python 0.15.0, TypeScript 0.13.0 and CLI 0.5.0; preparation is not publication.
 
 It is the single input to two things:
 

@@ -6745,7 +6745,7 @@
     }
   },
   "info": {
-    "description": "Use `/v1` with Catalog partner organization API keys. Merchant organization keys remain forbidden.",
+    "description": "Use `/v1` with organization API keys. A Developer (catalog partner) key reaches every route. A Merchant key reaches `/me` and the product routes, reading only the organization's own and stewarded catalogs.",
     "summary": "Public server-to-server API for product search, lookup, and brand discovery",
     "title": "StoreRouter Catalog API",
     "version": "1.0.0"
@@ -9322,7 +9322,7 @@
     },
     "/products/more-like-this": {
       "post": {
-        "description": "Find products similar to a source product with a Catalog partner API key.\n\nFull corpus by default: a ``catalogs`` allowlist in the request restricts\nthe RETRIEVAL to those catalogs, while source resolution always spans\nevery catalog the caller's resolved scope permits (the source may live\noutside the allowlist). Every branch carries the scope, so a\n``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``.",
+        "description": "Find products similar to a source product.\n\nThe caller's whole scope by default: a ``catalogs`` allowlist in the request restricts\nthe RETRIEVAL to those catalogs, while source resolution always spans\nevery catalog the caller's resolved scope permits (the source may live\noutside the allowlist). Every branch carries the scope, so a\n``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``\nand a merchant caller to its own and stewarded catalogs.",
         "operationId": "moreLikeThisProducts",
         "parameters": [
           {
