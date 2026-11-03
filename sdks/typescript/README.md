@@ -191,7 +191,8 @@ for (const facet of page.effectiveQuery?.facets ?? []) {
   Only names a relaxation stage covers may be marked (brand profile facets,
   taxonomy attributes, `color`, `color_family`, `category_path.depth_2` and
   deeper).
-- `debug: true` adds `effectiveQuery`, the search that actually ran.
+- `effectiveQuery` reports the search that actually ran on every successful page,
+  with or without `debug: true`.
 
 Contradictions the API would refuse — `relax` without a `q` or with
 `understand: false` and no `relaxable` facet, `understand: false` without a
