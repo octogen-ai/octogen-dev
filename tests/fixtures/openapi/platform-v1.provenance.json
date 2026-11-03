@@ -1,0 +1,34 @@
+{
+  "repository": "https://github.com/octogen-ai/octogen",
+  "sourceCommit": "c14f7859c91589e06eb47e22c54e4e1076a87f8e",
+  "sourceSnapshot": "apps/octogen-platform/tests/snapshots/programmatic_v1_openapi.json",
+  "snapshot": "platform-v1.json",
+  "snapshotSha256": "0596b05ef7a6a577fc866245d2074a6bf587bc1e1fbf6402807cf935e85fa3ff",
+  "sourceSnapshotSha256": "abb70f2e775b6cac1ff9c1e6167746d26ef457c019cf94406c9908fc7a5eed41",
+  "generator": "UPDATE_OPENAPI_SNAPSHOT=1 .venv/bin/python -m pytest -q apps/octogen-platform/tests/test_programmatic_openapi_snapshot.py::test_programmatic_v1_openapi_matches_snapshot",
+  "normalization": "normalize_openapi_schema(app.openapi()), json.dumps(sort_keys=True, indent=2) + newline",
+  "sdkNormalization": "json.dumps(server_snapshot, sort_keys=True, indent=2, ensure_ascii=False) + newline; same formatting as tools/codegen/generate.py fetch_snapshot",
+  "fields": [
+    "exclude_facets",
+    "facets",
+    "limit",
+    "q",
+    "similar_to_brands",
+    "understand"
+  ],
+  "operationId": "searchBrandsFromText",
+  "state": "Merged server source; API/CDN deployment and live-contract equality must be accepted before SDK merge/publication.",
+  "previousCandidate": {
+    "sdkCommit": "2e7e6ecc59ced67cc0f2cb74da0be3c055988081",
+    "serverBaseCommit": "716dc77a5d154e1c875cd29e5202905640144dbc",
+    "sourcePatch": "platform-v1.source.patch",
+    "sourcePatchSha256": "f1a53fbbbf2e6b30758a6af51e6fe6b9314de6ee94d6610ffb1ac90c5b206d32",
+    "sourceSnapshotSha256": "d014be3c72c3f77947e0b49351cb57361f193d48695d6566811b6ace958804f0",
+    "snapshotSha256": "4857e6922b99341e15a35c9016afde6e76560ddf37480c285d3aef83c60c50ac",
+    "note": "Historical candidate retained in git at sdkCommit; sourcePatch is no longer needed for the merged source."
+  },
+  "changesFromCandidate": [
+    "/info/description",
+    "/paths//products/more-like-this/post/description"
+  ]
+}

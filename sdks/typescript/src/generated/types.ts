@@ -110,13 +110,16 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Find brands from a natural-language query
-         * @description Discover brands from text and optional reference brands.
+         * Find brands from text, filters, or reference brands
+         * @description Discover brands from text, filters, or reference brands.
          *
          *     Searches corpus-wide brand identities, not stores or sellers. Brand matches
-         *     do not promise products in your catalog scope. By default the text is
+         *     do not promise products in your catalog scope. By default `q` is
          *     understood (rewritten, with facets and similar brands derived from it); set
-         *     `understand` to false to search the text as written with only your facets.
+         *     `understand` to false to search `q` as written with only your facets.
+         *     Caller-supplied inclusion and exclusion filters always apply. Without `q`, query
+         *     understanding is skipped; provide filters or `similar_to_brands` instead.
+         *     Filter-only result order is unspecified.
          *     Returns 400 for an unusable generated query or reference brands without
          *     embeddings.
          */
@@ -360,13 +363,14 @@ export interface paths {
         put?: never;
         /**
          * Find products similar to a source product
-         * @description Find products similar to a source product with a Catalog partner API key.
+         * @description Find products similar to a source product.
          *
-         *     Full corpus by default: a ``catalogs`` allowlist in the request restricts
+         *     The caller's whole scope by default: a ``catalogs`` allowlist in the request restricts
          *     the RETRIEVAL to those catalogs, while source resolution always spans
          *     every catalog the caller's resolved scope permits (the source may live
          *     outside the allowlist). Every branch carries the scope, so a
-         *     ``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``.
+         *     ``catalog_partner`` caller stays bounded to ``catalog_type = 'CRAWLED'``
+         *     and a merchant caller to its own and stewarded catalogs.
          */
         post: operations["moreLikeThisProducts"];
         delete?: never;
@@ -880,9 +884,14 @@ export interface components {
         };
         /**
          * BrandTextSearchRequest
-         * @description Generate and execute a brand search from text and optional references.
+         * @description Search brands by text, reference brands, or structured filters.
          */
         BrandTextSearchRequest: {
+            /**
+             * Exclude Facets
+             * @description Up to 20 exclusion filters, with the same names and value bounds as facets. Exclusions are never relaxed.
+             */
+            exclude_facets?: components["schemas"]["BrandFacet"][] | null;
             /**
              * Facets
              * @description Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.
@@ -895,18 +904,18 @@ export interface components {
              */
             limit: number;
             /**
-             * Referencebrands
+             * Q
+             * @description Optional brand discovery query. Blank `q` is omitted; without `q`, provide reference brands or inclusion/exclusion filters.
+             */
+            q?: string | null;
+            /**
+             * Similar To Brands
              * @description Canonical source brands whose averaged embeddings guide the search.
              */
-            referenceBrands?: string[] | null;
-            /**
-             * Text
-             * @description Natural-language brand discovery query.
-             */
-            text: string;
+            similar_to_brands?: string[] | null;
             /**
              * Understand
-             * @description Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.
+             * @description Run query understanding on `q`. Set false to match it as written and filter only by the facets you send; reference brands still apply. Without `q`, query understanding is skipped.
              * @default true
              */
             understand: boolean;
@@ -1384,7 +1393,7 @@ export interface components {
             slug: string;
             /**
              * Type
-             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.
+             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers here, on the merchant onboarding routes, and on the product lookup, parse, retrieve, search, facet-counts and more-like-this routes, which read only the organization's own catalogs. Every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.
              * @enum {string}
              */
             type: "merchant" | "catalog_partner";

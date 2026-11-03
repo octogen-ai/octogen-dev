@@ -173,10 +173,22 @@ export const STORE_SIMILAR_FIELDS = {
 // ── /brands ─────────────────────────────────────────────────────────────────
 
 export const BRAND_SEARCH_FIELDS = {
+  exclude_facets: {
+    flag: "--exclude-facet",
+    sdkName: "excludeFacets",
+    codec: "facets",
+    multiple: true,
+    placeholder: "k=v",
+  },
   facets: { flag: "--facet", codec: "facets", multiple: true, placeholder: "k=v" },
   limit: { flag: "--limit" },
-  referenceBrands: { flag: "--like", multiple: true, placeholder: "brand" },
-  text: { flag: "<description> (positional)" },
+  similar_to_brands: {
+    flag: "--like",
+    sdkName: "similarToBrands",
+    multiple: true,
+    placeholder: "brand",
+  },
+  q: { flag: "[description] (positional)" },
   understand: unsupported(
     "Literal matching changes what the positional description means; reach it " +
       "with `storerouter api`.",

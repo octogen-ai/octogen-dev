@@ -356,7 +356,7 @@ class MeOrganization(BaseModel):
     slug: str = Field(..., description="URL-safe organization slug.", title="Slug")
     type: Literal["merchant", "catalog_partner"] | str = Field(
         ...,
-        description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
+        description="Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers here, on the merchant onboarding routes, and on the product lookup, parse, retrieve, search, facet-counts and more-like-this routes, which read only the organization's own catalogs. Every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
         title="Type",
     )
 
@@ -1291,6 +1291,11 @@ class BrandTextSearchRequest(BaseModel):
         extra="forbid",
         populate_by_name=True,
     )
+    exclude_facets: list[BrandFacet] | None = Field(
+        None,
+        description="Up to 20 exclusion filters, with the same names and value bounds as facets. Exclusions are never relaxed.",
+        title="Exclude Facets",
+    )
     facets: list[BrandFacet] | None = Field(
         None,
         description="Up to 20 explicit filters that override generated facets by name and are never relaxed. Each needs 1..100 nonblank values of at most 256 characters. Product-only color, color_family, is_activewear and internal brand_quality_score are rejected.",
@@ -1299,18 +1304,19 @@ class BrandTextSearchRequest(BaseModel):
     limit: int | None = Field(
         24, description="Maximum number of matching brands.", title="Limit"
     )
-    reference_brands: list[str] | None = Field(
+    q: str | None = Field(
         None,
-        alias="referenceBrands",
-        description="Canonical source brands whose averaged embeddings guide the search.",
-        title="Referencebrands",
+        description="Optional brand discovery query. Blank `q` is omitted; without `q`, provide reference brands or inclusion/exclusion filters.",
+        title="Q",
     )
-    text: str = Field(
-        ..., description="Natural-language brand discovery query.", title="Text"
+    similar_to_brands: list[str] | None = Field(
+        None,
+        description="Canonical source brands whose averaged embeddings guide the search.",
+        title="Similar To Brands",
     )
     understand: bool | None = Field(
         True,
-        description="Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+        description="Run query understanding on `q`. Set false to match it as written and filter only by the facets you send; reference brands still apply. Without `q`, query understanding is skipped.",
         title="Understand",
     )
 

@@ -5,9 +5,25 @@ SDK tests.
 
 ## `openapi/platform-v1.json`
 
-The published `/v1` OpenAPI contract, fetched verbatim from
-`https://cdn.storerouter.ai/openapi/platform/v1/openapi.json` and re-serialized with
-sorted keys so a diff is readable.
+The complete normalized `/v1` OpenAPI contract. This snapshot comes from the
+merged canonical Brand Search server source at
+`c14f7859c91589e06eb47e22c54e4e1076a87f8e`; it does not claim deployed CDN parity.
+[Provenance](openapi/platform-v1.provenance.json) records the exact server commit,
+generator command and SHA-256 hashes. Check out that server commit, run its
+checked-in snapshot test, then normalize with
+`json.dumps(sort_keys=True, indent=2, ensure_ascii=False) + "\n"`, as the SDK
+generator does when fetching. The manifest records both the original server bytes
+and normalized SDK fixture hashes. No source patch is needed for the merged
+commit. The previous candidate's provenance and patch remain in git at the
+recorded SDK commit.
+
+Compared with the reviewed candidate, the merged document changes only the API
+description and the More Like This endpoint description. No schema changes were
+introduced. Do not overwrite this fixture with an older CDN document.
+
+Publication remains gated on canonical server deployment, a fresh complete CDN
+comparison and the unchanged live-contract equality test. The package manifests
+prepare Python 0.15.0, TypeScript 0.13.0 and CLI 0.5.0; preparation is not publication.
 
 It is the single input to two things:
 
@@ -17,7 +33,7 @@ It is the single input to two things:
 - **Conformance.** Both runners in [`tests/contract`](../contract/README.md)
   hold each SDK's routing table to this file.
 
-Refresh it — and the generated types with it — when the contract moves:
+After the canonical server is deployed, refresh the snapshot and generated types:
 
 ```bash
 npm run codegen -- --fetch

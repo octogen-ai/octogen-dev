@@ -42,6 +42,33 @@ const key =
   "octo_live_3f9c1a2b4d5e6f708192a3b4c5d6e7f8_sZ9wQ1x-Yv3TbN7mK2pRdL4gH6jF8cA0eU5iO1yW3qE";
 const cases = [
   {
+    operation: "searchBrandsFromText",
+    argv: [
+      "brands",
+      "search",
+      "--like",
+      "Example",
+      "--facet",
+      "brand_style_identity=MINIMALIST",
+      "--facet",
+      "brand_style_identity=CONTEMPORARY",
+      "--exclude-facet",
+      "brand_name=Other",
+    ],
+    path: "/brands/search",
+    response: { results: [], totalFound: 0 },
+    exit: 6,
+    body: {
+      similar_to_brands: ["Example"],
+      facets: [
+        { name: "brand_style_identity", values: ["MINIMALIST"] },
+        { name: "brand_style_identity", values: ["CONTEMPORARY"] },
+      ],
+      exclude_facets: [{ name: "brand_name", values: ["Other"] }],
+      limit: 24,
+    },
+  },
+  {
     operation: "searchProducts",
     argv: [
       "search",

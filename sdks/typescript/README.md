@@ -44,6 +44,9 @@ merchant domain is unsupported. Use `getMe` (Python: `get_me`) to check credenti
 
 ## API
 
+> Canonical Brand Search is prepared against a local server candidate. Its
+> deployment and package release are pending; see the [snapshot provenance](../../tests/fixtures/openapi/platform-v1.provenance.json).
+
 Every published `/v1` operation has a method. `tests/contract` fails the build
 if that stops being true — see [Contract conformance](../../tests/contract/README.md).
 
@@ -61,13 +64,22 @@ if that stops being true — see [Contract conformance](../../tests/contract/REA
   stores by resemblance to one or more stores (`POST /v1/stores/similar`).
 - `searchProducts({ stores: [domain] })` searches every catalog serving a store
   domain, as `getStore` resolves it, instead of naming `catalogs`.
-- Brand discovery (`/v1/brands`): `searchBrandsFromText({ text, referenceBrands, understand })`
+- Brand discovery (`/v1/brands`): `searchBrands({ q, similarToBrands, facets, excludeFacets, understand })`
   and `searchSimilarBrands({ brands })` rank brands, `searchBrandPrefix(prefix)`
   completes a canonical name, `getBrandDetails(brand)` and
   `getBrandTopCategories(brand)` describe one, and `browseBrandProducts(brand,
 { limit, offset })` pages its products within your key's catalogs. A brand is
   a slug or case-insensitive name; an unknown one throws `OctogenNotFoundError`
   with `detail` `brand_not_found`.
+
+`searchBrands` also accepts reference-only, inclusion-only, or exclusion-only
+requests. Omit `q` for those modes; empty requests fail locally. Without `q`,
+understanding is skipped. Explicit filters are never relaxed and filter-only
+order is unspecified. Each filter list allows 20 clauses with 1–100 values
+each, sent without merging or truncation. `q` is at most 500 characters,
+`similarToBrands` accepts 1–20 names of at most 200 characters, and `limit` is
+1–100 (server default 24). The convenience fields serialize to `q`, `facets`,
+`exclude_facets`, `similar_to_brands`, `understand`, and `limit`.
 
 - `searchProducts(params)` searches every active catalog by default, or only
   the catalogs in `catalogs` (1–500 keys) when it is provided. The query field

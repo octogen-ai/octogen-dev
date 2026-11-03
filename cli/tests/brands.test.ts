@@ -94,8 +94,8 @@ describe("storerouter brands search", () => {
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.requests[0]?.body).toEqual({
-      text: "sustainable dresses",
-      referenceBrands: ["Everlane", "Aritzia"],
+      q: "sustainable dresses",
+      similar_to_brands: ["Everlane", "Aritzia"],
       facets: [{ name: "facet_price_tier", values: ["premium"] }],
       limit: 5,
     });
@@ -114,6 +114,70 @@ describe("storerouter brands search", () => {
     ]);
   });
 
+  it.each([
+    [["--like", "Everlane"], { similar_to_brands: ["Everlane"] }],
+    [
+      ["--facet", "facet_price_tier=premium"],
+      { facets: [{ name: "facet_price_tier", values: ["premium"] }] },
+    ],
+    [
+      ["--exclude-facet", "brand_name=Example"],
+      { exclude_facets: [{ name: "brand_name", values: ["Example"] }] },
+    ],
+  ])("supports textless flags %j", async (flags, expected) => {
+    const result = await runCli({
+      argv: ["brands", "search", ...flags, "--json"],
+      env: KEYED,
+      routes: { "POST /brands/search": { body: BRANDS_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests[0]?.body).toEqual({ ...expected, limit: 24 });
+    expect(result.json()["query"]).toBe("");
+  });
+
+  it("preserves repeated facet clauses and every value", async () => {
+    const result = await runCli({
+      argv: [
+        "brands",
+        "search",
+        "--facet",
+        "brand_style_identity=MINIMALIST,CONTEMPORARY",
+        "--facet",
+        "brand_style_identity=MINIMALIST",
+        "--exclude-facet",
+        "brand_name=Example,Other",
+        "--exclude-facet",
+        "brand_name=Another",
+      ],
+      env: KEYED,
+      routes: { "POST /brands/search": { body: BRANDS_BODY } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.requests[0]?.body).toEqual({
+      facets: [
+        { name: "brand_style_identity", values: ["MINIMALIST", "CONTEMPORARY"] },
+        { name: "brand_style_identity", values: ["MINIMALIST"] },
+      ],
+      exclude_facets: [
+        { name: "brand_name", values: ["Example", "Other"] },
+        { name: "brand_name", values: ["Another"] },
+      ],
+      limit: 24,
+    });
+  });
+
+  it("reports no results clearly without a description", async () => {
+    const result = await runCli({
+      argv: ["brands", "search", "--like", "Everlane", "--json"],
+      env: KEYED,
+      routes: { "POST /brands/search": { body: { results: [], totalFound: 0 } } },
+    });
+    expect(result.exitCode).toBe(ExitCode.NoResult);
+    expect(result.json()["message"]).toBe(
+      "No brands matched these references or filters.",
+    );
+  });
+
   it("exits 6 when no brand matched", async () => {
     const result = await runCli({
       argv: ["brands", "search", "nothing like this", "--json"],
@@ -124,7 +188,7 @@ describe("storerouter brands search", () => {
     expect(result.json()["code"]).toBe("no_matches");
   });
 
-  it("is a usage error without a description, before any request", async () => {
+  it("is a usage error without search input, before any request", async () => {
     const result = await runCli({ argv: ["brands", "search"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);
     expect(result.requests).toEqual([]);

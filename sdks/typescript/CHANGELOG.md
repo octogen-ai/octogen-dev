@@ -1,5 +1,13 @@
 # Changelog — `@octogen-ai/sdk`
 
+## 0.13.0 (unreleased)
+
+- Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
+  `understand`, and `limit` request fields, including reference/filter-only modes.
+  No public quality controls or ranking changes. Package release requires the
+  canonical server and live-contract parity.
+- **Breaking:** replace `searchBrandsFromText` with `searchBrands` and `SearchBrandsParams`; no legacy wrapper.
+
 ## 0.12.0 (unreleased)
 
 - `BrandCoverageResponse` declares `targetAudience`, the brand's recorded audience

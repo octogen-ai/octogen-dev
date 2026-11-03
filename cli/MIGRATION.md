@@ -16,11 +16,11 @@ requests, JSON `command: "lookup"`, output, flags, and exit codes.
 
 The existing `@octogen-ai/cli@next` 0.2.0 stays available, pinned to SDK 0.4.0.
 It is not republished, unpublished, or automatically upgraded by this change.
-The published StoreRouter 0.3.0 pins SDK 0.5.0. The next release candidate is
-CLI 0.4.0 with SDK 0.6.0, including public-contract validation and customer
-Voyage removal. Old installs do not gain the new defaults or aliases. Moving to
-the new package is an explicit choice; an old-name forwarding package is not
-part of this release.
+The published StoreRouter 0.4.0 pins SDK 0.6.0. The next release candidate is
+CLI 0.5.0 with SDK 0.13.0, including canonical Brand Search requests and
+reference/filter-only brand discovery. Old installs do not gain new commands or
+request fields. Moving to the new package is an explicit choice; an old-name
+forwarding package is not part of this release.
 
 For a global installation in the **same npm prefix**, remove the old package
 before installing the new one:
@@ -77,26 +77,34 @@ canonical command names, and exit codes are unchanged. Color/size shortcuts,
 
 ## Release owner checklist (publication requires separate authorization)
 
-Read-only registry audit on 2026-10-16: `@storerouter/cli@next` is 0.3.0;
+Read-only registry audit on 2026-11-03: `@storerouter/cli@next` is 0.4.0;
 `latest` still points to the 0.0.0 reservation package. Always specify `@next`.
-TypeScript `@octogen-ai/sdk` and Python `octogen-ai-sdk` are both at 0.5.0.
-The published CLI still includes Voyage and lacks `dist/contract.js`; merging
-source changes does not update that artifact. Do not reuse published versions.
+TypeScript `@octogen-ai/sdk` is 0.12.0 and Python `octogen-ai-sdk` is 0.14.0.
+CLI 0.5.0, TypeScript 0.13.0 and Python 0.15.0 are unpublished candidates.
+Merging source changes does not update registry artifacts. Do not reuse
+published versions.
 
-1. Review and merge the release-preparation PR under normal repository policy.
+1. Verify the canonical Brand Search server bridge is serving and the complete
+   public CDN contract matches the reviewed candidate. If the CDN differs beyond
+   the intended Brand contract, review that diff before regenerating anything.
+   Keep the published-contract check intact. Review and merge the
+   release-preparation PR under normal repository policy.
    On the final release commit run `npm ci`, `npm run check`,
    `npm run codegen:check`, `npm run test:published-contract`, Python tests,
    `npm run test:cli-package`, and the migration smoke test below.
-2. With explicit release authorization, publish TypeScript SDK 0.6.0 through
-   `sdk-ts-v0.6.0`. Publish Python SDK 0.6.0 through `sdk-py-v0.6.0` as its
+2. With explicit release authorization, publish TypeScript SDK 0.13.0 through
+   `sdk-ts-v0.13.0`. Publish Python SDK 0.15.0 through `sdk-py-v0.15.0` as its
    separate release. The existing workflow checks tag/manifest agreement and
-   retains the `npm` / `pypi` environment approval gates and trusted publishing.
-   Verify the registry artifacts, versions, and retired Voyage surface.
-3. After npm serves SDK 0.6.0, run `npm run test:cli-release` on the final
+   uses the `npm` / `pypi` environments and trusted publishing. The current `npm`
+   environment requires reviewer approval; the current `pypi` environment has
+   no required reviewer. Do not change those controls as part of this release.
+   Verify registry artifacts, versions, provenance and canonical Brand requests
+   from fresh installs before consumer adoption.
+3. After npm serves SDK 0.13.0, run `npm run test:cli-release` on the final
    release commit. This installs the CLI tarball with its exact **registry** SDK.
    A passing local-tarball test is not this gate; an unpublished SDK means this
    gate is blocked. Do not change the pin or waive the check to bypass it.
-4. With separate CLI release authorization, tag `cli-v0.4.0`. The workflow
+4. With CLI release authorization, tag `cli-v0.5.0`. The workflow
    publishes `@storerouter/cli` using public access, provenance, and `next`.
    Verify trusted-publisher configuration on this package for GitHub owner
    `octogen-ai`, repository `octogen-dev`, workflow `release.yml`, environment
@@ -121,8 +129,8 @@ From the repository root, after `npm ci` and `npm run build`:
 pack_dir=$(mktemp -d)
 npm pack --workspace @octogen-ai/sdk --pack-destination "$pack_dir"
 npm pack --workspace @storerouter/cli --pack-destination "$pack_dir"
-CLI_TARBALL="$pack_dir/storerouter-cli-0.4.0.tgz" \
-SDK_TARBALL="$pack_dir/octogen-ai-sdk-0.6.0.tgz" \
+CLI_TARBALL="$pack_dir/storerouter-cli-0.5.0.tgz" \
+SDK_TARBALL="$pack_dir/octogen-ai-sdk-0.13.0.tgz" \
 bash cli/tests/package-smoke.sh
 ```
 

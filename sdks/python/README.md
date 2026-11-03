@@ -51,6 +51,10 @@ merchant domain is unsupported. Use `get_me()` to check credentials.
 
 ## API
 
+> Canonical Brand Search is prepared against a local server candidate. Its
+> deployment and package release are pending; see the [snapshot provenance](../../tests/fixtures/openapi/platform-v1.provenance.json).
+
+
 Every published `/v1` operation has a method. `tests/contract` fails the build
 if that stops being true — see
 [Contract conformance](../../tests/contract/README.md).
@@ -108,12 +112,17 @@ if that stops being true — see
   `q`, facets, bounds and `catalogs`.
 
 - `search_brand_prefix(prefix)` completes a canonical brand name from its
-  first characters. `search_brands_from_text(text, ...)` finds brands from a
-  description, optionally steered by `reference_brands` (`understand=False`
-  matches the text as written, with only the facets you send);
-  `search_similar_brands(brands, ...)` finds brands like 1–20 source brands.
-  Both take `facets` (and similar, `exclusion_facets`) as `BrandFacet`s, whose
-  names are `facet_*` keys such as `facet_price_tier`.
+  first characters. `search_brands(q=..., similar_to_brands=..., facets=...,
+  exclude_facets=...)` finds brands from a description, reference brands, or
+  filters. Omit `q` for reference/filter-only discovery; empty requests fail
+  locally. `understand=False` matches `q` as written; without `q`, understanding
+  is skipped. Explicit filters are never relaxed, and filter-only order is
+  unspecified. `search_similar_brands(brands, ...)` remains a separate method
+  for 1–20 source brands, with `facets` and `exclusion_facets`.
+  Brand facets accept names such as `brand_price_tier` and `facet_price_tier`.
+  Each list allows 20 clauses with 1–100 values each. Clauses and values are
+  sent without merging or truncation. Reference names are at most 200 characters;
+  `q` is at most 500 characters and `limit` is 1–100 (default 24).
 - `get_brand_details(brand)`, `browse_brand_products(brand, limit=..., offset=...)`
   and `get_brand_top_categories(brand, min_level=..., limit=...)` read one
   brand by slug or case-insensitive name. An unknown brand raises
