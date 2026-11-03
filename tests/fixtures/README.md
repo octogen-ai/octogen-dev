@@ -9,7 +9,8 @@ The complete normalized `/v1` OpenAPI contract. This snapshot currently prepares
 OCT-4757 against the canonical Brand Search **server candidate**, not the deployed
 CDN. [Provenance](openapi/platform-v1.provenance.json) records the exact server
 base, [source patch](openapi/platform-v1.source.patch), generator command and
-SHA-256 hashes. Apply the patch to the recorded base, run the checked-in server
+SHA-256 hashes. Apply the zero-context patch to the recorded base with
+`git apply --unidiff-zero`, run the checked-in server
 snapshot test, then normalize with `json.dumps(sort_keys=True, indent=2,
 ensure_ascii=False) + "\n"`, as the SDK generator does when fetching. The manifest
 records both the original server bytes and the normalized SDK fixture hashes. Keep the candidate immutable while
