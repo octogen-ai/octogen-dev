@@ -212,8 +212,7 @@ looks like this:
 }
 ```
 
-In a raw JSON-RPC response, read `result.structuredContent.items`. The JSON-RPC
-`result` container remains; there is no nested `structuredContent.result`.
+In a raw JSON-RPC response, read `result.structuredContent.items`.
 The text content block contains the same page JSON. Items use REST product
 cards, including object-valued `primaryImage` and `images`. Each invocation and
 page gets a fresh `requestId`. `effectiveQuery` reports what ran; keep your
@@ -228,34 +227,20 @@ transport-level handling.
 #### Continue a search
 
 Keep the original arguments and replace only `cursor` with `nextCursor`. Stop
-at `null`. Invalid, mismatched, or retired MCP cursors return `invalid_cursor`;
-restart by omitting `cursor`. They never silently restart at page 1. REST and
+at `null`. Invalid or mismatched cursors return `invalid_cursor`;
+restart by omitting `cursor`. REST and
 MCP cursors interoperate only when the request and authorized catalog scope
 match. Authorization is resolved again on every call.
 
-#### Migrate existing MCP callers
+#### Organization context
 
-Refresh cached tool schemas after the November 3, 2026 release.
+Developer callers use their signed-in organization. Authorized super-admin
+integrations select a target with `params._meta["storerouter.ai/org_id"]`;
+this metadata does not grant catalog access.
 
-| Previous contract                          | Replacement                                      |
-| ------------------------------------------ | ------------------------------------------------ |
-| `query`                                    | `q`                                              |
-| `catalog: "key"`                           | `catalogs: ["key"]`                              |
-| Empty `catalogs` or `stores` means all     | Omit the selector; empty arrays are invalid.     |
-| `structuredContent.result`                 | Read `structuredContent` directly.               |
-| Compact product fields and URL-only images | REST product cards and image objects.            |
-| Old cursors or silent restart              | Discard old cursors and handle `invalid_cursor`. |
-| Search error as a successful value         | Check `isError` and parse the JSON text error.   |
-
-Do not send `org_id` in search arguments. Developer callers use their signed-in
-organization. For existing authorized super-admin integrations, move the target
-to `params._meta["storerouter.ai/org_id"]`; this metadata does not grant access.
-Other MCP tools retain their contracts.
-
-The Python and TypeScript SDK search methods and `storerouter search` already
-call REST. Their request contracts are unchanged by this MCP release; no SDK or
-CLI upgrade is required for it. The BigQuery MCP automation keeps its existing
-tool envelopes.
+The Python and TypeScript SDK search methods and `storerouter search` call
+REST with the same search contract. BigQuery MCP automation uses the envelopes
+of the BigQuery tools documented below.
 
 ### `list_bigquery_listing_resources(catalogs?)`
 

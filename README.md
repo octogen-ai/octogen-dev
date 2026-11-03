@@ -134,7 +134,7 @@ Package names and release targets are finalized: `@octogen-ai/sdk` on npm and
 
 The OAuth `search_products` tool accepts the same request and returns the same
 successful page as `POST /v1/products/search`. See the
-[MCP integration and migration guide](docs/guides/catalog-partner-mcp.md)
+[MCP product search guide](docs/guides/catalog-partner-mcp.md)
 for flat arguments, direct `structuredContent`, pagination, and error handling.
 The SDKs and CLI continue to call REST with their existing contracts.
 
