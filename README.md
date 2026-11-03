@@ -130,6 +130,14 @@ Package names and release targets are finalized: `@octogen-ai/sdk` on npm and
 `octogen-ai-sdk` on PyPI. Publishing is gated on a human owning the
 `@octogen-ai` npm organization and configuring 2FA and OIDC trusted publishing.
 
+## MCP product search
+
+The OAuth `search_products` tool accepts the same request and returns the same
+successful page as `POST /v1/products/search`. See the
+[MCP integration and migration guide](docs/guides/catalog-partner-mcp.md)
+for flat arguments, direct `structuredContent`, pagination, and error handling.
+The SDKs and CLI continue to call REST with their existing contracts.
+
 ## The CLI
 
 [`cli/`](cli/README.md) is `@storerouter/cli`, the primary `storerouter` binary

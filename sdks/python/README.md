@@ -79,7 +79,7 @@ if that stops being true — see
   `q`, understood by default; `understand`, `facets`, `exclude_facets`, the
   price and brand-quality bounds, `relax`, and `debug` refine it (see below).
   Results come back as `items` + `next_cursor`, each item carrying
-  `product_url`, plus `effective_query` with `debug=True`.
+  `product_url`, plus `effective_query` on every successful search page.
 - `more_like_this_products(...)` finds products similar to a source product URL
   or UUID, or to a set of 1–20 product UUIDs passed as `sources`, optionally
   restricted to `catalogs` (1–100 keys). `facets`,
@@ -222,7 +222,8 @@ async with OctogenClient(base_url="https://api.storerouter.ai/v1") as client:
   guesses as `relaxable` facets, and `relax=True`. Only names a relaxation
   stage covers may be marked (brand profile facets, taxonomy attributes,
   `color`, `color_family`, `category_path.depth_2` and deeper).
-- `debug=True` adds `effective_query`, the search that actually ran.
+- `effective_query` reports the search that actually ran on every successful page,
+  with or without `debug=True`.
 
 Contradictions the API would refuse — `relax` without a `q` or with
 `understand=False` and no `relaxable` facet, `understand=False` without a `q`,

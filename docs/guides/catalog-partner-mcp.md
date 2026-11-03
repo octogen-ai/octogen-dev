@@ -2,7 +2,7 @@
 
 The Octogen Catalog Partner MCP server lets agents (Claude Code, Codex CLI,
 Claude Desktop, and any other [Model Context Protocol](https://modelcontextprotocol.io/)
-client) discover and query the product catalogs granted to your organization.
+client) search and browse active crawled product catalogs for your organization.
 It is the interactive sibling of [Platform Catalog API v1](../api/platform-catalog-api-v1.md);
 both share the same business logic and active crawled catalog policy. MCP
 also exposes BigQuery listing/subscriber helpers for organizations with
@@ -24,9 +24,9 @@ browser tab for sign-in and cache the resulting tokens locally.
 
 Before your first tool call:
 
-1. Your organization is provisioned as a Catalog Partner (`org_type=catalog_partner`)
-   and your account has been granted at least one catalog. If you don't yet
-   have a Catalog Partner organization, contact Octogen support.
+1. Your account belongs to a Developer organization (`org_type=catalog_partner`).
+   Product search covers active crawled catalogs and excludes merchant catalogs.
+   BigQuery listing access remains explicitly granted.
 2. You can sign in to the Octogen Platform with the email that belongs to the
    Catalog Partner organization. If you belong to multiple organizations,
    you'll be asked to pick which one to act as during sign-in.
@@ -131,7 +131,8 @@ as long as the refresh token is valid.
 
 The catalog read tools map to endpoints in the
 [Platform Catalog API v1 (REST)](../api/platform-catalog-api-v1.md), so the
-arguments and result shapes are the same on either surface. BigQuery tools are
+`search_products` arguments and successful page are identical to REST search.
+Other tools retain their own request and response formats. BigQuery tools are
 OAuth-only and help an agent coordinate Analytics Hub subscription setup.
 
 ### `lookup_product(product_url, catalogs?)`
@@ -152,25 +153,109 @@ images, and identifiers. If no active product matches, the tool returns a
 structured `product_not_found` error (HTTP 200 with an `error` field) — not
 a transport-level failure — so your agent can recover.
 
-### `search_products(catalog, query?, limit?, cursor?)`
+### `search_products(q?, ...)`
 
-Searches products inside a single active crawled catalog. Use when the URL isn't
-known and the user wants products by name, attribute, or keyword.
+Use the same body as `POST /v1/products/search` directly as MCP `arguments`,
+without a `request` wrapper. The tool advertises the shared request as its
+`inputSchema` and the shared page as its `outputSchema`. All fields and validation
+rules are documented in the [REST search reference](../api/platform-catalog-api-v1.md).
 
-```text
-catalog   string   required  Known active crawled catalog key. Single-catalog
-                             by design — cross-catalog search is not supported.
-query     string   optional  Free-text query. Omit to browse the catalog's
-                             most relevant products without filtering.
-limit     integer  optional  Page size, 1..100 (default 50). Out-of-range
-                             values return an `invalid_limit` structured
-                             error — there is no silent clamping.
-cursor    string   optional  Opaque cursor from a previous response's
-                             `nextCursor` field. Pass it verbatim to advance.
-                             Malformed cursors silently restart at page 1.
+| Purpose                 | Arguments                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| Text and understanding  | `q`, `understand` (default `true`)                                           |
+| Filters and refinements | `facets`, `exclude_facets`, `omit_generated_facets`, `fallback_category`     |
+| Bounds                  | `price_min`, `price_max`, `brand_quality_min`, `brand_quality_max`           |
+| Catalog selection       | `catalogs` (1–500 keys) or `stores` (1–20 domains)                           |
+| Ranking and relaxation  | `similar_to_brands`, `diversity`, `relax` (both booleans default to `false`) |
+| Pagination              | `limit` (1–100, default 50), `cursor`                                        |
+| Diagnostics             | `debug`; `effectiveQuery` is returned regardless                             |
+
+Omit `q` for browsing or filter-only searches. `understand: false` requires
+nonblank `q`. Omit both selectors to search the full authorized scope. Empty
+selector arrays, combining `catalogs` with `stores`, unknown fields, and
+contradictory filters return `invalid_request`. Unknown or inaccessible catalog
+keys match nothing; an uncovered store domain returns `domain_not_covered`.
+Selectors only narrow access and cannot grant access to merchant catalogs.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "search_products",
+    "arguments": {
+      "q": "blue linen shirts",
+      "price_max": 150,
+      "limit": 20
+    }
+  }
+}
 ```
 
-Returns a page of items plus a `nextCursor` for pagination.
+#### Read the search result
+
+Successful `structuredContent` is the REST page itself. An empty browse page
+looks like this:
+
+```json
+{
+  "requestId": "93b3432e-e8b3-43b6-a96a-81a2902d9000",
+  "items": [],
+  "nextCursor": null,
+  "effectiveQuery": {
+    "text": "",
+    "understood": false,
+    "facets": [],
+    "excludeFacets": []
+  }
+}
+```
+
+In a raw JSON-RPC response, read `result.structuredContent.items`. The JSON-RPC
+`result` container remains; there is no nested `structuredContent.result`.
+The text content block contains the same page JSON. Items use REST product
+cards, including object-valued `primaryImage` and `images`. Each invocation and
+page gets a fresh `requestId`. `effectiveQuery` reports what ran; keep your
+original arguments instead of replaying that report as a request.
+
+Check `isError` before parsing a page. Search validation and expected execution
+errors set `isError: true`, omit `structuredContent`, and put JSON with
+`requestId`, `error`, and `message` in a text content block. Validation also
+includes `detail`. Authentication and protocol failures still use their
+transport-level handling.
+
+#### Continue a search
+
+Keep the original arguments and replace only `cursor` with `nextCursor`. Stop
+at `null`. Invalid, mismatched, or retired MCP cursors return `invalid_cursor`;
+restart by omitting `cursor`. They never silently restart at page 1. REST and
+MCP cursors interoperate only when the request and authorized catalog scope
+match. Authorization is resolved again on every call.
+
+#### Migrate existing MCP callers
+
+Refresh cached tool schemas after the November 3, 2026 release.
+
+| Previous contract                          | Replacement                                      |
+| ------------------------------------------ | ------------------------------------------------ |
+| `query`                                    | `q`                                              |
+| `catalog: "key"`                           | `catalogs: ["key"]`                              |
+| Empty `catalogs` or `stores` means all     | Omit the selector; empty arrays are invalid.     |
+| `structuredContent.result`                 | Read `structuredContent` directly.               |
+| Compact product fields and URL-only images | REST product cards and image objects.            |
+| Old cursors or silent restart              | Discard old cursors and handle `invalid_cursor`. |
+| Search error as a successful value         | Check `isError` and parse the JSON text error.   |
+
+Do not send `org_id` in search arguments. Developer callers use their signed-in
+organization. For existing authorized super-admin integrations, move the target
+to `params._meta["storerouter.ai/org_id"]`; this metadata does not grant access.
+Other MCP tools retain their contracts.
+
+The Python and TypeScript SDK search methods and `storerouter search` already
+call REST. Their request contracts are unchanged by this MCP release; no SDK or
+CLI upgrade is required for it. The BigQuery MCP automation keeps its existing
+tool envelopes.
 
 ### `list_bigquery_listing_resources(catalogs?)`
 
@@ -330,25 +415,27 @@ client-side exceptions. The most common are:
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 401    | Missing, expired, or wrong-audience token. Compliant clients restart the OAuth flow automatically using the `WWW-Authenticate` header. |
 | 403    | Token is valid but the organization isn't allowed to use MCP (e.g. `org_type` is not `catalog_partner`).                               |
-| 422    | Request body validation failed.                                                                                                        |
+| 422    | HTTP request-body validation failed outside the search tool.                                                                           |
 
-**Tool-level errors** (HTTP 200 with an `error` field in the payload) are
-returned as values so the calling agent can recover without a transport
-failure. The codes you can see:
+**Tool-level errors** let your agent recover after an authenticated call.
+For `search_products`, check MCP `isError` and read the JSON text error described
+above. Other tools keep their existing error values. Common codes include:
 
-| Tool                      | `error`               | Meaning                                                                |
-| ------------------------- | --------------------- | ---------------------------------------------------------------------- |
-| `lookup_product`          | `product_not_found`   | No active product matched the URL in active crawled catalogs.          |
-| `lookup_product`          | `catalog_not_granted` | The `catalogs` argument listed only catalogs you don't have access to. |
-| `search_products`         | `catalog_not_granted` | The `catalog` argument is not in your active grants.                   |
-| `search_products`         | `invalid_limit`       | `limit` was outside the 1..100 range.                                  |
-| BigQuery tools            | `catalog_not_granted` | A requested catalog does not have an active `bigquery_listing` grant.  |
-| BigQuery subscriber tools | `not_authorized`      | Your user is not an owner/admin member of the target organization.     |
-| BigQuery tools            | `request_failed`      | The backing Analytics Hub or subscriber operation failed.              |
+| Tool                      | `error`                        | Meaning                                                                     |
+| ------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| `lookup_product`          | `product_not_found`            | No active product matched the URL in active crawled catalogs.               |
+| `lookup_product`          | `catalog_not_granted`          | The `catalogs` argument listed only catalogs you don't have access to.      |
+| `search_products`         | `invalid_request`              | Fix invalid arguments, including an out-of-range `limit` or empty selector. |
+| `search_products`         | `invalid_cursor`               | Restart without `cursor`, then keep the request and cursor together.        |
+| `search_products`         | `domain_not_covered`           | Choose a covered store domain.                                              |
+| `search_products`         | `catalog_registry_unavailable` | Retry later.                                                                |
+| BigQuery tools            | `catalog_not_granted`          | A requested catalog does not have an active `bigquery_listing` grant.       |
+| BigQuery subscriber tools | `not_authorized`               | Your user is not an owner/admin member of the target organization.          |
+| BigQuery tools            | `request_failed`               | The backing Analytics Hub or subscriber operation failed.                   |
 
-If an agent encounters one of these, retry with a known active crawled catalog
-or call `list_bigquery_listing_resources` for the explicitly granted BigQuery
-listing set.
+Correct invalid search arguments before retrying. An inaccessible catalog in
+search yields an empty page, not `catalog_not_granted`. For BigQuery grant
+errors, call `list_bigquery_listing_resources` for the granted listing set.
 
 ## Coexistence with API keys
 
