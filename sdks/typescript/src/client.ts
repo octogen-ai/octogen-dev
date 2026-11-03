@@ -51,7 +51,7 @@ import type {
   ProductRetrieveResult,
   ResolveProductFromHtmlParams,
   SearchBrandPrefixParams,
-  SearchBrandsFromTextParams,
+  SearchBrandsParams,
   SearchProductsParams,
   SearchSimilarBrandsParams,
   SearchSimilarStoresParams,
@@ -371,19 +371,42 @@ export class OctogenClient {
   }
 
   /**
-   * Brands matching a natural-language description
-   * (`POST /v1/brands/search`), optionally steered by `referenceBrands`.
-   * Explicit `facets` override the facets generated from `text` by name.
+   * Discover brands from a query, references, or structured filters.
+   * Explicit filters are never relaxed. Without `q`, understanding is skipped
+   * and filter-only ordering is unspecified. Reference brands merge with
+   * inferred references; sources with usable embeddings are excluded.
+   * If no explicit source has embeddings, the server returns 400.
    */
-  async searchBrandsFromText(
-    params: SearchBrandsFromTextParams,
+  async searchBrands(
+    params: SearchBrandsParams,
     options: RequestOptions = {},
   ): Promise<SimilarBrandsResponse> {
-    assertNonEmptyString(params.text.trim(), "text");
-    const body: BrandTextSearchRequest = { text: params.text };
-    if (params.referenceBrands !== undefined)
-      body.referenceBrands = params.referenceBrands;
+    if (params.q !== undefined && typeof params.q !== "string") {
+      throw new TypeError("q must be a string");
+    }
+    const q = params.q?.trim();
+    if (params.similarToBrands !== undefined) {
+      assertStringArray(params.similarToBrands, "similarToBrands");
+      if (params.similarToBrands.length === 0) {
+        throw new TypeError("similarToBrands must contain at least one brand");
+      }
+      for (const brand of params.similarToBrands)
+        assertNonEmptyString(brand.trim(), "similarToBrands[]");
+    }
+    if (
+      !q &&
+      !params.similarToBrands?.length &&
+      !params.facets?.length &&
+      !params.excludeFacets?.length
+    ) {
+      throw new TypeError("provide q, similarToBrands, facets, or excludeFacets");
+    }
+    const body: BrandTextSearchRequest = {};
+    if (q) body.q = q;
+    if (params.similarToBrands !== undefined)
+      body.similar_to_brands = params.similarToBrands;
     if (params.facets !== undefined) body.facets = params.facets;
+    if (params.excludeFacets !== undefined) body.exclude_facets = params.excludeFacets;
     if (params.understand !== undefined) body.understand = params.understand;
     if (params.limit !== undefined) body.limit = params.limit;
     const data = await this.json("searchBrandsFromText", {

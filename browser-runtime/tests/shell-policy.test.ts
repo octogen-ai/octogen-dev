@@ -354,6 +354,18 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
         "storerouter brands similar Example --json | jq -r '.brands[0].name'",
         "Example",
       ],
+      [
+        "storerouter brands search --like Example --json | jq -r '.brands[0].name'",
+        "Example",
+      ],
+      [
+        "storerouter brands search --facet brand_price_tier=premium --json | jq -r '.brands[0].name'",
+        "Example",
+      ],
+      [
+        "storerouter brands search --exclude-facet brand_name=Other --json | jq -r '.brands[0].name'",
+        "Example",
+      ],
       ["storerouter brands prefix Ex --json | jq -r '.brands[0]'", "Example"],
       [
         "storerouter brands show 'Example Studio' --json | jq -r '.brand.brandName'",
@@ -373,6 +385,48 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
       expect(result.stdout.trim(), line).toBe(expected);
       expect(result.calls, line).toBe(1);
     }
+  });
+  it("validates canonical Brand Search wire fields in the browser policy", () => {
+    const request = {
+      url: "https://api.storerouter.ai/v1/brands/search",
+      method: "POST",
+      headers: {},
+    };
+    for (const body of [
+      {
+        q: "linen",
+        similar_to_brands: ["Example"],
+        exclude_facets: [{ name: "brand_name", values: ["Other"] }],
+      },
+      { similar_to_brands: ["Example"] },
+      { facets: [{ name: "brand_price_tier", values: ["premium"] }] },
+      { exclude_facets: [{ name: "brand_name", values: ["Other"] }] },
+    ])
+      expect(checkDemoRequest({ ...request, body: JSON.stringify(body) })).toBe(
+        "searchBrandsFromText",
+      );
+    for (const body of [
+      { text: "linen" },
+      { referenceBrands: ["Example"] },
+      { exclusionFacets: [] },
+      { q: "linen", brand_quality_min: 3 },
+      { q: "x".repeat(501) },
+      { similar_to_brands: Array.from({ length: 21 }, () => "Example") },
+      {
+        facets: Array.from({ length: 21 }, () => ({
+          name: "brand_name",
+          values: ["Example"],
+        })),
+      },
+    ])
+      expect(() =>
+        checkDemoRequest({ ...request, body: JSON.stringify(body) }),
+      ).toThrow();
+  });
+  it("rejects empty Brand Search before browser transport", async () => {
+    const result = await shell("storerouter brands search --json");
+    expect(result.code).toBe(2);
+    expect(result.calls).toBe(0);
   });
   it("allows brand reads with only their declared, in-range query", () => {
     const base = "https://api.storerouter.ai/v1/brands";

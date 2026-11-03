@@ -444,8 +444,24 @@
       },
       "BrandTextSearchRequest": {
         "additionalProperties": false,
-        "description": "Generate and execute a brand search from text and optional references.",
+        "description": "Search brands by text, reference brands, or structured filters.",
         "properties": {
+          "exclude_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BrandFacet"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 exclusion filters, with the same names and value bounds as facets. Exclusions are never relaxed.",
+            "title": "Exclude Facets"
+          },
           "facets": {
             "anyOf": [
               {
@@ -470,7 +486,20 @@
             "title": "Limit",
             "type": "integer"
           },
-          "referenceBrands": {
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional brand discovery query. Blank `q` is omitted; without `q`, provide reference brands or inclusion/exclusion filters.",
+            "title": "Q"
+          },
+          "similar_to_brands": {
             "anyOf": [
               {
                 "items": {
@@ -485,25 +514,15 @@
               }
             ],
             "description": "Canonical source brands whose averaged embeddings guide the search.",
-            "title": "Referencebrands"
-          },
-          "text": {
-            "description": "Natural-language brand discovery query.",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
+            "title": "Similar To Brands"
           },
           "understand": {
             "default": true,
-            "description": "Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+            "description": "Run query understanding on `q`. Set false to match it as written and filter only by the facets you send; reference brands still apply. Without `q`, query understanding is skipped.",
             "title": "Understand",
             "type": "boolean"
           }
         },
-        "required": [
-          "text"
-        ],
         "title": "BrandTextSearchRequest",
         "type": "object"
       },
@@ -1825,7 +1844,7 @@
             "type": "string"
           },
           "type": {
-            "description": "Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers only here and on the merchant onboarding routes; every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
+            "description": "Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers here, on the merchant onboarding routes, and on the product lookup, parse, retrieve, search, facet-counts and more-like-this routes, which read only the organization's own catalogs. Every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.",
             "enum": [
               "merchant",
               "catalog_partner"
@@ -6891,7 +6910,7 @@
     },
     "/brands/search": {
       "post": {
-        "description": "Discover brands from text and optional reference brands.\n\nSearches corpus-wide brand identities, not stores or sellers. Brand matches\ndo not promise products in your catalog scope. By default the text is\nunderstood (rewritten, with facets and similar brands derived from it); set\n`understand` to false to search the text as written with only your facets.\nReturns 400 for an unusable generated query or reference brands without\nembeddings.",
+        "description": "Discover brands from text, filters, or reference brands.\n\nSearches corpus-wide brand identities, not stores or sellers. Brand matches\ndo not promise products in your catalog scope. By default `q` is\nunderstood (rewritten, with facets and similar brands derived from it); set\n`understand` to false to search `q` as written with only your facets.\nCaller-supplied inclusion and exclusion filters always apply. Without `q`, query\nunderstanding is skipped; provide filters or `similar_to_brands` instead.\nFilter-only result order is unspecified.\nReturns 400 for an unusable generated query or reference brands without\nembeddings.",
         "operationId": "searchBrandsFromText",
         "parameters": [
           {
@@ -7031,7 +7050,7 @@
             "BearerApiKey": []
           }
         ],
-        "summary": "Find brands from a natural-language query",
+        "summary": "Find brands from text, filters, or reference brands",
         "tags": [
           "brands",
           "platform-catalog-api"

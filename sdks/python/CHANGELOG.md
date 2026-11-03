@@ -1,5 +1,14 @@
 # Changelog — `octogen-ai-sdk`
 
+## Unreleased — canonical Brand Search preparation
+
+- Prepare the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
+  `understand`, and `limit` request fields, including reference/filter-only modes.
+  No public quality controls or ranking changes. Package release requires the
+  canonical server and live-contract parity; versions are unchanged here.
+- Replace `search_brands_from_text` with `search_brands`; no legacy wrapper.
+
+
 ## 0.14.0 (unreleased)
 
 - `BrandCoverageResponse` declares `target_audience`, the brand's recorded audience

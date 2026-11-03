@@ -307,3 +307,18 @@ hook or a native build step would turn the one-liner into a support load.
 ## License
 
 Apache-2.0
+
+### Canonical Brand Search preparation
+
+`storerouter brands search` accepts a description, references, or structured
+filters. These requests use the candidate canonical Brand contract; publication
+waits for the server rollout described in [CONTRACT.md](CONTRACT.md).
+
+```bash
+storerouter brands search --like Everlane --limit 12
+storerouter brands search --facet brand_price_tier=premium --exclude-facet brand_name=Example
+```
+
+Repeated facet flags remain separate clauses. Empty input is a usage error.
+Filter-only ordering is unspecified. The existing `brands similar` command keeps
+its separate request contract.

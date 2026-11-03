@@ -71,9 +71,9 @@ describe("brand discovery", () => {
     });
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
-    const page = await client.searchBrandsFromText({
-      text: "sustainable dresses",
-      referenceBrands: ["Everlane"],
+    const page = await client.searchBrands({
+      q: "sustainable dresses",
+      similarToBrands: ["Everlane"],
       facets: [{ name: "facet_price_tier", values: ["premium"] }],
       understand: false,
     });
@@ -82,12 +82,105 @@ describe("brand discovery", () => {
     expect(call.init?.method).toBe("POST");
     expect(call.input).toBe(`${BASE_URL}/brands/search`);
     expect(bodyOf(call)).toEqual({
-      text: "sustainable dresses",
-      referenceBrands: ["Everlane"],
+      q: "sustainable dresses",
+      similar_to_brands: ["Everlane"],
       facets: [{ name: "facet_price_tier", values: ["premium"] }],
       understand: false,
     });
     expect(page.results[0]?.brandName).toBe("Reformation");
+  });
+
+  it.each([
+    [
+      { similarToBrands: ["Everlane", "Unknown Brand"] },
+      { similar_to_brands: ["Everlane", "Unknown Brand"] },
+    ],
+    [
+      { facets: [{ name: "facet_price_tier", values: ["premium"] }] },
+      { facets: [{ name: "facet_price_tier", values: ["premium"] }] },
+    ],
+    [
+      { excludeFacets: [{ name: "brand_name", values: ["Example"] }] },
+      { exclude_facets: [{ name: "brand_name", values: ["Example"] }] },
+    ],
+  ])("supports textless input %j", async (params, expected) => {
+    const { calls, fetchMock } = fetchReturning({ results: [], totalFound: 0 });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    await client.searchBrands(params);
+    expect(bodyOf(lastCall(calls))).toEqual(expected);
+    await client.searchBrands({ ...params, q: " ", understand: false });
+    expect(bodyOf(lastCall(calls))).toEqual({ ...expected, understand: false });
+  });
+
+  it.each([
+    {},
+    { q: " " },
+    { facets: [] },
+    { excludeFacets: [] },
+    { understand: false },
+    { similarToBrands: [] },
+    { similarToBrands: [" "] },
+  ])("rejects unusable input %j before transport", async (params) => {
+    const { calls, fetchMock } = fetchReturning({});
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    await expect(client.searchBrands(params)).rejects.toThrow(TypeError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("preserves every clause and value at the server bounds with request context", async () => {
+    const { calls, fetchMock } = fetchReturning({
+      results: [REFORMATION],
+      totalFound: 1,
+    });
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    const facets = Array.from({ length: 20 }, () => ({
+      name: "brand_style_identity",
+      values: Array.from({ length: 100 }, (_, i) => `style-${String(i)}`),
+    }));
+    const brands = Array.from({ length: 20 }, (_, i) => `Brand ${String(i)}`);
+    const before = structuredClone(facets);
+    await client.searchBrands(
+      {
+        q: "x".repeat(500),
+        facets,
+        excludeFacets: facets,
+        similarToBrands: brands,
+        limit: 100,
+      },
+      {
+        context: {
+          application: "cosimo",
+          feature: "brand_search",
+          trigger: "user_search",
+        },
+      },
+    );
+    const call = lastCall(calls);
+    expect(bodyOf(call)).toEqual({
+      q: "x".repeat(500),
+      facets,
+      exclude_facets: facets,
+      similar_to_brands: brands,
+      limit: 100,
+    });
+    expect(facets).toEqual(before);
+    expect(
+      JSON.parse(
+        new Headers(call.init?.headers).get("X-Octogen-Request-Context") ?? "null",
+      ),
+    ).toEqual({
+      application: "cosimo",
+      feature: "brand_search",
+      trigger: "user_search",
+    });
+  });
+
+  it("preserves unknown-reference errors", async () => {
+    const { fetchMock } = fetchReturning({ detail: "brands_have_no_embeddings" }, 400);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+    await expect(
+      client.searchBrands({ similarToBrands: ["Unknown Brand"] }),
+    ).rejects.toMatchObject({ statusCode: 400, detail: "brands_have_no_embeddings" });
   });
 
   it("finds similar brands with inclusion and exclusion facets", async () => {
@@ -186,7 +279,7 @@ describe("brand discovery", () => {
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
 
     await expect(client.searchBrandPrefix("  ")).rejects.toThrow(TypeError);
-    await expect(client.searchBrandsFromText({ text: "" })).rejects.toThrow(TypeError);
+    await expect(client.searchBrands({ q: "" })).rejects.toThrow(TypeError);
     await expect(client.searchSimilarBrands({ brands: [] })).rejects.toThrow(TypeError);
     await expect(client.searchSimilarBrands({ brands: [" "] })).rejects.toThrow(
       TypeError,

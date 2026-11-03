@@ -941,20 +941,21 @@ export interface SearchBrandPrefixParams {
   limit?: number;
 }
 
-export interface SearchBrandsFromTextParams {
-  /** Natural-language brand query, 1-500 characters. */
-  text: string;
-  /** Up to 20 canonical brand names whose embeddings guide the search. */
-  referenceBrands?: string[];
+export interface SearchBrandsParams {
+  /** Optional query, at most 500 characters. Blank queries are omitted. */
+  q?: string;
+  /** 1-20 canonical brand names, each at most 200 characters. */
+  similarToBrands?: string[];
   /**
-   * Up to 20 filters; they override facets generated from `text` by name and
-   * are never relaxed.
+   * Up to 20 filters; they override facets generated from `q` by name and
+   * are never relaxed. Clauses and values are sent without merging.
    */
   facets?: BrandFacet[];
+  /** Up to 20 exclusion filters, with the same names and bounds as `facets`. */
+  excludeFacets?: BrandFacet[];
   /**
-   * Run query understanding on `text` (the server default). Set `false` to
-   * match `text` as written, with no generated facets, filtering only by the
-   * facets you send; reference brands still apply.
+   * Run query understanding on `q` (the server default). Set `false` to
+   * match `q` as written. Without `q`, understanding is skipped.
    */
   understand?: boolean;
   /** 1-100; the server defaults to 24. */

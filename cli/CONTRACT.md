@@ -57,8 +57,11 @@ Local README shell examples are checked against the actual command parser.
 
 ## Verification and release order
 
-1. Refresh the public snapshot only after the intended API contract is
-   published. Update SDK methods/metadata deliberately for any contract changes.
+1. For candidate preparation, use the complete normalized server-generated
+   fixture and record its source patch/revision/hash as described in
+   [fixture provenance](../tests/fixtures/README.md). Run offline `npm run codegen`.
+   After the intended API contract is published, refresh from the CDN before
+   release. Update SDK methods/metadata deliberately for contract changes.
 2. Run `npm ci`, `npm run codegen:check`, `npm run check`, Python checks, and
    `npm run test:published-contract`. CI compares the entire CDN document,
    so request-schema drift under an unchanged version fails too.

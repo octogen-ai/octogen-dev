@@ -1457,8 +1457,81 @@ export const PUBLIC_CONTRACT = {
     "searchBrandsFromText": {
       "body": {
         "additionalProperties": false,
-        "description": "Generate and execute a brand search from text and optional references.",
+        "description": "Search brands by text, reference brands, or structured filters.",
         "properties": {
+          "exclude_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
+                  "properties": {
+                    "name": {
+                      "anyOf": [
+                        {
+                          "description": "Facet keys supported by the brand index.\n\nThese correspond to fields in BRAND_ES_MAPPING_PROPERTIES and convenience\naliases for depth-based category paths.",
+                          "enum": [
+                            "brand_name",
+                            "facet_types",
+                            "facet_tags",
+                            "facet_styles",
+                            "facet_style_identity",
+                            "facet_genders",
+                            "facet_age_groups",
+                            "facet_categories",
+                            "facet_origin_country",
+                            "facet_price_tier",
+                            "facet_target_audience",
+                            "facet_sustainability",
+                            "facet_brand_ethics",
+                            "facet_brand_inclusivity",
+                            "facet_brand_cultural_anchors",
+                            "facet_key_people_names",
+                            "facet_key_people_nationalities",
+                            "facet_brand_hype_cycle_stage",
+                            "facet_category_path.depth_0",
+                            "facet_category_path.depth_1",
+                            "facet_category_path.depth_2",
+                            "facet_category_path.depth_3",
+                            "facet_category_path.depth_4",
+                            "facet_category_path.depth_5",
+                            "facet_category_path.depth_6"
+                          ],
+                          "title": "BrandFacetName",
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "description": "Facet key. Accepts brand base facets (BrandFacetName), attribute keys (bare or prefixed), and select backwards-compatible product facet names.",
+                      "title": "Name"
+                    },
+                    "values": {
+                      "description": "List of values to filter by. They should be lowercase; phrases allowed.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "BrandFacet",
+                  "type": "object"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Up to 20 exclusion filters, with the same names and value bounds as facets. Exclusions are never relaxed.",
+            "title": "Exclude Facets"
+          },
           "facets": {
             "anyOf": [
               {
@@ -1540,7 +1613,20 @@ export const PUBLIC_CONTRACT = {
             "title": "Limit",
             "type": "integer"
           },
-          "referenceBrands": {
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional brand discovery query. Blank `q` is omitted; without `q`, provide reference brands or inclusion/exclusion filters.",
+            "title": "Q"
+          },
+          "similar_to_brands": {
             "anyOf": [
               {
                 "items": {
@@ -1555,25 +1641,15 @@ export const PUBLIC_CONTRACT = {
               }
             ],
             "description": "Canonical source brands whose averaged embeddings guide the search.",
-            "title": "Referencebrands"
-          },
-          "text": {
-            "description": "Natural-language brand discovery query.",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
+            "title": "Similar To Brands"
           },
           "understand": {
             "default": true,
-            "description": "Run query understanding on `text`. Set false to match `text` as written and filter only by the facets you send; reference brands still apply.",
+            "description": "Run query understanding on `q`. Set false to match it as written and filter only by the facets you send; reference brands still apply. Without `q`, query understanding is skipped.",
             "title": "Understand",
             "type": "boolean"
           }
         },
-        "required": [
-          "text"
-        ],
         "title": "BrandTextSearchRequest",
         "type": "object"
       },
@@ -2118,6 +2194,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "1c47df4f36498568005e4a5b02cabb0eeb0a48a4d3a7f61c284a369b4064bbdb",
+  "sha256": "4857e6922b99341e15a35c9016afde6e76560ddf37480c285d3aef83c60c50ac",
   "version": "1.0.0"
 } as const;

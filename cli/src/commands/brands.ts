@@ -15,7 +15,7 @@ import type {
   BrandCoverageResponse,
   BrandProductsPage,
   BrandTopCategoriesPage,
-  SearchBrandsFromTextParams,
+  SearchBrandsParams,
   SearchSimilarBrandsParams,
   SimilarBrandView,
   SimilarBrandsResponse,
@@ -129,39 +129,59 @@ function emitBrands(
 // ── brands search ───────────────────────────────────────────────────────────
 
 async function runSearch(context: CommandContext): Promise<ExitCode> {
-  const text = context.positionals.join(" ").trim();
-  if (text.length === 0) {
+  const q = context.positionals.join(" ").trim();
+  // Each repeated Brand clause is independent; the Product parser otherwise
+  // merges same-name clauses and changes their conjunction into one value list.
+  const facets = context.args
+    .strings("facet")
+    .flatMap((entry) => parseFacets([entry], "--facet"));
+  const excludeFacets = context.args
+    .strings("exclude-facet")
+    .flatMap((entry) => parseFacets([entry], "--exclude-facet"));
+  if (
+    !q &&
+    !context.args.strings("like").length &&
+    !facets.length &&
+    !excludeFacets.length
+  ) {
     throw usageError(
-      "storerouter brands search <description> requires a description, such as 'sustainable linen basics'.",
+      "storerouter brands search requires a description, --like, --facet, or --exclude-facet.",
       "missing_argument",
     );
   }
-  const facets = parseFacets(context.args.strings("facet"), "--facet");
-  const params = contractRequest<SearchBrandsFromTextParams>(
+  const params = contractRequest<SearchBrandsParams>(
     "searchBrandsFromText",
     BRAND_SEARCH_FIELDS,
     context.args,
-    { text, ...(facets.length === 0 ? {} : { facets }) },
+    {
+      ...(q ? { q } : {}),
+      ...(facets.length ? { facets } : {}),
+      ...(excludeFacets.length ? { exclude_facets: excludeFacets } : {}),
+    },
   );
 
   const api = context.api();
   const response = await call(api, "POST /brands/search", () =>
-    api.client.searchBrandsFromText(params),
+    api.client.searchBrands(params),
   );
   if (response.results.length === 0) {
     throw noResult({
       answeredWith: "200 POST /brands/search with an empty results[]",
       code: "no_matches",
-      data: { query: text, brands: [] },
-      message: `No brands matched ${JSON.stringify(text)}.`,
+      data: { query: q, brands: [] },
+      message: q
+        ? `No brands matched ${JSON.stringify(q)}.`
+        : "No brands matched these references or filters.",
       serverAnswered: true,
     });
   }
   return emitBrands(
     context,
     response,
-    `${String(response.results.length)} brands for ${JSON.stringify(text)}`,
-    { query: text, like: params.referenceBrands ?? [] },
+    q
+      ? `${String(response.results.length)} brands for ${JSON.stringify(q)}`
+      : `${String(response.results.length)} matching brands`,
+    { query: q, like: params.similarToBrands ?? [] },
   );
 }
 
@@ -169,16 +189,18 @@ export const brandsSearchCommand = {
   flags: contractFlags("searchBrandsFromText", BRAND_SEARCH_FIELDS),
   name: "brands search",
   notes: [
-    "Ranks brands by how well they match a plain-language description.",
+    "Finds brands from a description, reference brands, or structured filters.",
     "--like names brands whose style steers the ranking; repeat it for several.",
     "Brand facets use the brand index's names, e.g. --facet facet_price_tier=premium.",
+    "Repeated facet flags retain separate clauses. Filter-only order is unspecified.",
     "",
     "Exit 6 means the server searched and no brand matched.",
   ],
   operations: ["searchBrandsFromText"] as const,
   run: runSearch,
-  summary: "Find brands from a plain-language description",
-  usage: "brands search <description> [--like <brand>]… [--facet k=v]… [--limit <n>]",
+  summary: "Find brands from a description, references, or filters",
+  usage:
+    "brands search [description] [--like <brand>]… [--facet k=v]… [--exclude-facet k=v]… [--limit <n>]",
 } satisfies CommandSpec;
 
 // ── brands similar ──────────────────────────────────────────────────────────

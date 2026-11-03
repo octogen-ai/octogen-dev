@@ -14,8 +14,10 @@ from octogen_ai_sdk import (
     BrandFacet,
     BrandProductsPage,
     BrandTopCategoriesPage,
+    OctogenAPIError,
     OctogenClient,
     OctogenNotFoundError,
+    RequestContext,
     SimilarBrandsResponse,
 )
 
@@ -151,15 +153,15 @@ async def test_search_brand_prefix_omits_unset_limit() -> None:
 
 
 @respx.mock
-async def test_search_brands_from_text_sends_wire_names() -> None:
+async def test_search_brands_sends_wire_names() -> None:
     route = respx.post(f"{BASE_URL}/brands/search").mock(
         return_value=httpx.Response(200, json=SIMILAR_BRANDS)
     )
 
     async with OctogenClient(api_key="key") as client:
-        response = await client.search_brands_from_text(
+        response = await client.search_brands(
             "romantic floral dresses",
-            reference_brands=["Reformation"],
+            similar_to_brands=["Reformation"],
             facets=[
                 BrandFacet(name="facet_price_tier", values=["premium"]),
                 {"name": "facet_genders", "values": ["female"]},
@@ -169,8 +171,8 @@ async def test_search_brands_from_text_sends_wire_names() -> None:
         )
 
     assert _body(route) == {
-        "text": "romantic floral dresses",
-        "referenceBrands": ["Reformation"],
+        "q": "romantic floral dresses",
+        "similar_to_brands": ["Reformation"],
         "facets": [
             {"name": "facet_price_tier", "values": ["premium"]},
             {"name": "facet_genders", "values": ["female"]},
@@ -185,15 +187,103 @@ async def test_search_brands_from_text_sends_wire_names() -> None:
 
 
 @respx.mock
-async def test_search_brands_from_text_omits_unset_fields() -> None:
+async def test_search_brands_omits_unset_fields() -> None:
     route = respx.post(f"{BASE_URL}/brands/search").mock(
         return_value=httpx.Response(200, json={"results": [], "totalFound": 0})
     )
 
     async with OctogenClient(api_key="key") as client:
-        await client.search_brands_from_text("quiet luxury knitwear")
+        await client.search_brands("quiet luxury knitwear")
 
-    assert _body(route) == {"text": "quiet luxury knitwear"}
+    assert _body(route) == {"q": "quiet luxury knitwear"}
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"similar_to_brands": ["Reformation", "Unknown Brand"]},
+        {"facets": [{"name": "facet_price_tier", "values": ["premium"]}]},
+        {"exclude_facets": [{"name": "brand_name", "values": ["Example"]}]},
+    ],
+)
+@pytest.mark.parametrize("q", [None, "", "  "])
+@pytest.mark.parametrize("understand", [True, False])
+@respx.mock
+async def test_search_brands_textless_modes(
+    options: dict[str, Any], q: str | None, understand: bool
+) -> None:
+    route = respx.post(f"{BASE_URL}/brands/search").mock(
+        return_value=httpx.Response(200, json=SIMILAR_BRANDS)
+    )
+    async with OctogenClient(api_key="key") as client:
+        await client.search_brands(q, **options, understand=understand)
+    assert _body(route) == {**options, "understand": understand}
+
+
+@pytest.mark.parametrize(
+    "options",
+    [{}, {"q": " "}, {"facets": []}, {"exclude_facets": []}, {"understand": False}],
+)
+@respx.mock(assert_all_called=False)
+async def test_search_brands_requires_meaningful_input(options: dict[str, Any]) -> None:
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(
+            ValueError, match="provide q, similar_to_brands, facets, or exclude_facets"
+        ):
+            await client.search_brands(**options)
+    assert not respx.calls
+
+
+@respx.mock
+async def test_search_brands_preserves_all_clauses_values_context_and_timeout() -> None:
+    route = respx.post(f"{BASE_URL}/brands/search").mock(
+        return_value=httpx.Response(200, json=SIMILAR_BRANDS)
+    )
+    # Repeated same-name clauses and values must not be merged or truncated.
+    facets = [
+        {"name": "brand_style_identity", "values": [f"style-{i}" for i in range(100)]}
+        for _ in range(20)
+    ]
+    sources = ["Brand " + str(i) for i in range(20)]
+    before = json.dumps(facets)
+    context = RequestContext(
+        application="cosimo", feature="brand_search", trigger="user_search"
+    )
+    async with OctogenClient(api_key="key") as client:
+        await client.search_brands(
+            "x" * 500,
+            facets=facets,
+            exclude_facets=facets,
+            similar_to_brands=sources,
+            limit=100,
+            context=context,
+            timeout=2.5,
+        )
+    assert _body(route) == {
+        "q": "x" * 500,
+        "facets": facets,
+        "exclude_facets": facets,
+        "similar_to_brands": sources,
+        "limit": 100,
+    }
+    assert json.dumps(facets) == before
+    request = route.calls.last.request
+    assert json.loads(
+        request.headers["X-Octogen-Request-Context"]
+    ) == context.model_dump(exclude_unset=True)
+    assert request.extensions["timeout"]["read"] == 2.5
+
+
+@respx.mock
+async def test_search_brands_preserves_unknown_reference_error() -> None:
+    respx.post(f"{BASE_URL}/brands/search").mock(
+        return_value=httpx.Response(400, json={"detail": "brands_have_no_embeddings"})
+    )
+    async with OctogenClient(api_key="key") as client:
+        with pytest.raises(OctogenAPIError) as caught:
+            await client.search_brands(similar_to_brands=["Unknown Brand"])
+    assert caught.value.status_code == 400
+    assert caught.value.detail == "brands_have_no_embeddings"
 
 
 # ── searchSimilarBrands ─────────────────────────────────────────────────────
@@ -374,7 +464,6 @@ async def test_unknown_brand_is_a_not_found_error(method: str, path: str) -> Non
     ("method", "field"),
     [
         ("search_brand_prefix", "prefix"),
-        ("search_brands_from_text", "text"),
         ("get_brand_details", "brand"),
         ("browse_brand_products", "brand"),
         ("get_brand_top_categories", "brand"),
@@ -402,10 +491,10 @@ async def test_search_similar_brands_rejects_empty_brands(brands: list[str]) -> 
 
 
 @respx.mock(assert_all_called=False)
-async def test_search_brands_from_text_rejects_empty_reference_brands() -> None:
+async def test_search_brands_rejects_empty_similar_to_brands() -> None:
     async with OctogenClient(api_key="key") as client:
-        with pytest.raises(ValueError, match="reference_brands must be a non-empty"):
-            await client.search_brands_from_text("linen", reference_brands=[])
+        with pytest.raises(ValueError, match="similar_to_brands must be a non-empty"):
+            await client.search_brands("linen", similar_to_brands=[])
 
     assert not respx.calls
 

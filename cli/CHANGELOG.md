@@ -1,5 +1,13 @@
 # Changelog — `@storerouter/cli`
 
+## Unreleased — canonical Brand Search preparation
+
+- Prepare the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
+  `understand`, and `limit` request fields, including reference/filter-only modes.
+  No public quality controls or ranking changes. Package release requires the
+  canonical server and live-contract parity; versions are unchanged here.
+- `brands search` accepts an optional description and `--exclude-facet`; repeated clauses are preserved.
+
 ## 0.5.0 (unreleased, `next`)
 
 - `storerouter search [query]` no longer requires a query when at least one of

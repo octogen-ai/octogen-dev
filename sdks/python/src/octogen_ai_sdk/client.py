@@ -824,38 +824,49 @@ class OctogenClient:
         )
         return _BRAND_NAMES.validate_python(data)
 
-    async def search_brands_from_text(
+    async def search_brands(
         self,
-        text: str,
+        q: str | None = None,
         *,
-        reference_brands: Sequence[str] | None = None,
+        similar_to_brands: Sequence[str] | None = None,
         facets: Sequence[BrandFacetInput] | None = None,
+        exclude_facets: Sequence[BrandFacetInput] | None = None,
         understand: bool | None = None,
         limit: int | None = None,
         context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
     ) -> SimilarBrandsResponse:
-        """Brands matching a natural-language description.
+        """Discover brands from a query, references, or structured filters.
 
-        ``text`` is 1-500 characters, such as ``"minimalist Scandinavian
-        outerwear"``. ``reference_brands`` (1-20 canonical names) steers the
-        search toward those brands. ``facets`` (up to 20) are
-        :class:`BrandFacet` filters that override the facets generated from
-        ``text`` by name and are never relaxed. ``understand=False`` matches
-        ``text`` as written, with no query understanding and no generated
-        facets, filtering only by the facets you send; reference brands still
-        apply. The server default is ``True``. ``limit`` is 1-100 (server
-        default 24).
+        ``q`` is optional (at most 500 characters); blank queries are omitted.
+        Without a query, provide ``similar_to_brands`` (1-20 canonical names),
+        ``facets``, or ``exclude_facets`` (up to 20 each). Every facet clause
+        and value is sent unchanged. Explicit facets override generated facets
+        by name; explicit inclusions and exclusions are never relaxed.
+        ``understand=False`` matches ``q`` as written. Without ``q``, query
+        understanding is skipped regardless of this flag. Reference brands
+        merge with inferred references; sources with usable embeddings are
+        excluded from results. If no explicit source has embeddings, the
+        server returns ``400 brands_have_no_embeddings``.
+        ``limit`` is 1-100 (server default 24). Filter-only order is unspecified.
         """
-        operation = "search_brands_from_text"
-        _require_text(operation, "text", text)
+        operation = "search_brands"
+        if q is not None and not isinstance(q, str):
+            raise TypeError(f"{operation}: q must be a string")
+        query = (q or "").strip() or None
+        names = _brand_names(operation, "similar_to_brands", similar_to_brands)
+        inclusion = _brand_facet_list(facets)
+        exclusion = _brand_facet_list(exclude_facets)
+        if not (query or names or inclusion or exclusion):
+            raise ValueError(
+                f"{operation}: provide q, similar_to_brands, facets, or exclude_facets"
+            )
         body = _without_none(
             {
-                "text": text,
-                "referenceBrands": _brand_names(
-                    operation, "reference_brands", reference_brands
-                ),
-                "facets": _brand_facet_list(facets),
+                "q": query,
+                "similar_to_brands": names,
+                "facets": inclusion,
+                "exclude_facets": exclusion,
                 "understand": understand,
                 "limit": limit,
             }

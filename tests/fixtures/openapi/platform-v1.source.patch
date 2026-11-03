@@ -1,0 +1,79 @@
+diff --git a/apps/octogen-platform/src/octogen/platform/api/mcp/brands.py b/apps/octogen-platform/src/octogen/platform/api/mcp/brands.py
+index 94444fb064..3891e2c09e 100644
+--- a/apps/octogen-platform/src/octogen/platform/api/mcp/brands.py
++++ b/apps/octogen-platform/src/octogen/platform/api/mcp/brands.py
+@@ -83,9 +83,9 @@ def register_brand_tools(
+     ) -> BrandToolResult[SimilarBrandsResponse] | BrandToolError:
+         """Discover brands from text, filters, or reference brands.
+ 
+-        request accepts text, referenceBrands, facets, exclude_facets,
++        request accepts q, similar_to_brands, facets, exclude_facets,
+         understand, and limit (1..100, default 24).
+-        Without text, provide filters or references; understanding is skipped.
++        Without q, provide filters or references; understanding is skipped.
+         Empty requests are rejected. Filter-only result order is unspecified.
+         These are corpus-wide brand identities, not stores or sellers. A match
+         does not promise available products. org_id follows search_products:
+diff --git a/apps/octogen-platform/src/octogen/platform/api/programmatic_brands.py b/apps/octogen-platform/src/octogen/platform/api/programmatic_brands.py
+index 1edd0a2d11..d566670851 100644
+--- a/apps/octogen-platform/src/octogen/platform/api/programmatic_brands.py
++++ b/apps/octogen-platform/src/octogen/platform/api/programmatic_brands.py
+@@ -559,11 +559,11 @@ async def search_brands_from_text(
+     """Discover brands from text, filters, or reference brands.
+ 
+     Searches corpus-wide brand identities, not stores or sellers. Brand matches
+-    do not promise products in your catalog scope. By default the text is
++    do not promise products in your catalog scope. By default `q` is
+     understood (rewritten, with facets and similar brands derived from it); set
+-    `understand` to false to search the text as written with only your facets.
+-    Caller-supplied inclusion and exclusion filters always apply. Without text, query
+-    understanding is skipped; provide filters or reference brands instead.
++    `understand` to false to search `q` as written with only your facets.
++    Caller-supplied inclusion and exclusion filters always apply. Without `q`, query
++    understanding is skipped; provide filters or `similar_to_brands` instead.
+     Filter-only result order is unspecified.
+     Returns 400 for an unusable generated query or reference brands without
+     embeddings.
+diff --git a/apps/octogen-platform/src/octogen/platform/api/schemas/brands.py b/apps/octogen-platform/src/octogen/platform/api/schemas/brands.py
+index fc420ab306..4d419942e6 100644
+--- a/apps/octogen-platform/src/octogen/platform/api/schemas/brands.py
++++ b/apps/octogen-platform/src/octogen/platform/api/schemas/brands.py
+@@ -246,23 +246,24 @@ class BrandTextSearchRequest(BaseModel):
+ 
+     text: str | None = Field(
+         default=None,
++        alias="q",
+         max_length=500,
+         description=(
+-            "Optional brand discovery query. Blank text is omitted; without "
+-            "text, provide reference brands or inclusion/exclusion filters."
++            "Optional brand discovery query. Blank `q` is omitted; without "
++            "`q`, provide reference brands or inclusion/exclusion filters."
+         ),
+     )
+     understand: bool = Field(
+         default=True,
+         description=(
+-            "Run query understanding on `text`. Set false to match it as "
++            "Run query understanding on `q`. Set false to match it as "
+             "written and filter only by the facets you send; reference brands "
+-            "still apply. Without text, query understanding is skipped."
++            "still apply. Without `q`, query understanding is skipped."
+         ),
+     )
+     reference_brands: list[str] | None = Field(
+         default=None,
+-        alias="referenceBrands",
++        alias="similar_to_brands",
+         min_length=1,
+         max_length=20,
+         description="Canonical source brands whose averaged embeddings guide the search.",
+@@ -328,7 +329,7 @@ class BrandTextSearchRequest(BaseModel):
+             self.text or self.reference_brands or self.facets or self.exclusion_facets
+         ):
+             raise ValueError(
+-                "Provide nonblank text, referenceBrands, facets, or exclude_facets"
++                "Provide nonblank q, similar_to_brands, facets, or exclude_facets"
+             )
+         return self
+ 
