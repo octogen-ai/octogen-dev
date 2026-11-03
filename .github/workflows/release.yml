@@ -107,8 +107,9 @@ jobs:
     if: startsWith(github.ref_name, 'sdk-ts-v')
     needs: verify
     runs-on: ubuntu-latest
-    # The `npm` environment gates this publish on a reviewer and restricts it to
-    # the sdk-ts-v*/cli-v* tags. It also narrows the OIDC subject to
+    # The `npm` environment restricts publishing to the sdk-ts-v*/cli-v* tags.
+    # Releases publish after verification without manual approval. The
+    # environment also narrows the OIDC subject to
     # `repo:octogen-ai/octogen-dev:environment:npm`, so the registry's trusted
     # publisher must name this environment — the two have to agree.
     environment: npm
