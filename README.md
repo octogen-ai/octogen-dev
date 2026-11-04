@@ -7,6 +7,7 @@ This repository is public-facing and is intended to become the canonical home fo
 - Python SDKs for Octogen APIs
 - TypeScript SDKs for Octogen APIs
 - The `@storerouter/cli` command-line tool, for terminals and agents
+- Agent-framework integrations, starting with `langchain-storerouter`
 - Shared fixtures and contract tests for SDK behavior
 - Codex, Claude, and Cursor skills for building with Octogen
 - Examples and integration guides for commerce workflows
@@ -23,6 +24,8 @@ This repository is public-facing and is intended to become the canonical home fo
 +-- examples/
 |   +-- python/              # Python SDK examples
 |   +-- typescript/          # TypeScript SDK examples
++-- integrations/
+|   +-- langchain/           # `langchain-storerouter` — LangChain tools over the Python SDK
 +-- sdks/
 |   +-- python/              # Python package source, packaging config, and unit tests
 |   +-- typescript/          # TypeScript package source, package config, and unit tests
@@ -209,6 +212,16 @@ standalone `uv` project:
 
 ```bash
 uv run --project sdks/python pytest -c sdks/python/pyproject.toml sdks/python/tests
+```
+
+### LangChain integration
+
+`integrations/langchain` is its own `uv` project, published to PyPI as
+`langchain-storerouter`. It develops against `sdks/python` from this checkout,
+so an SDK change that breaks a tool fails in the same pull request:
+
+```bash
+uv run --directory integrations/langchain pytest
 ```
 
 ### Hooks and CI

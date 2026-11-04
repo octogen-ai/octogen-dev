@@ -2,9 +2,10 @@
 #
 # One file, on purpose. npm configures a trusted publisher *per package* and
 # PyPI configures one per project, so the workflow filename is a string that has
-# to match in three separate places (`@octogen-ai/sdk`, `@storerouter/cli`,
-# `octogen-ai-sdk`). One filename means one string to get right; three files
-# would mean three, and a typo only surfaces when a release fails.
+# to match in four separate places (`@octogen-ai/sdk`, `@storerouter/cli`,
+# `octogen-ai-sdk`, `langchain-storerouter`). One filename means one string to
+# get right; four files would mean four, and a typo only surfaces when a release
+# fails.
 #
 # Nothing here holds a registry token. Both registries authenticate this
 # workflow over OIDC ("trusted publishing"), which also attaches a provenance
@@ -23,6 +24,7 @@ on:
       - "sdk-ts-v*" # @octogen-ai/sdk
       - "sdk-py-v*" # octogen-ai-sdk
       - "cli-v*" # @storerouter/cli
+      - "langchain-v*" # langchain-storerouter
 
 # Read-only by default. `id-token: write` is granted per publishing job rather
 # than here, so the verification job below cannot mint an OIDC token it has no
@@ -74,6 +76,7 @@ jobs:
             sdk-ts-v*) manifest=$(node -p "require('./sdks/typescript/package.json').version") ;;
             cli-v*)    manifest=$(node -p "require('./cli/package.json').version") ;;
             sdk-py-v*) manifest=$(grep -m1 '^version' sdks/python/pyproject.toml | cut -d'"' -f2) ;;
+            langchain-v*) manifest=$(grep -m1 '^version' integrations/langchain/pyproject.toml | cut -d'"' -f2) ;;
             *) echo "::error::Unrecognized tag shape: $GITHUB_REF_NAME"; exit 1 ;;
           esac
           if [ "$manifest" != "$VERSION" ]; then
@@ -101,6 +104,9 @@ jobs:
         run: >-
           uv run --project sdks/python --frozen
           pytest -c sdks/python/pyproject.toml sdks/python/tests tests/contract
+      - name: LangChain integration tests
+        working-directory: integrations/langchain
+        run: uv run --frozen pytest
 
   publish-sdk-npm:
     name: Publish @octogen-ai/sdk
@@ -188,6 +194,32 @@ jobs:
           enable-cache: true
       - name: Build sdist and wheel
         run: uv build --project sdks/python --out-dir dist
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  publish-langchain-pypi:
+    name: Publish langchain-storerouter
+    # Release order matters, as for the CLI: the wheel requires
+    # `octogen-ai-sdk>=<floor>`, so the `sdk-py-v*` release that floor names
+    # ships first.
+    if: startsWith(github.ref_name, 'langchain-v')
+    needs: verify
+    runs-on: ubuntu-latest
+    # The `langchain-storerouter` PyPI project needs its own trusted publisher
+    # naming this workflow and this environment.
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+      - name: Build sdist and wheel
+        run: uv build --project integrations/langchain --out-dir dist
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
