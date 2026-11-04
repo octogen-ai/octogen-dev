@@ -112,6 +112,35 @@ jobs:
           uv run --project sdks/python --frozen
           pytest -c sdks/python/pyproject.toml tests/contract
 
+  langchain:
+    name: LangChain integration (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: integrations/langchain
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      # Mirrors `langchain-{ruff-check,ruff-format-check,ty-check,tests}` in
+      # prek.toml. It installs `sdks/python` from this checkout, so an SDK change
+      # that breaks a tool fails here in the same PR. The live-API suite in
+      # tests/integration_tests skips without STOREROUTER_API_KEY.
+      - name: Ruff lint
+        run: uv run --frozen ruff check src tests
+      - name: Ruff format check
+        run: uv run --frozen ruff format --check src tests
+      - name: ty typecheck
+        run: uv run --frozen ty check
+      - name: Unit and standard tests
+        run: uv run --frozen pytest
+
   contract:
     name: Contract and codegen
     runs-on: ubuntu-latest

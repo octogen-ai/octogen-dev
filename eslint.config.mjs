@@ -34,6 +34,7 @@ export default tseslint.config(
       "**/src/generated/**",
       "**/core-source.generated.*",
       "sdks/python/**",
+      "integrations/langchain/**",
     ],
   },
   js.configs.recommended,

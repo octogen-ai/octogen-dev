@@ -1,0 +1,70 @@
+[project]
+name = "langchain-storerouter"
+version = "0.1.0"
+description = "LangChain tools for StoreRouter: product search, product lookup, store and brand discovery across real merchant catalogs"
+readme = "README.md"
+authors = [
+    { name = "Octogen AI" }
+]
+license = "Apache-2.0"
+requires-python = ">=3.11"
+keywords = ["langchain", "storerouter", "ecommerce", "product-search", "shopping", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "langchain-core>=1.0.0,<2.0.0",
+    "octogen-ai-sdk>=0.16.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://storerouter.ai"
+Documentation = "https://github.com/octogen-ai/octogen-dev/tree/main/integrations/langchain#readme"
+Source = "https://github.com/octogen-ai/octogen-dev/tree/main/integrations/langchain"
+
+[build-system]
+requires = ["uv_build>=0.11.9,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    # Pinned exactly: new langchain-tests releases add standard tests that can
+    # turn CI red without any change here.
+    "langchain-tests==1.1.9",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "respx>=0.23.1",
+    "ruff>=0.15.12",
+    "ty>=0.0.34",
+]
+
+# Develop and test against the SDK in this repo, so an SDK change that breaks the
+# tools turns red in the same PR. The published wheel depends on the PyPI
+# release named in `dependencies`; build backends ignore this table.
+[tool.uv.sources]
+octogen-ai-sdk = { path = "../../sdks/python", editable = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests/unit_tests"]
+
+[tool.ruff]
+src = []
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.environment]
+python-version = "3.11"

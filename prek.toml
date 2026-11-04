@@ -46,6 +46,38 @@ hooks = [
     files = "^(sdks/python|examples/python)/",
     pass_filenames = false,
   },
+  {
+    id = "langchain-ruff-check",
+    name = "LangChain integration Ruff lint",
+    language = "system",
+    entry = "uv run --directory integrations/langchain ruff check src tests",
+    files = "^(integrations/langchain|sdks/python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "langchain-ruff-format-check",
+    name = "LangChain integration Ruff format check",
+    language = "system",
+    entry = "uv run --directory integrations/langchain ruff format --check src tests",
+    files = "^(integrations/langchain|sdks/python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "langchain-ty-check",
+    name = "LangChain integration ty typecheck",
+    language = "system",
+    entry = "uv run --directory integrations/langchain ty check",
+    files = "^(integrations/langchain|sdks/python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "langchain-tests",
+    name = "LangChain integration tests",
+    language = "system",
+    entry = "uv run --directory integrations/langchain pytest",
+    files = "^(integrations/langchain|sdks/python/src)/",
+    pass_filenames = false,
+  },
   # Lint and format are repository-wide: one root ESLint config and one root
   # Prettier config cover every workspace, so these run on any change that a
   # root config or any linted source file could affect.
