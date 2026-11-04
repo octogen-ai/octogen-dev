@@ -43,6 +43,28 @@ async function shell(line: string, files = new VirtualFiles(), terminal = false)
   return { ...result, events, calls };
 }
 describe("bounded shell using real QuickJS and real jq WASM", () => {
+  it("serves distinct directory, profile, coverage and continuation fixtures", async () => {
+    const directory = await shell("storerouter brands directory --json");
+    expect(directory.code).toBe(0);
+    expect(JSON.parse(directory.stdout)).toMatchObject({
+      entries: [{ brandName: "Example", brandSlug: "example" }],
+      total: 1,
+    });
+    const profile = await shell("storerouter brands show example --json");
+    expect(profile.code).toBe(0);
+    expect(JSON.parse(profile.stdout).brand).toMatchObject({
+      articles: [],
+      navigationFacets: [],
+    });
+    expect(JSON.parse(profile.stdout).brand).not.toHaveProperty("productCount");
+    const coverage = await shell("storerouter brands coverage example --json");
+    expect(coverage.code).toBe(0);
+    expect(JSON.parse(coverage.stdout).brand).toHaveProperty("productCount", 1200);
+    const products = await shell("storerouter brands products example --json");
+    expect(products.code).toBe(0);
+    expect(JSON.parse(products.stdout)).toHaveProperty("nextOffset", null);
+  });
+
   it("quoted pipeline produces items and one raw result with one request", async () => {
     const result = await shell(
       "storerouter search 'linen dress' --limit 8 --json | jq '.items'",
