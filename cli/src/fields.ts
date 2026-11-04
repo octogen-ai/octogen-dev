@@ -246,6 +246,8 @@ export const FIELD_MAPS: Readonly<
   searchSimilarBrands: BRAND_SIMILAR_FIELDS,
   searchBrandPrefix: BRAND_PREFIX_FIELDS,
   getBrandDetails: BRAND_SHOW_FIELDS,
+  getBrandCoverage: BRAND_SHOW_FIELDS,
+  getBrandDirectory: {},
   browseBrandProducts: BRAND_PRODUCTS_FIELDS,
   getBrandTopCategories: BRAND_CATEGORIES_FIELDS,
 });

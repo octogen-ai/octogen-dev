@@ -51,6 +51,46 @@ function bodyOf(call: FetchCall): unknown {
 }
 
 describe("brand discovery", () => {
+  it("separates directory, profile and coverage paths", async () => {
+    const { calls, fetchMock } = fetchReturning({
+      ...REFORMATION,
+      articles: [],
+      navigationFacets: [],
+    });
+    const client = new OctogenClient({ apiKey: "customer", fetch: fetchMock });
+    await client.getBrandDirectory();
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/brands/directory`);
+    const profile = await client.getBrandDetails("Éliou");
+    expectTypeOf(profile).toExtend<import("../src/index.js").BrandDetailsView>();
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/brands/%C3%89liou`);
+    await client.getBrandCoverage("eliou");
+    expect(lastCall(calls).input).toBe(`${BASE_URL}/brands/eliou/coverage`);
+    expect(lastCall(calls).init?.headers).toMatchObject({
+      Authorization: "Bearer customer",
+    });
+  });
+
+  it.each([
+    [11952, 11976],
+    [11976, null],
+  ])("preserves source continuation at %i", async (offset, nextOffset) => {
+    const { fetchMock } = fetchReturning({
+      brandName: "Éliou",
+      products: [],
+      total: 20000,
+      limit: 24,
+      offset,
+      nextOffset,
+      hasMore: nextOffset !== null,
+    });
+    const page = await new OctogenClient({
+      apiKey: "customer",
+      fetch: fetchMock,
+    }).browseBrandProducts("eliou", { offset, limit: 24 });
+    expect(page.nextOffset).toBe(nextOffset);
+    expect(page.products).toEqual([]);
+  });
+
   it("completes a brand prefix with a query", async () => {
     const { calls, fetchMock } = fetchReturning(["Reformation", "Rebecca Taylor"]);
     const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });

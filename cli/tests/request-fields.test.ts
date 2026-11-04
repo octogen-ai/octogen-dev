@@ -129,6 +129,8 @@ describe("every published request field is accounted for", () => {
       searchSimilarBrands: "brands similar",
       searchBrandPrefix: "brands prefix",
       getBrandDetails: "brands show",
+      getBrandCoverage: "brands coverage",
+      getBrandDirectory: "brands directory",
       browseBrandProducts: "brands products",
       getBrandTopCategories: "brands categories",
     };

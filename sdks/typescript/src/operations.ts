@@ -32,6 +32,8 @@ export const OPERATIONS = {
   countProductFacets: { method: "POST", path: "/products/facet-counts" },
   createUrlList: { method: "POST", path: "/coverage/url-lists" },
   deleteUrlList: { method: "DELETE", path: "/coverage/url-lists/{urlListId}" },
+  getBrandDirectory: { method: "GET", path: "/brands/directory" },
+  getBrandCoverage: { method: "GET", path: "/brands/{brand}/coverage" },
   getBrandDetails: { method: "GET", path: "/brands/{brand}" },
   getBrandTopCategories: { method: "GET", path: "/brands/{brand}/top-categories" },
   getStore: { method: "GET", path: "/stores/{domain}" },

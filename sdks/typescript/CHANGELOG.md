@@ -1,5 +1,13 @@
 # Changelog — `@octogen-ai/sdk`
 
+## 0.14.0 (unreleased)
+
+- **Breaking:** brand details now returns the lightweight profile, typed articles and
+  navigation facets. Read the approximate snapshot with the separate coverage method.
+- Add the complete alphabetical brand directory operation.
+- Brand browsing exposes server `nextOffset` and supports offset 11976 inclusive.
+  Follow that offset through empty projected pages; totals count source rows.
+
 ## 0.13.0 (unreleased)
 
 - Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,

@@ -258,24 +258,15 @@ describe("storerouter brands show", () => {
 
   it("prints the brand's coverage like a store catalog, then its catalogs", async () => {
     const result = await runCli({
-      argv: ["brands", "show", "reformation"],
+      argv: ["brands", "coverage", "reformation"],
       env: KEYED,
       isTty: true,
-      routes: { "GET /brands/reformation": { body: REFORMATION_DETAILS } },
+      routes: { "GET /brands/reformation/coverage": { body: REFORMATION_DETAILS } },
     });
     expect(result.exitCode).toBe(ExitCode.Success);
     expect(result.stdout).toBe(
       [
         "Reformation",
-        "  slug       reformation",
-        "  domain     thereformation.com",
-        "  founded    2009",
-        "  origin     USA",
-        "  tier       CONTEMPORARY",
-        "",
-        "  Sustainable women's clothing.",
-        "",
-        "Coverage across catalogs",
         "  products   4,556",
         "  price      median 196.94, 50–450 (4,500 priced)",
         "  computed   2026-10-21T19:40:00Z",
@@ -311,6 +302,7 @@ describe("storerouter brands products", () => {
     limit: 2,
     offset: 10,
     hasMore: true,
+    nextOffset: 12,
     products: [
       {
         uuid: "11111111-1111-4111-8111-111111111111",
@@ -376,7 +368,7 @@ describe("storerouter brands products", () => {
       env: KEYED,
       routes: {
         "GET /brands/reformation/products": {
-          body: { ...PAGE, products: [], hasMore: false },
+          body: { ...PAGE, products: [], hasMore: false, nextOffset: null },
         },
       },
     });
@@ -386,7 +378,7 @@ describe("storerouter brands products", () => {
 
   it("rejects an offset past the contract's ceiling before any request", async () => {
     const result = await runCli({
-      argv: ["brands", "products", "reformation", "--offset", "10001"],
+      argv: ["brands", "products", "reformation", "--offset", "11977"],
       env: KEYED,
     });
     expect(result.exitCode).toBe(ExitCode.Usage);
@@ -443,7 +435,7 @@ describe("storerouter brands, the group", () => {
     const result = await runCli({ argv: ["brands", "nope", "--json"], env: KEYED });
     expect(result.exitCode).toBe(ExitCode.Usage);
     expect(result.json()["message"]).toBe(
-      "Unknown brands subcommand: nope. Use one of: search, similar, show, products, categories, prefix.",
+      "Unknown brands subcommand: nope. Use one of: search, similar, coverage, directory, show, products, categories, prefix.",
     );
   });
 });
@@ -469,5 +461,46 @@ describe("brands listings on a terminal", () => {
     expect(lines).toHaveLength(3);
     expect(lines[2]?.length).toBeLessThanOrEqual(104);
     expect(lines[2]?.endsWith("…")).toBe(true);
+  });
+});
+
+describe("brand profile and directory contract", () => {
+  it("renders a lightweight profile with month-precision articles without coverage", async () => {
+    const profile = {
+      ...REFORMATION,
+      articles: [
+        {
+          title: "Story",
+          publication: "Press",
+          date: "May 2026",
+          summary: "Story",
+          url: "https://example.com/story",
+          thumbnailUrl: null,
+        },
+      ],
+      navigationFacets: [],
+    };
+    const result = await runCli({
+      argv: ["brands", "show", "reformation"],
+      env: KEYED,
+      isTty: true,
+      routes: { "GET /brands/reformation": { body: profile } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.stdout).toContain("articles: 1");
+    expect(result.stdout).not.toContain("Coverage");
+  });
+  it("returns the complete directory without a search limit", async () => {
+    const directory = {
+      entries: [{ brandName: "Éliou", brandSlug: "eliou" }],
+      total: 1,
+    };
+    const result = await runCli({
+      argv: ["brands", "directory", "--json"],
+      env: KEYED,
+      routes: { "GET /brands/directory": { body: directory } },
+    });
+    expect(result.exitCode).toBe(ExitCode.Success);
+    expect(result.json()["entries"]).toEqual(directory.entries);
   });
 });

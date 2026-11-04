@@ -21,6 +21,8 @@ import {
   brandsPrefixCommand,
   brandsProductsCommand,
   brandsSearchCommand,
+  brandsCoverageCommand,
+  brandsDirectoryCommand,
   brandsShowCommand,
   brandsSimilarCommand,
 } from "./brands.js";
@@ -56,6 +58,8 @@ export const ALL_COMMANDS = [
   storesCategoriesCommand,
   brandsSearchCommand,
   brandsSimilarCommand,
+  brandsCoverageCommand,
+  brandsDirectoryCommand,
   brandsShowCommand,
   brandsProductsCommand,
   brandsCategoriesCommand,

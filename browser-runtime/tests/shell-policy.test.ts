@@ -457,7 +457,7 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
       { url: `${base}/prefix?prefix=Re&limit=51`, method: "GET" },
       { url: `${base}/prefix?prefix=Re&limit=1e1`, method: "GET" },
       { url: `${base}/prefix?prefix=Re&`, method: "GET" },
-      { url: `${base}/reformation/products?offset=10001`, method: "GET" },
+      { url: `${base}/reformation/products?offset=11977`, method: "GET" },
       { url: `${base}/reformation/products?limit=-1`, method: "GET" },
       { url: `${base}/reformation?limit=1`, method: "GET" },
       { url: `${base}/a%2Fproducts`, method: "GET" },

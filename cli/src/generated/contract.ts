@@ -70,14 +70,14 @@ export const PUBLIC_CONTRACT = {
           }
         },
         {
-          "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+          "description": "Source rows to skip, at most 11976 (page 500 at 24 rows per page). Follow `nextOffset`; `hasMore` is false when the next page would exceed this bound, even if more source rows exist.",
           "in": "query",
           "name": "offset",
           "required": false,
           "schema": {
             "default": 0,
-            "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
-            "maximum": 10000,
+            "description": "Source rows to skip, at most 11976 (page 500 at 24 rows per page). Follow `nextOffset`; `hasMore` is false when the next page would exceed this bound, even if more source rows exist.",
+            "maximum": 11976,
             "minimum": 0,
             "title": "Offset",
             "type": "integer"
@@ -454,6 +454,28 @@ export const PUBLIC_CONTRACT = {
       ],
       "path": "/coverage/url-lists/{urlListId}"
     },
+    "getBrandCoverage": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "Brand slug or case-insensitive name.",
+          "in": "path",
+          "name": "brand",
+          "required": true,
+          "schema": {
+            "description": "Brand slug or case-insensitive name.",
+            "minLength": 1,
+            "title": "Brand",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/brands/{brand}/coverage"
+    },
     "getBrandDetails": {
       "body": {
         "properties": {},
@@ -475,6 +497,15 @@ export const PUBLIC_CONTRACT = {
         }
       ],
       "path": "/brands/{brand}"
+    },
+    "getBrandDirectory": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [],
+      "path": "/brands/directory"
     },
     "getBrandTopCategories": {
       "body": {
@@ -2194,6 +2225,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "0596b05ef7a6a577fc866245d2074a6bf587bc1e1fbf6402807cf935e85fa3ff",
+  "sha256": "e7c985ec4ad965e19b98bdfa0157dc249660da7fb9db8e4c3c38edd40fd8b888",
   "version": "1.0.0"
 } as const;

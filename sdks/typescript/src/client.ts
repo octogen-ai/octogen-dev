@@ -17,6 +17,8 @@ import { normalizeHost } from "./hosts.js";
 import type { HttpMethod, OperationId } from "./operations.js";
 import { OPERATIONS, resolveOperationPath } from "./operations.js";
 import type {
+  BrandDetailsView,
+  BrandDirectoryResponse,
   BrandCoverageResponse,
   BrandProductsPage,
   BrandTextSearchRequest,
@@ -69,7 +71,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.storerouter.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.13.0";
+export const SDK_VERSION = "0.14.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -440,30 +442,42 @@ export class OctogenClient {
     return data as SimilarBrandsResponse;
   }
 
-  /**
-   * One brand's profile and coverage (`GET /v1/brands/{brand}`): public
-   * metadata plus a snapshot of the brand's products across catalogs (product
-   * count, populated facets, price histogram, shaped like one store catalog)
-   * and the catalogs carrying it, most products first; pass one of a
-   * catalog's `hosts` to {@link getStore}. `brand` is a slug or a
-   * case-insensitive name; an unknown one is a `404` with `detail`
-   * `brand_not_found`.
-   */
+  /** Complete alphabetical directory; one response, independent of product scope. */
+  async getBrandDirectory(
+    options: RequestOptions = {},
+  ): Promise<BrandDirectoryResponse> {
+    return (await this.json("getBrandDirectory", {
+      context: options.context,
+    })) as BrandDirectoryResponse;
+  }
+
+  /** Public profile, articles and recorded assortment navigation; coverage is separate. */
   async getBrandDetails(
     brand: string,
     options: RequestOptions = {},
-  ): Promise<BrandCoverageResponse> {
-    const data = await this.json("getBrandDetails", {
+  ): Promise<BrandDetailsView> {
+    return (await this.json("getBrandDetails", {
       context: options.context,
       pathParams: { brand },
-    });
-    return data as BrandCoverageResponse;
+    })) as BrandDetailsView;
+  }
+
+  /** Approximate corpus-wide coverage snapshot, independent of profile availability. */
+  async getBrandCoverage(
+    brand: string,
+    options: RequestOptions = {},
+  ): Promise<BrandCoverageResponse> {
+    return (await this.json("getBrandCoverage", {
+      context: options.context,
+      pathParams: { brand },
+    })) as BrandCoverageResponse;
   }
 
   /**
    * One page of a brand's active products (`GET /v1/brands/{brand}/products`),
    * within the catalogs your key can browse. Items are shaped like
-   * `searchProducts` items; continue with `offset` while `hasMore` is true.
+   * `searchProducts` items in UUID ascending order. Follow `nextOffset`, even
+   * when products is empty. Source totals precede projection; offset is 0–11976.
    */
   async browseBrandProducts(
     brand: string,

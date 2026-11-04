@@ -48,7 +48,9 @@ conversation.
 | A store, and want what it mostly sells     | `storerouter stores categories <domain>`        |
 | A taste, and want brands that fit it       | `storerouter brands search '<description>'`     |
 | A brand, and want brands like it           | `storerouter brands similar <brand>`            |
-| A brand, and want its details and coverage | `storerouter brands show <brand>`               |
+| A brand, and want its public profile | `storerouter brands show <brand>`               |
+| A brand, and want its coverage | `storerouter brands coverage <brand>` |
+| The complete alphabetical directory | `storerouter brands directory` |
 | A brand, and want its products             | `storerouter brands products <brand>`           |
 | A brand, and want what it mostly sells     | `storerouter brands categories <brand>`         |
 | Part of a brand name                       | `storerouter brands prefix <prefix>`            |
@@ -161,7 +163,8 @@ storerouter brands products reformation --limit 24
 - `<brand>` is a slug or a case-insensitive name; quote names with spaces. If
   you only have part of one, `brands prefix` completes it.
 - Brand metadata spans the whole corpus; `brands products` lists only products
-  from catalogs your key can access. Page it with `--offset <nextOffset>`.
+  from catalogs your key can access. Page it with `--offset <nextOffset>`, including empty projected pages.
+  Offsets end at 11976; source totals may exceed usable products.
 - Exit `6` with `code: brand_not_found` means the brand name did not resolve;
   with `no_matches`, the brand resolved and the answer was empty.
 - To search one brand's products by text, use `storerouter search` with

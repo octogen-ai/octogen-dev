@@ -10,7 +10,7 @@ import octogen_ai_sdk
 import pytest
 import respx
 from octogen_ai_sdk import (
-    BrandCoverageResponse,
+    BrandDetailsView,
     BrandFacet,
     BrandProductsPage,
     BrandTopCategoriesPage,
@@ -74,6 +74,21 @@ BRAND_DETAILS = {
     ],
     "catalogsTruncated": False,
 }
+BRAND_COVERAGE = BRAND_DETAILS
+BRAND_DETAILS = {
+    k: v
+    for k, v in BRAND_COVERAGE.items()
+    if k
+    not in {
+        "productCount",
+        "computedAt",
+        "fields",
+        "price",
+        "catalogs",
+        "catalogsTruncated",
+    }
+}
+BRAND_DETAILS.update({"articles": [], "navigationFacets": []})
 BRAND_PRODUCTS = {
     "brandName": "Reformation",
     "brandSlug": "reformation",
@@ -88,6 +103,7 @@ BRAND_PRODUCTS = {
     "limit": 2,
     "offset": 10,
     "hasMore": True,
+    "nextOffset": 12,
 }
 TOP_CATEGORIES = {
     "brandName": "Reformation",
@@ -352,19 +368,14 @@ async def test_get_brand_details_encodes_the_brand_name() -> None:
 
     assert route.called
     assert route.calls.last.request.url.raw_path == b"/v1/brands/Rag%20%26%20Bone"
-    assert isinstance(details, BrandCoverageResponse)
+    assert isinstance(details, BrandDetailsView)
     assert details.brand_name == "Reformation"
     assert details.founded_year == 2009
     assert details.price_tier == "premium"
     assert details.brand_description is None
     assert details.target_audience is None
     assert "targetAudience" not in details.model_dump(by_alias=True, exclude_unset=True)
-    assert details.product_count == 4556
-    assert details.fields[0].top_values[0].value == "black"
-    assert [c.hosts for c in details.catalogs] == [
-        ["thereformation.com"],
-        ["farfetch.com"],
-    ]
+    assert isinstance(details, BrandDetailsView)
 
 
 @pytest.mark.parametrize("audience", ["WOMEN", "PLUS", "FUTURE_CATEGORY", None])
@@ -386,7 +397,7 @@ async def test_get_brand_details_preserves_nullable_open_audience(
     assert details.model_dump(by_alias=True, exclude_unset=True)["targetAudience"] == (
         audience
     )
-    assert details.product_count == BRAND_DETAILS["productCount"]
+    assert isinstance(details, BrandDetailsView)
 
 
 @respx.mock
@@ -506,3 +517,68 @@ async def test_search_similar_brands_rejects_a_bare_string() -> None:
             await client.search_similar_brands("Reformation")
 
     assert not respx.calls
+
+
+@respx.mock
+async def test_directory_profile_and_coverage_are_distinct_customer_reads() -> None:
+    directory = respx.get(f"{BASE_URL}/brands/directory").respond(
+        200,
+        json={
+            "entries": [{"brandName": "Éliou", "brandSlug": "eliou"}],
+            "total": 1,
+        },
+    )
+    profile = respx.get(f"{BASE_URL}/brands/eliou").respond(
+        200,
+        json={
+            **BRAND_DETAILS,
+            "articles": [
+                {
+                    "title": "Story",
+                    "publication": "Press",
+                    "date": "May 2026",
+                    "summary": "Story",
+                    "url": "https://example.com/story",
+                    "thumbnailUrl": None,
+                }
+            ],
+            "navigationFacets": [{"name": "gender", "values": ["female"]}],
+        },
+    )
+    coverage = respx.get(f"{BASE_URL}/brands/eliou/coverage").respond(
+        200, json=BRAND_COVERAGE
+    )
+    async with OctogenClient(api_key="customer") as client:
+        assert (await client.get_brand_directory()).entries[0].brand_slug == "eliou"
+        detail = await client.get_brand_details("eliou")
+        assert detail.articles is not None
+        assert detail.navigation_facets is not None
+        assert detail.articles[0].date == "May 2026"
+        assert detail.navigation_facets[0].values == ["female"]
+        assert (await client.get_brand_coverage("eliou")).product_count == 4556
+    for route in (directory, profile, coverage):
+        assert route.calls.last.request.headers["Authorization"] == "Bearer customer"
+
+
+@pytest.mark.parametrize("offset,next_offset", [(11952, 11976), (11976, None)])
+@respx.mock
+async def test_browse_source_continuation_and_page_500(
+    offset: int, next_offset: int | None
+) -> None:
+    route = respx.get(f"{BASE_URL}/brands/eliou/products").respond(
+        200,
+        json={
+            "brandName": "Éliou",
+            "products": [],
+            "total": 20000,
+            "limit": 24,
+            "offset": offset,
+            "hasMore": next_offset is not None,
+            "nextOffset": next_offset,
+        },
+    )
+    async with OctogenClient(api_key="customer") as client:
+        page = await client.browse_brand_products("eliou", offset=offset, limit=24)
+    assert page.next_offset == next_offset
+    assert page.has_more == (next_offset is not None)
+    assert _query(route)["offset"] == str(offset)

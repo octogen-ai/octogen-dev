@@ -12,10 +12,12 @@ export const DEMO_OPERATIONS = [
   "searchStores",
   "searchSimilarStores",
   // `/brands/prefix` before `/brands/{brand}`, which would also match it.
+  "getBrandDirectory",
   "searchBrandPrefix",
   "searchBrandsFromText",
   "searchSimilarBrands",
   "getBrandDetails",
+  "getBrandCoverage",
   "browseBrandProducts",
   "getBrandTopCategories",
 ] as const satisfies readonly OperationId[];
