@@ -52,14 +52,13 @@ describe("bounded shell using real QuickJS and real jq WASM", () => {
     });
     const profile = await shell("storerouter brands show example --json");
     expect(profile.code).toBe(0);
-    expect(JSON.parse(profile.stdout).brand).toMatchObject({
-      articles: [],
-      navigationFacets: [],
+    expect(JSON.parse(profile.stdout)).toMatchObject({
+      brand: { articles: [], navigationFacets: [] },
     });
-    expect(JSON.parse(profile.stdout).brand).not.toHaveProperty("productCount");
+    expect(JSON.parse(profile.stdout)).not.toHaveProperty("brand.productCount");
     const coverage = await shell("storerouter brands coverage example --json");
     expect(coverage.code).toBe(0);
-    expect(JSON.parse(coverage.stdout).brand).toHaveProperty("productCount", 1200);
+    expect(JSON.parse(coverage.stdout)).toHaveProperty("brand.productCount", 1200);
     const products = await shell("storerouter brands products example --json");
     expect(products.code).toBe(0);
     expect(JSON.parse(products.stdout)).toHaveProperty("nextOffset", null);
