@@ -32,7 +32,7 @@ export default tseslint.config(
       "**/eslint.config.*",
       "**/node_modules/**",
       "**/src/generated/**",
-      "**/core-source.generated.ts",
+      "**/core-source.generated.*",
       "sdks/python/**",
     ],
   },

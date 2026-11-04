@@ -2,6 +2,14 @@
 
 Async TypeScript SDK for the Octogen AI commerce API.
 
+## Brand serving
+
+Use `getBrandDirectory(), getBrandDetails(brand), getBrandCoverage(brand)` for the complete directory, lightweight profile and
+separate approximate coverage snapshot. Profiles include typed articles and
+Product Search navigation facets, which describe recorded brand-wide assortment.
+Brand products stay scoped to the customer's catalogs. Follow the returned
+`nextOffset` even when a projected page is empty; offsets end at 11976.
+
 ## Install
 
 ```bash

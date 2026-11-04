@@ -2,7 +2,8 @@ import type { Transport } from "./protocol.js";
 /** Deterministic local harness data; these are not live API claims. */
 export const fixtureTransport: Transport = (request, signal) => {
   signal.throwIfAborted();
-  const path = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const path = url.pathname;
   let data: unknown;
   const brand = {
     brandUuid: "fixture-brand",
@@ -11,7 +12,12 @@ export const fixtureTransport: Transport = (request, signal) => {
     domain: "example.com",
     brandDescription: "Linen basics (fixture).",
   };
-  if (path === "/v1/brands/prefix") data = ["Example", "Example Studio"];
+  if (path === "/v1/brands/directory")
+    data = {
+      entries: [{ brandName: brand.brandName, brandSlug: brand.brandSlug }],
+      total: 1,
+    };
+  else if (path === "/v1/brands/prefix") data = ["Example", "Example Studio"];
   else if (path === "/v1/brands/search" || path === "/v1/brands/similar")
     data = { results: [brand], totalFound: 1 };
   else if (path.startsWith("/v1/brands/") && path.endsWith("/products"))
@@ -22,6 +28,7 @@ export const fixtureTransport: Transport = (request, signal) => {
       limit: 24,
       offset: 0,
       hasMore: false,
+      nextOffset: null,
       products: [
         {
           uuid: "fixture-linen-dress",
@@ -40,7 +47,7 @@ export const fixtureTransport: Transport = (request, signal) => {
       brandName: "Example",
       topCategories: [{ categoryName: "Dresses", categoryLevel: 2 }],
     };
-  else if (path.startsWith("/v1/brands/"))
+  else if (/^\/v1\/brands\/[^/]+\/coverage$/.test(path))
     data = {
       ...brand,
       foundedYear: 2020,
@@ -70,6 +77,15 @@ export const fixtureTransport: Transport = (request, signal) => {
         },
       ],
       catalogsTruncated: false,
+    };
+  else if (/^\/v1\/brands\/[^/]+$/.test(path))
+    data = {
+      ...brand,
+      foundedYear: 2020,
+      originCountry: "US",
+      priceTier: "mid",
+      articles: [],
+      navigationFacets: [],
     };
   else if (path === "/v1/stores/search" || path === "/v1/stores/similar")
     data = {

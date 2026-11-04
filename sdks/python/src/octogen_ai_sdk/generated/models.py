@@ -41,6 +41,23 @@ class AudienceView(BaseModel):
     genders: list[str] | None = Field([], title="Genders")
 
 
+class BrandArticleView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    date: str = Field(
+        ...,
+        description="Source publication date, preserving precision (for example Month YYYY).",
+        title="Date",
+    )
+    publication: str = Field(..., title="Publication")
+    summary: str = Field(..., title="Summary")
+    thumbnail_url: str | None = Field(None, alias="thumbnailUrl", title="Thumbnailurl")
+    title: str = Field(..., title="Title")
+    url: str = Field(..., title="Url")
+
+
 class BrandCatalog(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -63,6 +80,40 @@ class BrandCatalog(BaseModel):
         alias="productCount",
         description="Indexed product groups of this brand in the catalog.",
         title="Productcount",
+    )
+
+
+class BrandDirectoryEntry(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical name of the brand.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical slug for the brand.",
+        title="Brandslug",
+    )
+
+
+class BrandDirectoryResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    entries: list[BrandDirectoryEntry] = Field(
+        ...,
+        description="Every canonical brand entry, sorted by brand name.",
+        title="Entries",
+    )
+    total: int = Field(
+        ..., description="Total number of directory entries.", title="Total"
     )
 
 
@@ -1241,6 +1292,77 @@ class Attribute(BaseModel):
     values: list[AttributeValue] | None = Field(None, title="Values")
 
 
+class BrandDetailsView(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    articles: list[BrandArticleView] | None = Field(None, title="Articles")
+    brand_description: str | None = Field(
+        None,
+        alias="brandDescription",
+        description="Short description of the brand.",
+        title="Branddescription",
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical name of the brand.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical slug for the brand.",
+        title="Brandslug",
+    )
+    brand_uuid: str = Field(
+        ...,
+        alias="brandUuid",
+        description="Unique identifier for the brand.",
+        title="Branduuid",
+    )
+    directory_subheading: str | None = Field(
+        None,
+        alias="directorySubheading",
+        description="Brand subheading for directory display.",
+        title="Directorysubheading",
+    )
+    domain: str | None = Field(
+        None, description="Primary website domain for the brand.", title="Domain"
+    )
+    founded_year: int | None = Field(
+        None,
+        alias="foundedYear",
+        description="Year the brand was founded.",
+        title="Foundedyear",
+    )
+    navigation_facets: list[Facet] | None = Field(
+        None,
+        alias="navigationFacets",
+        description="Brand-wide known assortment in Product Search's canonical facet vocabulary. Metadata only: no live counts or guarantee of products in the caller's catalog scope. Clients own labels and navigation routes.",
+        title="Navigationfacets",
+    )
+    origin_country: str | None = Field(
+        None,
+        alias="originCountry",
+        description="Country of origin for the brand.",
+        title="Origincountry",
+    )
+    price_tier: str | None = Field(
+        None,
+        alias="priceTier",
+        description="Price positioning for the brand.",
+        title="Pricetier",
+    )
+    target_audience: str | None = Field(
+        None,
+        alias="targetAudience",
+        description="The brand's recorded audience or fit category (for example WOMEN, MEN, UNISEX, KIDS, PLUS, PETITE, or ADAPTIVE). Null or omitted when unavailable; future categories may be returned.",
+        title="Targetaudience",
+    )
+
+
 class BrandFacet(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
@@ -2378,13 +2500,25 @@ class BrandProductsPage(BaseModel):
     has_more: bool = Field(
         ...,
         alias="hasMore",
-        description="Whether another fetchable page exists. False once pagination reaches the offset ceiling (10000), even if `total` is larger.",
+        description="Whether another fetchable page exists. False once pagination would pass the offset ceiling (11976), even if `total` is larger.",
         title="Hasmore",
     )
     limit: int = Field(
-        ..., description="Maximum number of products per page.", title="Limit"
+        ...,
+        description="Maximum source rows per page, before projection.",
+        title="Limit",
     )
-    offset: int = Field(..., description="Number of products skipped.", title="Offset")
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next fetchable page, or null at the end or depth bound. Advances by source page size, including rows omitted during projection; use this value even when products is empty.",
+        title="Nextoffset",
+    )
+    offset: int = Field(
+        ...,
+        description="Number of source rows skipped (at most 11976).",
+        title="Offset",
+    )
     products: list[MerchantProductListItem] = Field(
         ...,
         description="Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.",

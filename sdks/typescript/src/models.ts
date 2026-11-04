@@ -901,6 +901,10 @@ export type BrandFacetName = components["schemas"]["BrandFacetName"];
  * product count, populated facets and a price histogram, shaped like one
  * {@link StoreCatalogCoverage}, and the catalogs carrying the brand.
  */
+export type BrandArticleView = components["schemas"]["BrandArticleView"];
+export type BrandDetailsView = components["schemas"]["BrandDetailsView"];
+export type BrandDirectoryEntry = components["schemas"]["BrandDirectoryEntry"];
+export type BrandDirectoryResponse = components["schemas"]["BrandDirectoryResponse"];
 export type BrandCoverageResponse = components["schemas"]["BrandCoverageResponse"];
 
 /** One catalog carrying a brand; pass one of its `hosts` to `getStore`. */

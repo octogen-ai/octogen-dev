@@ -119,6 +119,52 @@
         "title": "AudienceView",
         "type": "object"
       },
+      "BrandArticleView": {
+        "description": "Public article card, without enrichment diagnostics or internal flags.",
+        "properties": {
+          "date": {
+            "description": "Source publication date, preserving precision (for example Month YYYY).",
+            "title": "Date",
+            "type": "string"
+          },
+          "publication": {
+            "title": "Publication",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailurl"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "publication",
+          "summary",
+          "title",
+          "url"
+        ],
+        "title": "BrandArticleView",
+        "type": "object"
+      },
       "BrandCatalog": {
         "description": "One catalog carrying the brand.",
         "properties": {
@@ -319,6 +365,189 @@
         "title": "BrandCoverageResponse",
         "type": "object"
       },
+      "BrandDetailsView": {
+        "description": "Public brand profile, independent of product coverage snapshots.",
+        "properties": {
+          "articles": {
+            "items": {
+              "$ref": "#/components/schemas/BrandArticleView"
+            },
+            "title": "Articles",
+            "type": "array"
+          },
+          "brandDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short description of the brand.",
+            "title": "Branddescription"
+          },
+          "brandName": {
+            "description": "Canonical name of the brand.",
+            "title": "Brandname",
+            "type": "string"
+          },
+          "brandSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical slug for the brand.",
+            "title": "Brandslug"
+          },
+          "brandUuid": {
+            "description": "Unique identifier for the brand.",
+            "title": "Branduuid",
+            "type": "string"
+          },
+          "directorySubheading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Brand subheading for directory display.",
+            "title": "Directorysubheading"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary website domain for the brand.",
+            "title": "Domain"
+          },
+          "foundedYear": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Year the brand was founded.",
+            "title": "Foundedyear"
+          },
+          "navigationFacets": {
+            "description": "Brand-wide known assortment in Product Search's canonical facet vocabulary. Metadata only: no live counts or guarantee of products in the caller's catalog scope. Clients own labels and navigation routes.",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            },
+            "title": "Navigationfacets",
+            "type": "array"
+          },
+          "originCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Country of origin for the brand.",
+            "title": "Origincountry"
+          },
+          "priceTier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Price positioning for the brand.",
+            "title": "Pricetier"
+          },
+          "targetAudience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The brand's recorded audience or fit category (for example WOMEN, MEN, UNISEX, KIDS, PLUS, PETITE, or ADAPTIVE). Null or omitted when unavailable; future categories may be returned.",
+            "title": "Targetaudience"
+          }
+        },
+        "required": [
+          "brandName",
+          "brandUuid"
+        ],
+        "title": "BrandDetailsView",
+        "type": "object"
+      },
+      "BrandDirectoryEntry": {
+        "description": "One canonical brand row in the global brand directory.",
+        "properties": {
+          "brandName": {
+            "description": "Canonical name of the brand.",
+            "title": "Brandname",
+            "type": "string"
+          },
+          "brandSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical slug for the brand.",
+            "title": "Brandslug"
+          }
+        },
+        "required": [
+          "brandName"
+        ],
+        "title": "BrandDirectoryEntry",
+        "type": "object"
+      },
+      "BrandDirectoryResponse": {
+        "description": "The complete brand directory, sorted alphabetically by brand name.",
+        "properties": {
+          "entries": {
+            "description": "Every canonical brand entry, sorted by brand name.",
+            "items": {
+              "$ref": "#/components/schemas/BrandDirectoryEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "total": {
+            "description": "Total number of directory entries.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ],
+        "title": "BrandDirectoryResponse",
+        "type": "object"
+      },
       "BrandFacet": {
         "description": "Brand-focused facet filter.\n\nAccepts either a BrandFacetName or a string. Strings may be:\n- A bare attribute key present in BRAND_ATTRIBUTE_FACET_FIELDS (will be\n  interpreted as facet_attributes.<key> later in the request builder)\n- A fully qualified attribute key: \"facet_attributes.<key>\"\n- Backwards-compatible forms from product search:\n    - \"attribute_facets.<key>\"\n    - \"gender\", \"product_type\", \"age_groups\"\n    - \"category_path.depth_i\" for i in 0..6\n    - \"color\", \"color_family\", \"is_activewear\" (recognized by this shared\n      compatibility model, but rejected by public brand request validation)\n\nPublic brand requests also reject \"brand_quality_score\". Each public facet\nneeds 1..100 nonblank values, each at most 256 characters.",
         "properties": {
@@ -403,17 +632,29 @@
             "title": "Brandslug"
           },
           "hasMore": {
-            "description": "Whether another fetchable page exists. False once pagination reaches the offset ceiling (10000), even if `total` is larger.",
+            "description": "Whether another fetchable page exists. False once pagination would pass the offset ceiling (11976), even if `total` is larger.",
             "title": "Hasmore",
             "type": "boolean"
           },
           "limit": {
-            "description": "Maximum number of products per page.",
+            "description": "Maximum source rows per page, before projection.",
             "title": "Limit",
             "type": "integer"
           },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offset of the next fetchable page, or null at the end or depth bound. Advances by source page size, including rows omitted during projection; use this value even when products is empty.",
+            "title": "Nextoffset"
+          },
           "offset": {
-            "description": "Number of products skipped.",
+            "description": "Number of source rows skipped (at most 11976).",
             "title": "Offset",
             "type": "integer"
           },
@@ -435,6 +676,7 @@
           "brandName",
           "hasMore",
           "limit",
+          "nextOffset",
           "offset",
           "products",
           "total"
@@ -6752,6 +6994,124 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/brands/directory": {
+      "get": {
+        "description": "Every canonical brand name and slug, corpus-wide and unpaginated.\n\nThis small projection is a directory, independent of ranked brand search\nand the customer's product scope. Cacheable for one hour with an ETag.",
+        "operationId": "getBrandDirectory",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandDirectoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Directory unchanged (ETag match)."
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "description": "Brand metadata or coverage backend unavailable; safe to retry."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Complete alphabetical brand directory",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
     "/brands/prefix": {
       "get": {
         "description": "Find corpus-wide canonical brand names by raw or punctuation-free prefix.\n\nBrand matches do not promise products within your catalog scope.",
@@ -7208,7 +7568,7 @@
     },
     "/brands/{brand}": {
       "get": {
-        "description": "Resolve a corpus-wide brand by slug or case-insensitive name.\n\nReturns display metadata plus a coverage snapshot of the brand's products,\nshaped like a ``GET /v1/stores/{domain}`` catalog: product count, populated\nfacets with top values, and a price histogram. ``catalogs`` lists the\ncatalogs carrying the brand by product count; pass a host to\n``GET /v1/stores/{domain}`` for a store's own coverage. The domain is the brand website,\nnot a promise that a store or seller is indexed. Unbilled; snapshots are\ncached per brand for about a day.",
+        "description": "Corpus-wide public metadata, articles and known-assortment navigation.\n\nIndependent of coverage snapshots and catalog registry availability. The\nbrand's domain identifies its website, not an indexed store or seller.\nNavigation facets describe its recorded assortment; they do not guarantee\ninventory within the customer's catalog scope. See `/coverage` separately\nfor the cached product coverage snapshot.",
         "operationId": "getBrandDetails",
         "parameters": [
           {
@@ -7232,7 +7592,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandCoverageResponse"
+                  "$ref": "#/components/schemas/BrandDetailsView"
                 }
               }
             },
@@ -7316,6 +7676,9 @@
               }
             },
             "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "description": "Brand metadata or coverage backend unavailable; safe to retry."
           }
         },
         "security": [
@@ -7323,7 +7686,137 @@
             "BearerApiKey": []
           }
         ],
-        "summary": "Get a brand's details and coverage",
+        "summary": "Get a public brand profile",
+        "tags": [
+          "brands",
+          "platform-catalog-api"
+        ]
+      }
+    },
+    "/brands/{brand}/coverage": {
+      "get": {
+        "description": "Resolve a corpus-wide brand by slug or case-insensitive name.\n\nReturns display metadata plus a coverage snapshot of the brand's products,\nshaped like a ``GET /v1/stores/{domain}`` catalog: product count, populated\nfacets with top values, and a price histogram. ``catalogs`` lists the\ncatalogs carrying the brand by product count; pass a host to\n``GET /v1/stores/{domain}`` for a store's own coverage. The domain is the brand website,\nnot a promise that a store or seller is indexed. Unbilled; snapshots are\ncached per brand for about a day.",
+        "operationId": "getBrandCoverage",
+        "parameters": [
+          {
+            "description": "Brand slug or case-insensitive name.",
+            "in": "path",
+            "name": "brand",
+            "required": true,
+            "schema": {
+              "description": "Brand slug or case-insensitive name.",
+              "minLength": 1,
+              "title": "Brand",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Coverage unchanged (ETag match)."
+          },
+          "400": {
+            "description": "Invalid X-Octogen-Request-Context header"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  },
+                  "missingBearer": {
+                    "summary": "Missing Bearer token",
+                    "value": {
+                      "detail": "Authorization Bearer token required"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing or invalid Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "API key is valid but its organization may not use `/v1`."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "brandNotFound": {
+                    "summary": "Unknown brand",
+                    "value": {
+                      "detail": "brand_not_found"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The brand could not be resolved."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "description": "Brand metadata or coverage backend unavailable; safe to retry."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "Get a brand's product coverage snapshot",
         "tags": [
           "brands",
           "platform-catalog-api"
@@ -7360,14 +7853,14 @@
             }
           },
           {
-            "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
+            "description": "Source rows to skip, at most 11976 (page 500 at 24 rows per page). Follow `nextOffset`; `hasMore` is false when the next page would exceed this bound, even if more source rows exist.",
             "in": "query",
             "name": "offset",
             "required": false,
             "schema": {
               "default": 0,
-              "description": "Rows to skip. Pagination stops at offset 10000: `hasMore` goes false there even when more rows exist.",
-              "maximum": 10000,
+              "description": "Source rows to skip, at most 11976 (page 500 at 24 rows per page). Follow `nextOffset`; `hasMore` is false when the next page would exceed this bound, even if more source rows exist.",
+              "maximum": 11976,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -7466,6 +7959,9 @@
               }
             },
             "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "description": "Brand metadata or coverage backend unavailable; safe to retry."
           }
         },
         "security": [
@@ -7614,6 +8110,9 @@
               }
             },
             "description": "Standard per-org request-rate limit."
+          },
+          "503": {
+            "description": "Brand metadata or coverage backend unavailable; safe to retry."
           }
         },
         "security": [

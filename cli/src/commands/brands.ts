@@ -4,7 +4,7 @@
  *
  * Search, similar, prefix, show and categories read corpus-wide brand
  * metadata; `products` browses within the catalogs the key can access. There
- * is no command that lists every brand: the full directory is not public.
+ * is also a complete alphabetical directory command.
  *
  * `{brand}` is a slug or a case-insensitive name, sent as given. A brand the
  * server cannot resolve (`404 brand_not_found`) and an empty result both exit
@@ -13,6 +13,7 @@
 
 import type {
   BrandCoverageResponse,
+  BrandDetailsView,
   BrandProductsPage,
   BrandTopCategoriesPage,
   SearchBrandsParams,
@@ -364,7 +365,7 @@ async function runShow(context: CommandContext): Promise<ExitCode> {
   contractRequest("getBrandDetails", BRAND_SHOW_FIELDS, context.args, { brand });
 
   const api = context.api();
-  let details: BrandCoverageResponse;
+  let details: BrandDetailsView;
   try {
     details = await call(api, `GET /brands/${encodeURIComponent(brand)}`, () =>
       api.client.getBrandDetails(brand),
@@ -385,10 +386,11 @@ async function runShow(context: CommandContext): Promise<ExitCode> {
         ...detailLine("origin", details.originCountry),
         ...detailLine("tier", details.priceTier),
         ...(details.brandDescription ? ["", `  ${details.brandDescription}`] : []),
-        "",
-        "Coverage across catalogs",
-        ...renderSnapshot(details),
-        ...renderBrandCatalogs(details),
+        ...detailLine("audience", details.targetAudience),
+        `  articles: ${String((details.articles ?? []).length)}`,
+        ...(details.navigationFacets ?? []).map(
+          (facet) => `  ${facet.name}: ${facet.values.join(", ")}`,
+        ),
       ].join("\n"),
     ok: true,
   });
@@ -401,13 +403,12 @@ export const brandsShowCommand = {
     "<brand> is a slug or a case-insensitive name. Exit 6 means the server",
     "answered 404 brand_not_found.",
     "",
-    "Coverage counts the brand's products in every catalog, shaped like one",
-    "`stores show` catalog. Pass a listed host to `stores show` for that store's",
-    "coverage.",
+    "Shows the public profile, articles and recorded assortment navigation.",
+    "Use brands coverage for the separate approximate product snapshot.",
   ],
   operations: ["getBrandDetails"] as const,
   run: runShow,
-  summary: "Show one brand's details and coverage: facets, prices, catalogs",
+  summary: "Show one brand's public profile, articles and navigation",
   usage: "brands show <brand>",
 } satisfies CommandSpec;
 
@@ -445,7 +446,7 @@ async function runProducts(context: CommandContext): Promise<ExitCode> {
       serverAnswered: true,
     });
   }
-  const nextOffset = page.hasMore ? page.offset + page.limit : null;
+  const nextOffset = page.nextOffset;
   context.writer.emit({
     command: context.command,
     data: {
@@ -489,7 +490,7 @@ export const brandsProductsCommand = {
   name: "brands products",
   notes: [
     "Products from the catalogs your key can access. Continue with --offset",
-    "<nextOffset>; paging stops at offset 10000. A page can hold fewer than",
+    "<nextOffset>; paging stops at offset 11976. A page can hold fewer than",
     "--limit products, or none, while more remain: follow nextOffset, not the count.",
   ],
   operations: ["browseBrandProducts"] as const,
@@ -567,4 +568,67 @@ export const brandsCategoriesCommand = {
   run: runCategories,
   summary: "Show a brand's top categories by product count",
   usage: "brands categories <brand> [--min-level <n>] [--limit <n>]",
+} satisfies CommandSpec;
+
+export const brandsDirectoryCommand = {
+  name: "brands directory",
+  usage: "brands directory",
+  summary: "List every canonical brand name and slug alphabetically",
+  operations: ["getBrandDirectory"] as const,
+  async run(context: CommandContext): Promise<ExitCode> {
+    contractRequest("getBrandDirectory", {}, context.args);
+    const api = context.api();
+    const directory = await call(api, "GET /brands/directory", () =>
+      api.client.getBrandDirectory(),
+    );
+    context.writer.emit({
+      command: context.command,
+      data: directory,
+      exitCode: ExitCode.Success,
+      ok: true,
+      human: () =>
+        directory.entries
+          .map((entry) => `${entry.brandName} · ${entry.brandSlug ?? ""}`)
+          .join("\n"),
+    });
+    return ExitCode.Success;
+  },
+} satisfies CommandSpec;
+
+export const brandsCoverageCommand = {
+  name: "brands coverage",
+  usage: "brands coverage <brand>",
+  summary: "Show a brand's approximate public-population coverage snapshot",
+  notes: [
+    "Corpus-wide cached counts, facets, prices and catalogs; not live scoped inventory.",
+  ],
+  operations: ["getBrandCoverage"] as const,
+  async run(context: CommandContext): Promise<ExitCode> {
+    const brand = brandArgument(context);
+    contractRequest("getBrandCoverage", BRAND_SHOW_FIELDS, context.args, { brand });
+    const api = context.api();
+    let coverage: BrandCoverageResponse;
+    try {
+      coverage = await call(
+        api,
+        `GET /brands/${encodeURIComponent(brand)}/coverage`,
+        () => api.client.getBrandCoverage(brand),
+      );
+    } catch (error) {
+      throw brandMissOrRethrow(error, brand, "GET /brands/{brand}/coverage");
+    }
+    context.writer.emit({
+      command: context.command,
+      data: { brand: coverage },
+      exitCode: ExitCode.Success,
+      ok: true,
+      human: () =>
+        [
+          coverage.brandName,
+          ...renderSnapshot(coverage),
+          ...renderBrandCatalogs(coverage),
+        ].join("\n"),
+    });
+    return ExitCode.Success;
+  },
 } satisfies CommandSpec;

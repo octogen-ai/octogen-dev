@@ -36,6 +36,8 @@ from octogen_ai_sdk.errors import (
 from octogen_ai_sdk.hosts import normalize_host
 from octogen_ai_sdk.models import (
     BrandCoverageResponse,
+    BrandDetailsView,
+    BrandDirectoryResponse,
     BrandFacet,
     BrandProductsPage,
     BrandTopCategoriesPage,
@@ -140,7 +142,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.15.0"
+        return "0.16.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -909,26 +911,53 @@ class OctogenClient:
         )
         return SimilarBrandsResponse.model_validate(data)
 
+    async def get_brand_directory(
+        self,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> BrandDirectoryResponse:
+        """Complete alphabetical name/slug directory, independent of product scope."""
+        data = await self._json("getBrandDirectory", context=context, timeout=timeout)
+        return BrandDirectoryResponse.model_validate(data)
+
     async def get_brand_details(
         self,
         brand: str,
         *,
         context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
         timeout: Timeout | None = None,
-    ) -> BrandCoverageResponse:
-        """One brand's profile and coverage (``GET /v1/brands/{brand}``).
+    ) -> BrandDetailsView:
+        """Lightweight public profile, typed articles and navigation facets.
 
-        Public metadata plus a snapshot of the brand's products across
-        catalogs (product count, populated facets, price histogram, shaped
-        like one store catalog) and the catalogs carrying it, most products
-        first; pass one of a catalog's ``hosts`` to :meth:`get_store`.
-        ``brand`` is a brand slug or a case-insensitive brand name. An unknown
-        brand raises :class:`OctogenNotFoundError` with
-        ``detail == "brand_not_found"``.
+        ``brand`` is a slug or case-insensitive name. Navigation describes recorded
+        brand-wide assortment, not live scoped inventory. Coverage is a separate
+        :meth:`get_brand_coverage` read; its failure does not affect this profile.
         """
         _require_text("get_brand_details", "brand", brand)
         data = await self._json(
             "getBrandDetails",
+            path_params={"brand": brand},
+            context=context,
+            timeout=timeout,
+        )
+        return BrandDetailsView.model_validate(data)
+
+    async def get_brand_coverage(
+        self,
+        brand: str,
+        *,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> BrandCoverageResponse:
+        """Approximate public-population snapshot, facets, prices and catalogs.
+
+        This corpus-wide snapshot is cached independently of the profile. Counts
+        are not live inventory or scoped product-browse totals.
+        """
+        _require_text("get_brand_coverage", "brand", brand)
+        data = await self._json(
+            "getBrandCoverage",
             path_params={"brand": brand},
             context=context,
             timeout=timeout,
@@ -947,9 +976,12 @@ class OctogenClient:
         """A page of one brand's active products, within your catalog scope.
 
         ``brand`` takes the same references as :meth:`get_brand_details`.
-        ``limit`` is 1-100 (server default 24) and ``offset`` 0-10000; continue
-        while ``has_more``, which turns false at the offset ceiling even when
-        ``total`` is larger. An unknown brand raises
+        ``limit`` is 1-100 (server default 24); ``offset`` is 0-11976.
+        Follow ``next_offset`` even for an empty projected
+        page. It advances by source rows, not the number of products returned;
+        ``None`` ends browsing, including at the depth cap. ``total`` counts
+        source rows before projection. Ordering is UUID ascending.
+        An unknown brand raises
         :class:`OctogenNotFoundError` with ``detail == "brand_not_found"``.
         """
         _require_text("browse_brand_products", "brand", brand)

@@ -39,6 +39,10 @@ from octogen_ai_sdk.request_context import RequestVisitor as RequestVisitor
 # `url` or `uuid`"), and constructor ergonomics — the generator turns a
 # `minLength`/`maxLength` string into a constrained root-model alias, so a
 # generated request body would not accept a plain `str`.
+BrandArticleView = _contract.BrandArticleView
+BrandDetailsView = _contract.BrandDetailsView
+BrandDirectoryEntry = _contract.BrandDirectoryEntry
+BrandDirectoryResponse = _contract.BrandDirectoryResponse
 BrandCatalog = _contract.BrandCatalog
 BrandCoverageResponse = _contract.BrandCoverageResponse
 BrandFacet = _contract.BrandFacet

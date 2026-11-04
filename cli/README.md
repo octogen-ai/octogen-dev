@@ -224,7 +224,9 @@ other store is profiled (`no_matches`).
 ```bash
 storerouter brands search 'quiet luxury knitwear' --like 'Loro Piana' --limit 10
 storerouter brands similar Reformation 'Free People' --limit 10
+storerouter brands directory
 storerouter brands show reformation
+storerouter brands coverage reformation
 storerouter brands products reformation --limit 24 --offset 24
 storerouter brands categories reformation --min-level 2
 storerouter brands prefix Re
@@ -322,3 +324,10 @@ storerouter brands search --facet brand_price_tier=premium --exclude-facet brand
 Repeated facet flags remain separate clauses. Empty input is a usage error.
 Filter-only ordering is unspecified. The existing `brands similar` command keeps
 its separate request contract.
+
+### Brand profile and coverage migration
+
+`brands show` returns the public profile, articles and navigation. Use
+`brands coverage` explicitly for the approximate public-population snapshot.
+`brands directory` lists every name and slug alphabetically. Product browsing
+uses server `nextOffset` through empty projected pages and ends at offset 11976.

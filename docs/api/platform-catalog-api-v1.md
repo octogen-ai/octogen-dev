@@ -59,7 +59,9 @@ the [taxonomy and facet-count](#taxonomy-and-facet-counts) operations, and the e
 | `GET /brands/prefix`                       | Canonical brand names starting with a prefix, for autocomplete.                       |
 | `POST /brands/search`                      | Brands ranked against a plain-language description, optionally steered by brands.     |
 | `POST /brands/similar`                     | Brands similar to one or more source brands.                                          |
-| `GET /brands/{brand}`                      | One brand: details plus coverage across catalogs and the catalogs carrying it.        |
+| `GET /brands/directory`                    | Complete alphabetical brand names and slugs.                                          |
+| `GET /brands/{brand}/coverage`             | Separate approximate public-population coverage snapshot.                             |
+| `GET /brands/{brand}`                      | Public profile, articles and recorded assortment navigation.                          |
 | `GET /brands/{brand}/products`             | One brand's active products within your key's catalogs, by offset.                    |
 | `GET /brands/{brand}/top-categories`       | A brand's top categories by product count.                                            |
 
