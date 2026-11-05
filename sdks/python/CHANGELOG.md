@@ -1,5 +1,17 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.17.0 (unreleased)
+
+- **Breaking:** the MCP defaults now point at the StoreRouter Developer MCP
+  server. `octogen-bq-autosubscribe` defaults `--mcp-url` to
+  `https://mcp.dev.storerouter.ai/mcp/`, and `octogen-mcp-login` defaults
+  `--resource` (the OAuth audience) to `https://mcp.dev.storerouter.ai/mcp`.
+  The server accepts only that audience, and `mcp.storerouter.ai` and
+  `mcp.octogen.ai` are being retired. Refresh tokens minted for the old
+  audiences (`https://mcp.octogen.ai`, `https://mcp.storerouter.ai`) are
+  rejected: re-run `octogen-mcp-login` to mint a new one before upgrading cron
+  jobs, and update any explicit `--mcp-url` or `OCTOGEN_MCP_URL`.
+
 ## 0.16.0 (unreleased)
 
 - **Breaking:** brand details now returns the lightweight profile, typed articles and

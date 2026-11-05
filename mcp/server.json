@@ -3,7 +3,7 @@
   "name": "ai.storerouter/mcp",
   "title": "StoreRouter",
   "description": "Search products across online stores, look up any product URL, and discover brands and stores.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "websiteUrl": "https://storerouter.ai/docs/mcp/overview",
   "icons": [
     {
@@ -20,7 +20,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.storerouter.ai/mcp"
+      "url": "https://mcp.dev.storerouter.ai/mcp"
     }
   ]
 }

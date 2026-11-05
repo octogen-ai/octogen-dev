@@ -5,9 +5,9 @@ the [Official MCP Registry](https://registry.modelcontextprotocol.io), where it
 is published as `ai.storerouter/mcp`. MCP clients and directories that read the
 registry pick it up from there.
 
-The server is remote only: Streamable HTTP at `https://mcp.storerouter.ai/mcp`,
+The server is remote only: Streamable HTTP at `https://mcp.dev.storerouter.ai/mcp`,
 with OAuth 2.1 (PKCE and Dynamic Client Registration) discovered from
-`https://mcp.storerouter.ai/.well-known/oauth-protected-resource`. There is no
+`https://mcp.dev.storerouter.ai/.well-known/oauth-protected-resource`. There is no
 package to install and no API key to configure, so `server.json` lists one
 `remotes` entry and no `headers`. Setup guides for each client are in the
 [MCP docs](https://storerouter.ai/docs/mcp/overview).

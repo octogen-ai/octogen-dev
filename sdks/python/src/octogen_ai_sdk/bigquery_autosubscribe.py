@@ -24,7 +24,7 @@ from octogen_ai_sdk.errors import (
     OctogenMCPError,
 )
 
-DEFAULT_MCP_URL = "https://mcp.octogen.ai/mcp/"
+DEFAULT_MCP_URL = "https://mcp.dev.storerouter.ai/mcp/"
 MCP_PROTOCOL_VERSION = "2025-06-18"
 
 CatalogAction = Literal[
