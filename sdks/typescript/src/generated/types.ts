@@ -558,7 +558,9 @@ export interface paths {
          * @description Inspect every catalog serving a covered store domain.
          *
          *     ``domain`` is a bare host (not a URL), lowercased with a leading ``www.``
-         *     removed. Unbilled; coverage snapshots are cached per catalog for about a day.
+         *     removed. A domain is covered only by catalogs with at least one indexed
+         *     product; a domain without one is ``404 domain_not_covered``.
+         *     Unbilled; coverage snapshots are cached per catalog for about a day.
          *     Profiles are read from published artifacts and checked against live catalog
          *     eligibility. Missing, revoked, expired, or unavailable profiles are null.
          *     Empty profiles retain their zero-product evidence. Observation timestamps
