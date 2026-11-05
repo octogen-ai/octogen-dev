@@ -153,7 +153,7 @@ describe("actual QuickJS WASM / installed Node parity", () => {
     };
     expect(body.coverage).toBe("unknown");
     expect(body.remediation.url).toBe(
-      "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+      "https://dev.storerouter.ai/agent-onboarding/SKILL.md",
     );
     expect(body.message).toContain(body.remediation.url);
   });

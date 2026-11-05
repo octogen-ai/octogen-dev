@@ -1,6 +1,6 @@
 [project]
 name = "langchain-storerouter"
-version = "0.1.0"
+version = "0.1.1"
 description = "LangChain tools for StoreRouter: product search, product lookup, store and brand discovery across real merchant catalogs"
 readme = "README.md"
 authors = [

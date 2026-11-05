@@ -209,12 +209,12 @@ describe("classify", () => {
       ].includes(row.code),
     )) {
       expect(classify(row.error).remediation?.url, row.what).toBe(
-        "https://platform.storerouter.ai/agent-onboarding/SKILL.md",
+        "https://dev.storerouter.ai/agent-onboarding/SKILL.md",
       );
     }
     expect(
       classify(apiError(403, "programmatic_access_forbidden")).remediation?.url,
-    ).toBe("https://platform.storerouter.ai");
+    ).toBe("https://dev.storerouter.ai");
   });
 
   it("never produces exit 6 for a throttle in particular", () => {

@@ -39,8 +39,7 @@ import {
 import { CliError, ExitCode, type CoverageVerdict } from "./exit.js";
 
 /** Where an agent is told to go when it has no usable credential. */
-export const ONBOARDING_URL =
-  "https://platform.storerouter.ai/agent-onboarding/SKILL.md";
+export const ONBOARDING_URL = "https://dev.storerouter.ai/agent-onboarding/SKILL.md";
 
 const NEVER_RETRY_429 = new Set(["keyless_trial_exhausted", "voyage_quota_exceeded"]);
 
@@ -178,7 +177,7 @@ function classifyApiError(
         ...base,
         code: "not_entitled",
         exitCode: ExitCode.NotEntitled,
-        remediation: { url: "https://platform.storerouter.ai" },
+        remediation: { url: "https://dev.storerouter.ai" },
       },
     );
   }

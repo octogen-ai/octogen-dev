@@ -13,7 +13,7 @@ pip install -U langchain-storerouter
 
 ## Credentials
 
-Create an API key at [platform.storerouter.ai](https://platform.storerouter.ai)
+Create an API key at [dev.storerouter.ai](https://dev.storerouter.ai)
 and export it:
 
 ```bash

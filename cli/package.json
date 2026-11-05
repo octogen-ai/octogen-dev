@@ -1,6 +1,6 @@
 {
   "name": "@storerouter/cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "The StoreRouter CLI: coverage, lookup, and search from your terminal or your agent",
   "type": "module",
   "license": "Apache-2.0",
