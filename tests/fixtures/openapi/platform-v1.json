@@ -11042,7 +11042,7 @@
     },
     "/stores/{domain}": {
       "get": {
-        "description": "Inspect every catalog serving a covered store domain.\n\n``domain`` is a bare host (not a URL), lowercased with a leading ``www.``\nremoved. Unbilled; coverage snapshots are cached per catalog for about a day.\nProfiles are read from published artifacts and checked against live catalog\neligibility. Missing, revoked, expired, or unavailable profiles are null.\nEmpty profiles retain their zero-product evidence. Observation timestamps\nbelong to the profile generation, independently of the coverage snapshot.\nProfile counts describe observed assortment, not live product-query matches.",
+        "description": "Inspect every catalog serving a covered store domain.\n\n``domain`` is a bare host (not a URL), lowercased with a leading ``www.``\nremoved. A domain is covered only by catalogs with at least one indexed\nproduct; a domain without one is ``404 domain_not_covered``.\nUnbilled; coverage snapshots are cached per catalog for about a day.\nProfiles are read from published artifacts and checked against live catalog\neligibility. Missing, revoked, expired, or unavailable profiles are null.\nEmpty profiles retain their zero-product evidence. Observation timestamps\nbelong to the profile generation, independently of the coverage snapshot.\nProfile counts describe observed assortment, not live product-query matches.",
         "operationId": "getStore",
         "parameters": [
           {
