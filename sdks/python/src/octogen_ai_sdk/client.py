@@ -142,7 +142,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.16.0"
+        return "0.17.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"

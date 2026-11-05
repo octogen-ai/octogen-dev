@@ -127,7 +127,7 @@ to the returned `product_url`, unchanged, to buy.
 
 ## MCP
 
-StoreRouter also runs a remote MCP server at `https://mcp.storerouter.ai/mcp`,
+StoreRouter also runs a remote MCP server at `https://mcp.dev.storerouter.ai/mcp`,
 authenticated with OAuth. It suits interactive clients. For agents running
 headless, this package with an API key is simpler.
 

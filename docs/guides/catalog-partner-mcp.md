@@ -8,13 +8,13 @@ both share the same business logic and active crawled catalog policy. MCP
 also exposes BigQuery listing/subscriber helpers for organizations with
 BigQuery access.
 
-| Connection          | What you should know                                                                                                                                                                          |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Base URL            | `https://mcp.storerouter.ai/mcp` for most clients; `https://codex-mcp.storerouter.ai/mcp` for Codex CLI                                                                                       |
-| Transport           | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http)                                                                                  |
-| Authentication      | OAuth 2.1 with PKCE-S256 against `https://auth.storerouter.ai`                                                                                                                                |
-| Discovery           | RFC 9728 protected-resource metadata at `https://mcp.storerouter.ai/.well-known/oauth-protected-resource`; Codex uses `https://codex-mcp.storerouter.ai/.well-known/oauth-protected-resource` |
-| Client registration | RFC 7591 Dynamic Client Registration — your MCP client registers itself on first launch                                                                                                       |
+| Connection          | What you should know                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base URL            | `https://mcp.dev.storerouter.ai/mcp` for most clients; `https://codex-mcp.storerouter.ai/mcp` for Codex CLI                                                                                       |
+| Transport           | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http)                                                                                      |
+| Authentication      | OAuth 2.1 with PKCE-S256 against `https://auth.storerouter.ai`                                                                                                                                    |
+| Discovery           | RFC 9728 protected-resource metadata at `https://mcp.dev.storerouter.ai/.well-known/oauth-protected-resource`; Codex uses `https://codex-mcp.storerouter.ai/.well-known/oauth-protected-resource` |
+| Client registration | RFC 7591 Dynamic Client Registration — your MCP client registers itself on first launch                                                                                                           |
 
 You do not need to provision API keys, client IDs, or shared secrets. Compliant
 MCP clients walk the discovery chain automatically; on first use they open a
@@ -39,7 +39,7 @@ Before your first tool call:
 ### Claude Code
 
 ```bash
-claude mcp add --transport http octogen https://mcp.storerouter.ai/mcp
+claude mcp add --transport http octogen https://mcp.dev.storerouter.ai/mcp
 ```
 
 The first tool call opens a browser tab for sign-in. Subsequent runs reuse
@@ -76,10 +76,12 @@ codex mcp get octogen
 
 The compatibility endpoint is only for Codex. It advertises OAuth resource
 indicator support and forwards the authorize/token requests to Octogen AuthKit
-with the compatibility MCP resource (`https://mcp.octogen.ai`) attached. This resource is a token audience identifier, not the hostname you connect to.
-Standard clients on `mcp.storerouter.ai` request the StoreRouter audience
-(`https://mcp.storerouter.ai`); the Codex compatibility proxy preserves the
-existing audience while using StoreRouter URLs for discovery and token exchange.
+with the Developer MCP resource (`https://mcp.dev.storerouter.ai/mcp`) attached,
+so Codex tokens carry the same audience as every other client. Standard clients
+connect to `mcp.dev.storerouter.ai` directly and discover that audience from its
+protected-resource metadata. Tokens minted for the retired audiences
+(`https://mcp.octogen.ai`, `https://mcp.storerouter.ai`) are rejected; run
+`codex mcp login octogen` again if Codex reports an invalid token.
 
 ### Claude Desktop
 
@@ -94,7 +96,7 @@ the equivalent on other platforms:
   "mcpServers": {
     "Octogen MCP": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.storerouter.ai/mcp"]
+      "args": ["-y", "mcp-remote", "https://mcp.dev.storerouter.ai/mcp"]
     }
   }
 }
@@ -106,7 +108,7 @@ sign-in flow on first connection.
 ### Other clients
 
 Any client that implements MCP discovery (RFC 9728) + OAuth 2.1 + PKCE-S256
-will work. Point it at `https://mcp.storerouter.ai/mcp` and it should walk the
+will work. Point it at `https://mcp.dev.storerouter.ai/mcp` and it should walk the
 chain automatically.
 
 ## Sign-in
@@ -342,7 +344,7 @@ Bootstrap cron credentials once from an interactive terminal:
 ```bash
 octogen-mcp-login \
   --authkit-domain https://auth.storerouter.ai \
-  --resource https://mcp.storerouter.ai \
+  --resource https://mcp.dev.storerouter.ai/mcp \
   --client-id-file /secure/octogen-mcp.client-id \
   --redirect-uri-file /secure/octogen-mcp.redirect-uri \
   --refresh-token-file /secure/octogen-mcp.refresh
@@ -368,7 +370,7 @@ OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id \
 OCTOGEN_MCP_REDIRECT_URI_FILE=/secure/octogen-mcp.redirect-uri \
 OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh \
 octogen-bq-autosubscribe \
-  --mcp-url https://mcp.storerouter.ai/mcp/ \
+  --mcp-url https://mcp.dev.storerouter.ai/mcp/ \
   --mcp-token-endpoint https://auth.storerouter.ai/oauth2/token \
   --project customer-project \
   --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com \
@@ -378,7 +380,7 @@ octogen-bq-autosubscribe \
 Then run with `--apply` from cron:
 
 ```cron
-*/15 * * * * OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REDIRECT_URI_FILE=/secure/octogen-mcp.redirect-uri OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh octogen-bq-autosubscribe --mcp-url https://mcp.storerouter.ai/mcp/ --mcp-token-endpoint https://auth.storerouter.ai/oauth2/token --project customer-project --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com --apply --json
+*/15 * * * * OCTOGEN_MCP_CLIENT_ID_FILE=/secure/octogen-mcp.client-id OCTOGEN_MCP_REDIRECT_URI_FILE=/secure/octogen-mcp.redirect-uri OCTOGEN_MCP_REFRESH_TOKEN_FILE=/secure/octogen-mcp.refresh octogen-bq-autosubscribe --mcp-url https://mcp.dev.storerouter.ai/mcp/ --mcp-token-endpoint https://auth.storerouter.ai/oauth2/token --project customer-project --principal serviceAccount:bq-reader@customer-project.iam.gserviceaccount.com --apply --json
 ```
 
 `OCTOGEN_MCP_REFRESH_TOKEN_FILE` should contain an Octogen MCP OAuth refresh

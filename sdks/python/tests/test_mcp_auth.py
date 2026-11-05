@@ -14,7 +14,7 @@ def test_build_authorize_url_includes_resource_and_pkce() -> None:
         authorization_endpoint="https://auth.example.test/oauth2/authorize",
         client_id="client_123",
         redirect_uri="http://localhost:8765/callback",
-        resource="https://mcp.octogen.ai",
+        resource="https://mcp.dev.storerouter.ai/mcp",
         state="state-1",
         code_challenge="challenge-1",
     )
@@ -23,7 +23,7 @@ def test_build_authorize_url_includes_resource_and_pkce() -> None:
     query = parse_qs(parsed.query)
     assert parsed.scheme == "https"
     assert query["client_id"] == ["client_123"]
-    assert query["resource"] == ["https://mcp.octogen.ai"]
+    assert query["resource"] == ["https://mcp.dev.storerouter.ai/mcp"]
     assert query["code_challenge"] == ["challenge-1"]
     assert query["code_challenge_method"] == ["S256"]
 

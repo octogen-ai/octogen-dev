@@ -31,7 +31,7 @@ else:
     msvcrt: Any = _msvcrt
 
 DEFAULT_AUTHKIT_DOMAIN = "https://auth.octogen.ai"
-DEFAULT_MCP_RESOURCE = "https://mcp.octogen.ai"
+DEFAULT_MCP_RESOURCE = "https://mcp.dev.storerouter.ai/mcp"
 DEFAULT_MCP_TOKEN_ENDPOINT = "https://auth.octogen.ai/oauth2/token"
 DEFAULT_MCP_LOGIN_PORT = 8765
 DEFAULT_MCP_SCOPE = "openid profile email offline_access"
