@@ -1,5 +1,14 @@
 # Changelog — `@storerouter/cli`
 
+## 0.6.1 (unreleased, `next`)
+
+- The no-credential remediation link (`remediation.url` on exit `3`) and the
+  bundled skill now point at
+  `https://dev.storerouter.ai/agent-onboarding/SKILL.md`. Exit `4`
+  (`not_entitled`) and `status` point at `https://dev.storerouter.ai`, where
+  Developer organizations create keys. The old `platform.storerouter.ai` links
+  keep redirecting, so older installs still work.
+
 ## 0.5.0 (unreleased, `next`)
 
 - Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,

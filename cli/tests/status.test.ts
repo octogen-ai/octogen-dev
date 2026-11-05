@@ -156,11 +156,11 @@ describe("the status envelope", () => {
     expect(problems).toContainEqual(
       expect.objectContaining({
         code: "not_entitled",
-        fix: "https://platform.storerouter.ai",
+        fix: "https://dev.storerouter.ai",
       }),
     );
     expect(body["remediation"]).toEqual({
-      url: "https://platform.storerouter.ai",
+      url: "https://dev.storerouter.ai",
     });
   });
 

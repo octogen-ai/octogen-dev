@@ -76,7 +76,7 @@ class StoreRouterBaseTool(BaseTool):
             if not key:
                 raise ValueError(
                     f"StoreRouter API key required. Set {API_KEY_ENV_VAR} or pass "
-                    "api_key. Get one at https://platform.storerouter.ai."
+                    "api_key. Get one at https://dev.storerouter.ai."
                 )
             self.api_key = SecretStr(key)
         if not self.base_url:

@@ -30,7 +30,7 @@ a `.env` in this directory or a parent. There is no `--api-key` flag. Never prin
 echo or log a key, not even to check that it is set.
 
 With no key (exit `3`), a human has to create one. Follow
-https://platform.storerouter.ai/agent-onboarding/SKILL.md: you print one link,
+https://dev.storerouter.ai/agent-onboarding/SKILL.md: you print one link,
 your human clicks Authorize, and the key arrives without passing through the
 conversation.
 
