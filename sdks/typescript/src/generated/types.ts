@@ -1539,7 +1539,7 @@ export interface components {
             prefix?: string | null;
             /**
              * Source
-             * @description How the key was created (`ui`, `coding_agent`, or `id_jag`). **Omitted entirely** — not `null` — while the backing column does not exist yet (agent-onboarding plan Phase 2). Treat an absent field as *unknown*, never as *no source*.
+             * @description How the key was created (`ui`, `coding_agent`, `id_jag`, `agent_mirror`, or `ui_session`). **Omitted entirely** — not `null` — while the backing column does not exist yet (agent-onboarding plan Phase 2). Treat an absent field as *unknown*, never as *no source*.
              */
             source?: string | null;
         };
