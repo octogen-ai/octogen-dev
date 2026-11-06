@@ -2225,6 +2225,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "59330a1c1fc06d744630f2fd6701cb2e14240c0368555c7ad4535ff415432f67",
+  "sha256": "5a9b9c22c74496741b872d5938042a4b5573cff7b8c7bea3de0755234dae1754",
   "version": "1.0.0"
 } as const;

@@ -1565,7 +1565,7 @@ export interface components {
             slug: string;
             /**
              * Type
-             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) may use every `/v1` route. A `merchant` key answers here, on the merchant onboarding routes, and on the product lookup, parse, retrieve, search, facet-counts and more-like-this routes, which read only the organization's own catalogs. Every other `/v1` route refuses it with `403 api_key_org_type_forbidden`.
+             * @description Organization type. `catalog_partner` (labelled *Developer* in the Platform UI) keys use `/v1`. `merchant` keys use `/merchant/v1`, whose product routes read only the organization's own, stewarded and granted catalogs. Each API refuses the other type's keys with `403 api_key_org_type_forbidden`.
              * @enum {string}
              */
             type: "merchant" | "catalog_partner";
