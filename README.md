@@ -4,13 +4,20 @@ Developer tools, SDKs, examples, tests, and agent skills for working with the Oc
 
 This repository is public-facing and is intended to become the canonical home for:
 
-- Python SDKs for Octogen APIs
+- Python SDKs for Octogen APIs: [`storerouter`](sdks/storerouter-python) (sync and async; start here) and the lower-level `octogen-ai-sdk`
 - TypeScript SDKs for Octogen APIs
 - The `@storerouter/cli` command-line tool, for terminals and agents
 - Agent-framework integrations, starting with `langchain-storerouter`
 - Shared fixtures and contract tests for SDK behavior
 - Codex, Claude, and Cursor skills for building with Octogen
 - Examples and integration guides for commerce workflows
+
+Install the SDK for your language:
+
+```bash
+pip install storerouter          # Python: StoreRouter / AsyncStoreRouter
+npm install @storerouter/sdk     # TypeScript
+```
 
 ## Repository Layout
 
@@ -27,7 +34,8 @@ This repository is public-facing and is intended to become the canonical home fo
 +-- integrations/
 |   +-- langchain/           # `langchain-storerouter` — LangChain tools over the Python SDK
 +-- sdks/
-|   +-- python/              # Python package source, packaging config, and unit tests
+|   +-- python/              # `octogen-ai-sdk`: Python package source, packaging config, and unit tests
+|   +-- storerouter-python/  # `storerouter` on PyPI: sync + async client over `octogen-ai-sdk`
 |   +-- typescript/          # TypeScript package source, package config, and unit tests
 +-- skills/
 |   +-- codex/               # Codex skills for Octogen workflows
@@ -214,6 +222,18 @@ standalone `uv` project:
 uv run --project sdks/python pytest -c sdks/python/pyproject.toml sdks/python/tests
 ```
 
+### storerouter Python package
+
+`sdks/storerouter-python` is its own `uv` project, published to PyPI as
+`storerouter`. It wraps `octogen-ai-sdk` with a blocking client, retries,
+batch lookup and the `STOREROUTER_*` settings, and develops against
+`sdks/python` from this checkout. Its README examples run against the live API
+when `STOREROUTER_API_KEY` is set:
+
+```bash
+uv run --directory sdks/storerouter-python pytest
+```
+
 ### LangChain integration
 
 `integrations/langchain` is its own `uv` project, published to PyPI as
@@ -239,7 +259,7 @@ uv run --project sdks/python prek run --all-files
 ```
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the same commands on
-every pull request, across Node 20/22 and Python 3.11/3.12. Hooks protect only
+every pull request, across Node 20/22 and Python 3.11/3.12 (3.13 too for `storerouter`). Hooks protect only
 the machines they are installed on; CI is what protects `main`.
 
 ## Skills Strategy

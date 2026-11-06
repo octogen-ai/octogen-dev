@@ -78,6 +78,38 @@ hooks = [
     files = "^(integrations/langchain|sdks/python/src)/",
     pass_filenames = false,
   },
+  {
+    id = "storerouter-python-ruff-check",
+    name = "storerouter Python package Ruff lint",
+    language = "system",
+    entry = "uv run --directory sdks/storerouter-python ruff check src tests",
+    files = "^sdks/(storerouter-python|python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "storerouter-python-ruff-format-check",
+    name = "storerouter Python package Ruff format check",
+    language = "system",
+    entry = "uv run --directory sdks/storerouter-python ruff format --check src tests",
+    files = "^sdks/(storerouter-python|python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "storerouter-python-ty-check",
+    name = "storerouter Python package ty typecheck",
+    language = "system",
+    entry = "uv run --directory sdks/storerouter-python ty check",
+    files = "^sdks/(storerouter-python|python/src)/",
+    pass_filenames = false,
+  },
+  {
+    id = "storerouter-python-tests",
+    name = "storerouter Python package tests",
+    language = "system",
+    entry = "uv run --directory sdks/storerouter-python pytest",
+    files = "^sdks/(storerouter-python|python/src)/",
+    pass_filenames = false,
+  },
   # Lint and format are repository-wide: one root ESLint config and one root
   # Prettier config cover every workspace, so these run on any change that a
   # root config or any linted source file could affect.

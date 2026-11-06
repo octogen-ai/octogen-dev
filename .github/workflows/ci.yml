@@ -141,6 +141,35 @@ jobs:
       - name: Unit and standard tests
         run: uv run --frozen pytest
 
+  storerouter-python:
+    name: storerouter Python package (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: sdks/storerouter-python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      # Mirrors `storerouter-python-{ruff-check,ruff-format-check,ty-check,tests}`
+      # in prek.toml. It installs `sdks/python` from this checkout, so an SDK
+      # change that breaks this package fails here in the same PR. The live
+      # README examples skip without STOREROUTER_API_KEY.
+      - name: Ruff lint
+        run: uv run --frozen ruff check src tests
+      - name: Ruff format check
+        run: uv run --frozen ruff format --check src tests
+      - name: ty typecheck
+        run: uv run --frozen ty check
+      - name: Tests
+        run: uv run --frozen pytest
+
   contract:
     name: Contract and codegen
     runs-on: ubuntu-latest

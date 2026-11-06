@@ -1,0 +1,85 @@
+[project]
+name = "storerouter"
+version = "0.1.0"
+description = "Python SDK for StoreRouter: look up any product URL as structured JSON, search products across stores, and discover brands and stores"
+readme = "README.md"
+authors = [
+    { name = "StoreRouter (Octogen AI)" }
+]
+license = "Apache-2.0"
+requires-python = ">=3.11"
+keywords = [
+    "storerouter",
+    "ecommerce",
+    "product-data",
+    "product-search",
+    "product-lookup",
+    "web-scraping",
+    "structured-data",
+    "shopping",
+    "ai-agents",
+    "sdk",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.28.1",
+    "octogen-ai-sdk>=0.17.0,<1.0.0",
+    "pydantic>=2.0",
+]
+
+[project.urls]
+Homepage = "https://storerouter.ai"
+Documentation = "https://storerouter.ai/docs"
+Source = "https://github.com/octogen-ai/octogen-dev/tree/main/sdks/storerouter-python"
+Issues = "https://github.com/octogen-ai/octogen-dev/issues"
+Changelog = "https://github.com/octogen-ai/octogen-dev/blob/main/sdks/storerouter-python/CHANGELOG.md"
+
+[build-system]
+requires = ["uv_build>=0.11.9,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "respx>=0.23.1",
+    "ruff>=0.15.12",
+    "ty>=0.0.34",
+]
+
+# Develop and test against the SDK in this repo, so an SDK change that breaks
+# this package turns red in the same PR. The published wheel depends on the
+# PyPI release named in `dependencies`; build backends ignore this table.
+[tool.uv.sources]
+octogen-ai-sdk = { path = "../python", editable = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+src = []
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.environment]
+python-version = "3.11"
