@@ -249,3 +249,53 @@ def test_sync_client_mirrors_every_async_method() -> None:
         method = getattr(StoreRouter, name)
         assert not inspect.iscoroutinefunction(method), name
         assert method.__doc__ == getattr(AsyncStoreRouter, name).__doc__, name
+
+
+def test_sync_client_mirrors_every_async_page_iterator() -> None:
+    iterators = {
+        name
+        for name, member in inspect.getmembers(
+            AsyncStoreRouter, inspect.isasyncgenfunction
+        )
+        if not name.startswith("_")
+    }
+    assert "iter_catalog_pages" in iterators
+    missing = sorted(name for name in iterators if not hasattr(StoreRouter, name))
+    assert missing == [], f"add these to StoreRouter: {missing}"
+    for name in iterators:
+        assert getattr(StoreRouter, name).__doc__ == (
+            getattr(AsyncStoreRouter, name).__doc__
+        ), name
+
+
+# --- catalogs --------------------------------------------------------------
+
+
+def _catalog_page(catalog: str, next_cursor: str | None) -> dict[str, object]:
+    return {
+        "items": [{"catalog": catalog, "displayName": catalog, "productCount": 1}],
+        "nextCursor": next_cursor,
+        "taxonomyRootCounts": [{"name": "Apparel & Accessories", "catalogCount": 2}],
+    }
+
+
+def test_sync_iter_catalog_pages_follows_next_cursor(api: respx.MockRouter) -> None:
+    route = api.get("/catalogs").mock(
+        side_effect=[
+            httpx.Response(200, json=_catalog_page("allbirds", "c1")),
+            httpx.Response(200, json=_catalog_page("rothys", None)),
+        ]
+    )
+    with StoreRouter(api_key="sk_test", base_url=BASE_URL, max_retries=0) as client:
+        pages = list(client.iter_catalog_pages(q="a", limit=1))
+    assert [page.items[0].catalog for page in pages if page.items] == [
+        "allbirds",
+        "rothys",
+    ]
+    assert pages[0].taxonomy_root_counts is not None
+    assert pages[0].taxonomy_root_counts[0].catalog_count == 2
+    first, second = (call.request.url.params for call in route.calls)
+    assert "cursor" not in first
+    assert second["cursor"] == "c1"
+    assert second["q"] == "a"
+    assert second["limit"] == "1"

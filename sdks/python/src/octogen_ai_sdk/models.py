@@ -61,6 +61,10 @@ MeQuotas = _contract.MeQuotas
 MeRateLimit = _contract.MeRateLimit
 MeResponse = _contract.MeResponse
 PriceBucket = _contract.PriceBucket
+ProgrammaticCatalog = _contract.ProgrammaticCatalog
+ProgrammaticCatalogPage = _contract.ProgrammaticCatalogPage
+ProgrammaticCatalogTaxonomyRoot = _contract.ProgrammaticCatalogTaxonomyRoot
+ProgrammaticCatalogTaxonomyRootCount = _contract.ProgrammaticCatalogTaxonomyRootCount
 PriceDistribution = _contract.PriceDistribution
 ProgrammaticProductSearchEffectiveFacet = (
     _contract.ProgrammaticProductSearchEffectiveFacet
@@ -381,8 +385,11 @@ class ProgrammaticFacetCountsRequest(_RequestModel):
     The filter fields mean what they mean on
     :class:`ProgrammaticProductSearchRequest`; ``q`` is always understood, and
     only its understood filters narrow the counts. ``categories``,
-    ``attributes`` and ``facet_names`` say what to count. The contradictions
-    the server refuses with a ``422`` and that are cheap to mirror fail here.
+    ``attributes`` (or ``derive_attributes``) and ``facet_names`` say what to
+    count. ``context_facets`` narrow attribute and facet value counts only,
+    so sibling categories keep their own counts. The contradictions the server
+    refuses with a ``422`` and that are cheap to mirror, such as
+    ``derive_attributes`` together with ``attributes``, fail here.
     """
 
     q: str | None = None
@@ -400,7 +407,14 @@ class ProgrammaticFacetCountsRequest(_RequestModel):
     categories: list[ProgrammaticFacetCountCategory] | None = Field(
         default=None, max_length=100
     )
+    #: Filters for attribute and facet value counts only, such as the category
+    #: being browsed; category counts ignore them. Each name at most once.
+    context_facets: list[Facet] | None = Field(default=None, max_length=50)
     attributes: list[str] | None = Field(default=None, max_length=50)
+    #: Count every filterable attribute under the category path in
+    #: ``context_facets`` instead of naming ``attributes``; not with
+    #: ``attributes``. ``None`` sends nothing (the server default is off).
+    derive_attributes: bool | None = None
     #: ``None`` sends nothing, and the server counts ``color_family``.
     facet_names: list[FacetCountName] | None = Field(default=None, max_length=2)
     value_limit: int | None = Field(default=None, ge=1, le=1000)
@@ -420,6 +434,7 @@ class ProgrammaticFacetCountsRequest(_RequestModel):
 
         facet_names = _facet_names(self.facets, "facets")
         _facet_names(self.exclude_facets, "exclude_facets")
+        _facet_names(self.context_facets, "context_facets")
         for name in self.omit_generated_facets or ():
             if name in facet_names:
                 raise ValueError(
@@ -439,9 +454,14 @@ class ProgrammaticFacetCountsRequest(_RequestModel):
             values = getattr(self, field) or []
             if len(set(values)) != len(values):
                 raise ValueError(f"{field} lists a value more than once")
-        if self.facet_names == [] and not (self.categories or self.attributes):
+        if self.derive_attributes and self.attributes:
+            raise ValueError("send attributes or derive_attributes, not both")
+        if self.facet_names == [] and not (
+            self.categories or self.attributes or self.derive_attributes
+        ):
             raise ValueError(
-                "nothing to count: send categories, attributes or facet_names"
+                "nothing to count: send categories, attributes, "
+                "derive_attributes or facet_names"
             )
         return self
 

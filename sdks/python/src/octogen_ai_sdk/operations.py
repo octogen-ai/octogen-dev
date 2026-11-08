@@ -42,6 +42,7 @@ OPERATIONS: Final[dict[str, Operation]] = {
     "getStore": Operation("GET", "/stores/{domain}"),
     "getMe": Operation("GET", "/me"),
     "getUrlList": Operation("GET", "/coverage/url-lists/{urlListId}"),
+    "listCatalogs": Operation("GET", "/catalogs"),
     "listTaxonomyAttributeValues": Operation(
         "GET", "/taxonomy/attributes/{handle}/values"
     ),

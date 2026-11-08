@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import os
 import threading
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator, Sequence
 from concurrent.futures import Future
 from dataclasses import dataclass
 from types import TracebackType
@@ -233,6 +233,63 @@ class _Blocking(Generic[_P, _R]):
         return call
 
 
+class _BlockingPages(Generic[_P, _R]):
+    """A blocking twin of an :class:`AsyncStoreRouter` page iterator.
+
+    Returns a plain iterator that fetches each page on the client's
+    event-loop thread as you advance it.
+    """
+
+    def __init__(
+        self,
+        method: Callable[Concatenate[AsyncStoreRouter, _P], AsyncIterator[_R]],
+    ) -> None:
+        self._name = ""
+        self.__doc__ = method.__doc__
+        signature = inspect.signature(method)
+        self._signature = signature.replace(
+            parameters=list(signature.parameters.values())[1:]
+        )
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self._name = name
+
+    @overload
+    def __get__(self, instance: None, owner: type | None = None) -> Self: ...
+
+    @overload
+    def __get__(
+        self, instance: StoreRouter, owner: type | None = None
+    ) -> Callable[_P, Iterator[_R]]: ...
+
+    def __get__(
+        self, instance: StoreRouter | None, owner: type | None = None
+    ) -> Self | Callable[_P, Iterator[_R]]:
+        if instance is None:
+            return self
+        name = self._name
+
+        def call(*args: _P.args, **kwargs: _P.kwargs) -> Iterator[_R]:
+            pages: AsyncIterator[_R] = getattr(instance._client, name)(*args, **kwargs)
+
+            async def next_page() -> list[_R]:
+                # Empty once the listing ends: StopAsyncIteration cannot cross
+                # back from the event-loop thread.
+                try:
+                    return [await anext(pages)]
+                except StopAsyncIteration:
+                    return []
+
+            while page := instance._run(next_page()):
+                yield page[0]
+
+        call.__name__ = name
+        call.__qualname__ = f"StoreRouter.{name}"
+        call.__doc__ = self.__doc__
+        call.__dict__["__signature__"] = self._signature
+        return call
+
+
 class StoreRouter:
     """Blocking client for the StoreRouter API.
 
@@ -322,6 +379,10 @@ class StoreRouter:
     get_brand_coverage = _Blocking(AsyncStoreRouter.get_brand_coverage)
     browse_brand_products = _Blocking(AsyncStoreRouter.browse_brand_products)
     get_brand_top_categories = _Blocking(AsyncStoreRouter.get_brand_top_categories)
+
+    # Catalogs
+    list_catalogs = _Blocking(AsyncStoreRouter.list_catalogs)
+    iter_catalog_pages = _BlockingPages(AsyncStoreRouter.iter_catalog_pages)
 
     # Taxonomy
     list_taxonomy_categories = _Blocking(AsyncStoreRouter.list_taxonomy_categories)

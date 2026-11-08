@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.1.0
+## 0.2.0 (unreleased)
+
+- Requires `octogen-ai-sdk>=0.18.0`.
+- `list_catalogs()` lists the catalogs your key may search, and
+  `iter_catalog_pages()` follows `next_cursor` through every page (a plain
+  iterator on `StoreRouter`, an async iterator on `AsyncStoreRouter`)
+  (OCT-4848).
+- `count_product_facets()` takes `context_facets` and `derive_attributes`
+  (OCT-4849).
+
+## 0.1.0 — 2026-11-06
 
 First release of `storerouter`, the StoreRouter Python SDK.
 

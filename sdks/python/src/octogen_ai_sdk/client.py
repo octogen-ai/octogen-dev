@@ -8,7 +8,7 @@ import math
 import os
 import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from pprint import pformat
@@ -60,6 +60,7 @@ from octogen_ai_sdk.models import (
     ProductMarkdownLookupResult,
     ProductRetrieveBatchResponse,
     ProductRetrieveResult,
+    ProgrammaticCatalogPage,
     ProgrammaticFacetCountCategory,
     ProgrammaticFacetCountsRequest,
     ProgrammaticFacetCountsResponse,
@@ -142,7 +143,7 @@ def _package_version() -> str:
     try:
         return metadata.version(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
-        return "0.17.0"
+        return "0.18.0"
 
 
 USER_AGENT = f"octogen-ai-sdk-python/{_package_version()}"
@@ -647,7 +648,9 @@ class OctogenClient:
         catalogs: Sequence[str] | None = None,
         categories: Sequence[ProgrammaticFacetCountCategory | dict[str, Any]]
         | None = None,
+        context_facets: Sequence[FacetInput] | None = None,
         attributes: Sequence[str] | None = None,
+        derive_attributes: bool | None = None,
         facet_names: Sequence[FacetCountName] | None = None,
         value_limit: int | None = None,
         request: ProgrammaticFacetCountsRequest | None = None,
@@ -667,8 +670,17 @@ class OctogenClient:
         * ``attributes`` — attribute handles such as ``"neckline"``, from
           :meth:`list_taxonomy_attributes`. A value's count ignores your own
           facet on that attribute, so it shows what selecting it would return.
+        * ``derive_attributes=True`` — instead of ``attributes``: every
+          filterable attribute under the category path in ``context_facets``,
+          attributes on more leaf categories first. Sending both is a ``422``,
+          so it raises here. With no category path in ``context_facets``, no
+          attributes are counted.
         * ``facet_names`` — ``"color_family"`` (the server default) and/or
           ``"category_path.depth_0"``, counted the same way.
+
+        ``context_facets`` narrow attribute and facet value counts only, such
+        as the category being browsed; ``categories`` counts ignore them, so
+        sibling categories keep their own counts.
 
         ``value_limit`` caps the values returned per attribute and facet.
         ``effective_query`` on the response reports the filters applied::
@@ -696,7 +708,9 @@ class OctogenClient:
                 brand_quality_max=brand_quality_max,
                 catalogs=catalogs,
                 categories=categories,
+                context_facets=context_facets,
                 attributes=attributes,
+                derive_attributes=derive_attributes,
                 facet_names=facet_names,
                 value_limit=value_limit,
             )
@@ -720,7 +734,9 @@ class OctogenClient:
                 categories=None
                 if categories is None
                 else [_coerce_count_category(category) for category in categories],
+                context_facets=_facet_list(context_facets),
                 attributes=_string_list(attributes, "attributes"),
+                derive_attributes=derive_attributes,
                 facet_names=_facet_name_list(facet_names),
                 value_limit=value_limit,
             )
@@ -728,6 +744,75 @@ class OctogenClient:
             "countProductFacets", json=_body(resolved), context=context, timeout=timeout
         )
         return ProgrammaticFacetCountsResponse.model_validate(data)
+
+    async def list_catalogs(
+        self,
+        *,
+        q: str | None = None,
+        taxonomy_root: str | None = None,
+        cursor: str | None = None,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> ProgrammaticCatalogPage:
+        """One page of the catalogs your key may search, by display name.
+
+        Every ``catalog`` key returned is accepted in ``catalogs`` on
+        :meth:`search_products` for the same key. ``q`` keeps catalogs whose
+        key, display name or dominant taxonomy category contains it, ignoring
+        case; ``taxonomy_root`` keeps catalogs whose dominant category is
+        exactly that name (``"Uncategorized"`` keeps those with none).
+        ``limit`` is 1-200 (server default 50). ``taxonomy_root_counts`` on
+        the page counts every catalog ``q`` matches, before ``taxonomy_root``
+        narrows them, so ``limit=1`` reads the counts alone. Continue with
+        ``next_cursor`` and the same ``q`` and ``taxonomy_root``, or let
+        :meth:`iter_catalog_pages` do it. Not billed.
+        """
+        data = await self._json(
+            "listCatalogs",
+            params={
+                "q": q,
+                "taxonomyRoot": taxonomy_root,
+                "cursor": cursor,
+                "limit": limit,
+            },
+            context=context,
+            timeout=timeout,
+        )
+        return ProgrammaticCatalogPage.model_validate(data)
+
+    async def iter_catalog_pages(
+        self,
+        *,
+        q: str | None = None,
+        taxonomy_root: str | None = None,
+        cursor: str | None = None,
+        limit: int | None = None,
+        context: RequestContext | None | _ContextUnset = _CONTEXT_UNSET,
+        timeout: Timeout | None = None,
+    ) -> AsyncIterator[ProgrammaticCatalogPage]:
+        """Every page of :meth:`list_catalogs`, following ``next_cursor``.
+
+        Takes the same filters; ``cursor`` resumes a listing. Stops after the
+        page whose ``next_cursor`` is ``None``::
+
+            async for page in client.iter_catalog_pages(q="allbirds"):
+                for catalog in page.items or []:
+                    print(catalog.catalog, catalog.product_count)
+        """
+        while True:
+            page = await self.list_catalogs(
+                q=q,
+                taxonomy_root=taxonomy_root,
+                cursor=cursor,
+                limit=limit,
+                context=context,
+                timeout=timeout,
+            )
+            yield page
+            if not page.next_cursor or page.next_cursor == cursor:
+                return
+            cursor = page.next_cursor
 
     async def list_taxonomy_categories(
         self,

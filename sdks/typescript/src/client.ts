@@ -35,6 +35,7 @@ import type {
   StoreSearchRequest,
   StoreSearchResponse,
   GetBrandTopCategoriesParams,
+  ListCatalogsParams,
   ListTaxonomyCategoriesParams,
   MeResponse,
   MoreLikeThisProductsParams,
@@ -42,6 +43,7 @@ import type {
   MoreLikeThisSource,
   LookupProductOptions,
   MerchantProductUrlLookupResponse,
+  ProgrammaticCatalogPage,
   ProgrammaticFacetCountsRequest,
   ProgrammaticFacetCountsResponse,
   ProgrammaticMoreLikeThisRequest,
@@ -71,7 +73,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.storerouter.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.14.0";
+export const SDK_VERSION = "0.15.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
@@ -544,6 +546,63 @@ export class OctogenClient {
       body,
     });
     return data as ProgrammaticFacetCountsResponse;
+  }
+
+  /**
+   * One page of the catalogs your key may search, ordered by display name
+   * (`GET /v1/catalogs`). Every `catalog` returned is accepted in `catalogs`
+   * on {@link searchProducts} for the same key.
+   *
+   * `taxonomyRootCounts` counts every catalog `q` matches, before
+   * `taxonomyRoot` narrows them, so `limit: 1` reads the counts alone.
+   * Continue with `nextCursor`, or let {@link iterCatalogPages} do it.
+   * Not billed.
+   */
+  async listCatalogs(
+    params: ListCatalogsParams = {},
+    options: RequestOptions = {},
+  ): Promise<ProgrammaticCatalogPage> {
+    const data = await this.json("listCatalogs", {
+      context: options.context,
+      query: {
+        q: params.q,
+        taxonomyRoot: params.taxonomyRoot,
+        cursor: params.cursor,
+        limit: params.limit,
+      },
+    });
+    return data as ProgrammaticCatalogPage;
+  }
+
+  /**
+   * Every page of {@link listCatalogs}, following `nextCursor` until it is
+   * null. `params.cursor` resumes a listing.
+   *
+   * ```ts
+   * for await (const page of client.iterCatalogPages({ q: "allbirds" })) {
+   *   for (const catalog of page.items ?? []) console.log(catalog.catalog);
+   * }
+   * ```
+   */
+  async *iterCatalogPages(
+    params: ListCatalogsParams = {},
+    options: RequestOptions = {},
+  ): AsyncGenerator<ProgrammaticCatalogPage, void, undefined> {
+    let pageParams = params;
+    for (;;) {
+      const page = await this.listCatalogs(pageParams, options);
+      yield page;
+      const next = page.nextCursor;
+      if (
+        next === undefined ||
+        next === null ||
+        next === "" ||
+        next === pageParams.cursor
+      ) {
+        return;
+      }
+      pageParams = { ...params, cursor: next };
+    }
   }
 
   /**
@@ -1271,15 +1330,22 @@ function toFacetCountsPayload(
   if (params.attributes !== undefined && params.attributes.length > 50) {
     throw new TypeError("attributes accepts at most 50 handles");
   }
+  assertFacetList(params.contextFacets, "contextFacets");
+  if (params.deriveAttributes === true && (params.attributes?.length ?? 0) > 0) {
+    throw new TypeError("send attributes or deriveAttributes, not both");
+  }
   if (params.facetNames?.some((name) => !FACET_COUNT_NAMES.has(name)) === true) {
     throw new TypeError("facetNames accepts color_family and category_path.depth_0");
   }
   if (
     params.facetNames?.length === 0 &&
     (categories?.length ?? 0) === 0 &&
-    (params.attributes?.length ?? 0) === 0
+    (params.attributes?.length ?? 0) === 0 &&
+    params.deriveAttributes !== true
   ) {
-    throw new TypeError("nothing to count: send categories, attributes or facetNames");
+    throw new TypeError(
+      "nothing to count: send categories, attributes, deriveAttributes or facetNames",
+    );
   }
   const valueLimit = params.valueLimit;
   if (
@@ -1312,7 +1378,13 @@ function toFacetCountsPayload(
       facets: category.facets,
     }));
   }
+  if (params.contextFacets !== undefined) {
+    payload.context_facets = params.contextFacets;
+  }
   if (params.attributes !== undefined) payload.attributes = [...params.attributes];
+  if (params.deriveAttributes !== undefined) {
+    payload.derive_attributes = params.deriveAttributes;
+  }
   if (params.facetNames !== undefined) payload.facet_names = [...params.facetNames];
   if (valueLimit !== undefined) payload.value_limit = valueLimit;
   return payload;

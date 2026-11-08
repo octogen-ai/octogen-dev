@@ -99,7 +99,7 @@ wheels = [
 
 [[package]]
 name = "octogen-ai-sdk"
-version = "0.17.0"
+version = "0.18.0"
 source = { editable = "../python" }
 dependencies = [
     { name = "httpx" },
@@ -372,7 +372,7 @@ wheels = [
 
 [[package]]
 name = "storerouter"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

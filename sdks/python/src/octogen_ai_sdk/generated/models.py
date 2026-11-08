@@ -619,6 +619,42 @@ class ProductRetrieveBatchRequest(BaseModel):
     )
 
 
+class ProgrammaticCatalogTaxonomyRoot(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    name: str = Field(
+        ...,
+        description="Top-level taxonomy category, e.g. `Apparel & Accessories`. Pass it as `taxonomyRoot` to list the catalogs it leads.",
+        title="Name",
+    )
+    product_percent: float | None = Field(
+        None,
+        alias="productPercent",
+        description="Share of the catalog's active products under this category, 0 to 100. Null when not computed.",
+        title="Productpercent",
+    )
+
+
+class ProgrammaticCatalogTaxonomyRootCount(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog_count: int = Field(
+        ...,
+        alias="catalogCount",
+        description="Catalogs whose dominant category it is.",
+        title="Catalogcount",
+    )
+    name: str = Field(
+        ...,
+        description="Top-level taxonomy category, as in `taxonomyRoots[].name`; `Uncategorized` counts catalogs that have none. Pass it as `taxonomyRoot` to list those catalogs.",
+        title="Name",
+    )
+
+
 class ProgrammaticCategoryCount(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -668,6 +704,16 @@ class ProgrammaticFacetCountsRequest(BaseModel):
         None,
         description="Categories to count. Each count is the products matching the filters above and the category's own facets.",
         title="Categories",
+    )
+    context_facets: list[Facet] | None = Field(
+        None,
+        description="Filters for attribute and facet value counts only, such as the category being browsed. Category counts ignore them, so sibling categories keep their own counts. Each name at most once.",
+        title="Context Facets",
+    )
+    derive_attributes: bool | None = Field(
+        False,
+        description="Count every filterable attribute on any leaf category under the category path in `context_facets` (its `category_path.depth_N` facets), instead of naming `attributes`. Attributes on more leaf categories come first. With no category path in `context_facets`, no attributes are counted.",
+        title="Derive Attributes",
     )
     exclude_facets: list[Facet] | None = Field(
         None,
@@ -1930,6 +1976,78 @@ class ProgrammaticAttributeCounts(BaseModel):
         ...,
         description="Values with at least one product, most products first.",
         title="Values",
+    )
+
+
+class ProgrammaticCatalog(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    catalog: str = Field(
+        ...,
+        description="Catalog key. Pass it in `catalogs` on `POST /products/search` and `POST /products/more-like-this`.",
+        title="Catalog",
+    )
+    catalog_type: Literal["CRAWLED", "MERCHANT"] | str | None = Field(
+        None,
+        alias="catalogType",
+        description="`CRAWLED` for a catalog Octogen crawls from a public store, `MERCHANT` for one a merchant supplies. Null when unknown.",
+        title="Catalogtype",
+    )
+    display_name: str = Field(
+        ...,
+        alias="displayName",
+        description="Human-readable catalog name.",
+        title="Displayname",
+    )
+    product_count: int = Field(
+        ...,
+        alias="productCount",
+        description="Active products in the catalog, from the catalog's serving summary. Refreshed when the catalog is indexed, not per request.",
+        title="Productcount",
+    )
+    store_domains: list[str] | None = Field(
+        None,
+        alias="storeDomains",
+        description="Store domains the catalog covers, e.g. `allbirds.com`. Empty when none is recorded.",
+        title="Storedomains",
+    )
+    taxonomy_roots: list[ProgrammaticCatalogTaxonomyRoot] | None = Field(
+        None,
+        alias="taxonomyRoots",
+        description="The catalog's dominant top-level taxonomy category. At most one entry today; empty when the catalog has none (filter those with `taxonomyRoot=Uncategorized`).",
+        title="Taxonomyroots",
+    )
+    updated_at: AwareDatetime | None = Field(
+        None,
+        alias="updatedAt",
+        description="When the catalog's products were last indexed. Null if never.",
+        title="Updatedat",
+    )
+
+
+class ProgrammaticCatalogPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    items: list[ProgrammaticCatalog] | None = Field(
+        None,
+        description="Catalogs ordered by `displayName`, case-insensitively.",
+        title="Items",
+    )
+    next_cursor: str | None = Field(
+        None,
+        alias="nextCursor",
+        description="Opaque cursor for the next page; pass it back verbatim as `cursor` with the same `q` and `taxonomyRoot`. Null when this is the last page.",
+        title="Nextcursor",
+    )
+    taxonomy_root_counts: list[ProgrammaticCatalogTaxonomyRootCount] | None = Field(
+        None,
+        alias="taxonomyRootCounts",
+        description="Catalogs per dominant taxonomy category, across every page: all catalogs `q` matches, before `taxonomyRoot` narrows them. Ordered by name, case-insensitively. The same on every page of a listing, so `limit=1` is enough to read the counts alone.",
+        title="Taxonomyrootcounts",
     )
 
 

@@ -56,6 +56,14 @@ const CATALOG_DISCOVERY: string =
   "agent tools; no dedicated command yet. Reachable here via `storerouter api`.";
 
 /**
+ * The catalog listing feeds catalog pickers and agent tools that choose
+ * `catalogs` for a search; a shell user filters by store domain instead.
+ */
+const CATALOG_LISTING: string =
+  "Listing the catalogs a key may search is an SDK surface for catalog pickers; " +
+  "no dedicated command yet. Reachable here via `storerouter api`.";
+
+/**
  * Retrieve reads back products by an id an integration stored from an earlier
  * search or lookup; a shell user starts from a URL or a query instead.
  */
@@ -84,6 +92,7 @@ export const EXCLUDED_OPERATIONS = {
   createUrlList: URL_LISTS,
   deleteUrlList: URL_LISTS,
   getUrlList: URL_LISTS,
+  listCatalogs: CATALOG_LISTING,
   listTaxonomyAttributeValues: CATALOG_DISCOVERY,
   listTaxonomyAttributes: CATALOG_DISCOVERY,
   listTaxonomyCategories: CATALOG_DISCOVERY,

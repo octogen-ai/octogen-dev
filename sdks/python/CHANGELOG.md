@@ -1,6 +1,23 @@
 # Changelog — `octogen-ai-sdk`
 
-## 0.17.0 (unreleased)
+## 0.18.0 (unreleased)
+
+- `list_catalogs()` lists the catalogs your key may search
+  (`GET /v1/catalogs`, OCT-4848): filter by `q` or `taxonomy_root`, page with
+  `cursor`. Each `catalog` key is accepted in `catalogs` on `search_products`.
+  The page's `taxonomy_root_counts` counts catalogs per dominant taxonomy
+  category across the whole listing. `iter_catalog_pages()` is an async
+  iterator that follows `next_cursor`. New models: `ProgrammaticCatalog`,
+  `ProgrammaticCatalogPage`, `ProgrammaticCatalogTaxonomyRoot`,
+  `ProgrammaticCatalogTaxonomyRootCount`.
+- `count_product_facets()` takes `context_facets` (filters for attribute and
+  facet value counts only, such as the category being browsed) and
+  `derive_attributes` (count every filterable attribute under the category
+  path in `context_facets` instead of naming `attributes`), both also on
+  `ProgrammaticFacetCountsRequest` (OCT-4849). Sending `derive_attributes`
+  with `attributes` is a `422` on the server and a `ValidationError` here.
+
+## 0.17.0 — 2026-11-05
 
 - **Breaking:** the MCP defaults now point at the StoreRouter Developer MCP
   server. `octogen-bq-autosubscribe` defaults `--mcp-url` to
@@ -12,7 +29,7 @@
   rejected: re-run `octogen-mcp-login` to mint a new one before upgrading cron
   jobs, and update any explicit `--mcp-url` or `OCTOGEN_MCP_URL`.
 
-## 0.16.0 (unreleased)
+## 0.16.0 — 2026-11-04
 
 - **Breaking:** brand details now returns the lightweight profile, typed articles and
   navigation facets. Read the approximate snapshot with the separate coverage method.
@@ -21,7 +38,7 @@
   Follow that offset through empty projected pages; totals count source rows.
 
 
-## 0.15.0 (unreleased)
+## 0.15.0 — 2026-11-03
 
 - Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
   `understand`, and `limit` request fields, including reference/filter-only modes.
@@ -29,7 +46,7 @@
   canonical server and live-contract parity.
 - **Breaking:** replace `search_brands_from_text` with `search_brands`; no legacy wrapper.
 
-## 0.14.0 (unreleased)
+## 0.14.0 — 2026-11-02
 
 - `BrandCoverageResponse` declares `target_audience`, the brand's recorded audience
   or fit category from `GET /v1/brands/{brand}` (OCT-4729). It remains optional
@@ -39,7 +56,7 @@
   `SearchFacet` now reject unknown properties instead of silently discarding them,
   matching server validation; documented `brand_name` relaxation is retained.
 
-## 0.13.0 (unreleased)
+## 0.13.0 — 2026-10-29
 
 - `MerchantProductView` declares the product-detail fields Platform added in
   octogen#14347: `availability` (the schema.org term the product's own offer
@@ -52,7 +69,7 @@
   `content_url` and `embed_url`. `BreadcrumbView.url` now also carries the
   item's schema.org `@id`.
 
-## 0.12.0 (unreleased)
+## 0.12.0 — 2026-10-29
 
 - Add `retrieve_product(uuid)` for `GET /v1/products/retrieve/{uuid}` and
   `retrieve_products(uuids)` for `POST /v1/products/retrieve` (1-50 ids),
@@ -62,14 +79,14 @@
   product no longer offered is returned with `is_active=False` and
   `last_deactivated_at`.
 
-## 0.11.1 (unreleased)
+## 0.11.1 — 2026-10-28
 
 - `ProgrammaticProductSearchRequest(facets=...)` accepts plain `Facet`
   instances again, as every release before 0.11.0 did; each becomes a
   `SearchFacet` that sends exactly what it did. 0.11.0 rejected them with a
   `model_type` validation error.
 
-## 0.11.0
+## 0.11.0 — 2026-10-28
 
 - Search `facets` take `SearchFacet`, a `Facet` with `relaxable`. A facet sent
   with `relaxable=True` may be dropped by `relax`; it still replaces an
@@ -123,7 +140,7 @@ Brand discovery, for the six `/v1/brands` operations the API now publishes.
   `BrandTopCategoriesPage`, `BrandTopCategoryView`, `SimilarBrandView` and
   `SimilarBrandsResponse` models, re-exported from the contract mirror.
 
-## 0.10.0 (unreleased)
+## 0.10.0 — 2026-10-20
 
 - Add typed per-call `RequestContext` on every API operation, with stable
   application defaults, explicit override/clear semantics and isolated request
@@ -137,7 +154,7 @@ Brand discovery, for the six `/v1/brands` operations the API now publishes.
 - Publication is a separate OCT-4518 step after merge; this change does not
   publish a package or activate context collection.
 
-## 0.9.0 (unreleased)
+## 0.9.0 — 2026-10-20
 
 **Breaking:** the covered-domain list is gone. The API no longer serves
 `GET /v1/domains` (octogen#13525), so `list_domains` and

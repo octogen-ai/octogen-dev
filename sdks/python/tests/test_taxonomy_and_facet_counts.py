@@ -16,9 +16,11 @@ from octogen_ai_sdk import (
     Facet,
     OctogenClient,
     OctogenNotFoundError,
+    ProgrammaticCatalogPage,
     ProgrammaticFacetCountCategory,
     ProgrammaticFacetCountsRequest,
     ProgrammaticFacetCountsResponse,
+    TaxonomyCategory,
     TaxonomyCategoryPage,
 )
 from pydantic import ValidationError
@@ -74,6 +76,10 @@ def test_new_models_are_exported() -> None:
         "ProgrammaticFacetCountsRequest",
         "ProgrammaticFacetCountsResponse",
         "ProgrammaticFacetCountCategory",
+        "ProgrammaticCatalog",
+        "ProgrammaticCatalogPage",
+        "ProgrammaticCatalogTaxonomyRoot",
+        "ProgrammaticCatalogTaxonomyRootCount",
         "TaxonomyCategoryPage",
         "TaxonomyAttributePage",
         "TaxonomyAttributeValuePage",
@@ -380,6 +386,19 @@ async def test_count_product_facets_sends_a_prebuilt_request() -> None:
             "unique",
         ),
         ({"attributes": ["neckline", "neckline"]}, "more than once"),
+        (
+            {"attributes": ["neckline"], "derive_attributes": True},
+            "not both",
+        ),
+        (
+            {
+                "context_facets": [
+                    {"name": "category_path.depth_0", "values": ["a"]},
+                    {"name": "category_path.depth_0", "values": ["b"]},
+                ]
+            },
+            "context_facets",
+        ),
         ({"facet_names": []}, "nothing to count"),
         ({"facet_names": ["brand_name"]}, "facet_names"),
         ({"value_limit": 0}, "value_limit"),
@@ -392,6 +411,148 @@ async def test_count_product_facets_rejects_what_the_server_refuses(
     async with OctogenClient(api_key="key") as client:
         with pytest.raises(ValidationError, match=message):
             await client.count_product_facets(**kwargs)
+
+
+@respx.mock
+async def test_count_product_facets_derives_attributes_in_a_context() -> None:
+    route = respx.post(f"{BASE_URL}/products/facet-counts").mock(
+        return_value=httpx.Response(200, json=COUNTS_RESPONSE)
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.count_product_facets(
+            context_facets=[Facet.model_validate(facet) for facet in DRESSES_FACETS],
+            derive_attributes=True,
+        )
+        await client.count_product_facets(facet_names=[], derive_attributes=True)
+
+    first, second = (json.loads(call.request.read()) for call in route.calls)
+    assert first == {"context_facets": DRESSES_FACETS, "derive_attributes": True}
+    assert second == {"derive_attributes": True, "facet_names": []}
+
+
+@respx.mock
+async def test_count_product_facets_sends_context_facets_from_a_category() -> None:
+    route = respx.post(f"{BASE_URL}/products/facet-counts").mock(
+        return_value=httpx.Response(200, json=COUNTS_RESPONSE)
+    )
+    clothing = TaxonomyCategory.model_validate(CLOTHING)
+
+    async with OctogenClient(api_key="key") as client:
+        await client.count_product_facets(
+            context_facets=clothing.facets, attributes=["neckline"]
+        )
+
+    assert _body(route) == {
+        "context_facets": DRESSES_FACETS[:2],
+        "attributes": ["neckline"],
+    }
+
+
+# ── catalogs ─────────────────────────────────────────────────────────────────
+
+
+def _catalog_page(catalog: str, next_cursor: str | None) -> dict[str, Any]:
+    return {
+        "items": [
+            {
+                "catalog": catalog,
+                "catalogType": "CRAWLED",
+                "displayName": catalog.title(),
+                "productCount": 1840,
+                "storeDomains": [f"{catalog}.com"],
+                "taxonomyRoots": [
+                    {"name": "Apparel & Accessories", "productPercent": 91.2}
+                ],
+                "updatedAt": "2026-11-06T09:14:00Z",
+            }
+        ],
+        "nextCursor": next_cursor,
+        "taxonomyRootCounts": [{"name": "Apparel & Accessories", "catalogCount": 2}],
+    }
+
+
+@respx.mock
+async def test_list_catalogs_sends_filters_under_their_wire_names() -> None:
+    route = respx.get(f"{BASE_URL}/catalogs").mock(
+        return_value=httpx.Response(200, json=_catalog_page("allbirds", None))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        page = await client.list_catalogs(
+            q="allbirds", taxonomy_root="Apparel & Accessories", cursor="c0", limit=5
+        )
+
+    assert dict(route.calls.last.request.url.params) == {
+        "q": "allbirds",
+        "taxonomyRoot": "Apparel & Accessories",
+        "cursor": "c0",
+        "limit": "5",
+    }
+    assert isinstance(page, ProgrammaticCatalogPage)
+    assert page.items is not None
+    catalog = page.items[0]
+    assert (catalog.catalog, catalog.display_name, catalog.product_count) == (
+        "allbirds",
+        "Allbirds",
+        1840,
+    )
+    assert catalog.taxonomy_roots is not None
+    assert catalog.taxonomy_roots[0].product_percent == 91.2
+    assert page.taxonomy_root_counts is not None
+    assert page.taxonomy_root_counts[0].catalog_count == 2
+    assert page.next_cursor is None
+
+
+@respx.mock
+async def test_list_catalogs_sends_no_params_by_default() -> None:
+    route = respx.get(f"{BASE_URL}/catalogs").mock(
+        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        await client.list_catalogs()
+
+    assert dict(route.calls.last.request.url.params) == {}
+
+
+@respx.mock
+async def test_iter_catalog_pages_follows_next_cursor_with_the_same_filters() -> None:
+    route = respx.get(f"{BASE_URL}/catalogs").mock(
+        side_effect=[
+            httpx.Response(200, json=_catalog_page("allbirds", "c1")),
+            httpx.Response(200, json=_catalog_page("rothys", None)),
+        ]
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        pages = [
+            page
+            async for page in client.iter_catalog_pages(
+                taxonomy_root="Apparel & Accessories", limit=1
+            )
+        ]
+
+    assert [page.items[0].catalog for page in pages if page.items] == [
+        "allbirds",
+        "rothys",
+    ]
+    first, second = (dict(call.request.url.params) for call in route.calls)
+    assert first == {"taxonomyRoot": "Apparel & Accessories", "limit": "1"}
+    assert second == {**first, "cursor": "c1"}
+
+
+@respx.mock
+async def test_iter_catalog_pages_stops_on_a_repeated_cursor() -> None:
+    route = respx.get(f"{BASE_URL}/catalogs").mock(
+        return_value=httpx.Response(200, json=_catalog_page("allbirds", "c1"))
+    )
+
+    async with OctogenClient(api_key="key") as client:
+        pages = [page async for page in client.iter_catalog_pages(cursor="c1")]
+
+    assert len(pages) == 1
+    assert route.call_count == 1
 
 
 async def test_bare_strings_are_refused_rather_than_split() -> None:

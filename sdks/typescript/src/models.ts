@@ -1056,6 +1056,39 @@ export interface ListTaxonomyCategoriesParams extends TaxonomyPageParams {
   parent?: string;
 }
 
+// ── Catalogs (/v1/catalogs) ─────────────────────────────────────────────────
+
+/** One page of the catalogs the calling key may search. */
+export type ProgrammaticCatalogPage = components["schemas"]["ProgrammaticCatalogPage"];
+
+/** One catalog the calling key may search; `catalog` goes in search `catalogs`. */
+export type ProgrammaticCatalog = components["schemas"]["ProgrammaticCatalog"];
+
+/** A catalog's dominant top-level taxonomy category. */
+export type ProgrammaticCatalogTaxonomyRoot =
+  components["schemas"]["ProgrammaticCatalogTaxonomyRoot"];
+
+/** How many listed catalogs a top-level taxonomy category leads. */
+export type ProgrammaticCatalogTaxonomyRootCount =
+  components["schemas"]["ProgrammaticCatalogTaxonomyRootCount"];
+
+export interface ListCatalogsParams {
+  /**
+   * Keep catalogs whose key, display name or dominant taxonomy category
+   * contains this text, ignoring case.
+   */
+  q?: string;
+  /**
+   * Keep catalogs whose dominant taxonomy category is exactly this name;
+   * `Uncategorized` keeps catalogs with none.
+   */
+  taxonomyRoot?: string;
+  /** `nextCursor` from the previous page, with the same `q` and `taxonomyRoot`. */
+  cursor?: string;
+  /** Catalogs per page, 1–200 (server default 50). */
+  limit?: number;
+}
+
 // ── Facet counts (/v1/products/facet-counts) ────────────────────────────────
 
 /** Facets whose values `countProductFacets` can count. */
@@ -1092,10 +1125,22 @@ export interface CountProductFacetsParams {
   /** Categories to count (at most 100); each count also applies its facets. */
   categories?: FacetCountCategory[];
   /**
+   * Filters for attribute and facet value counts only, such as the category
+   * being browsed (at most 50, each name once). Category counts ignore them,
+   * so sibling categories keep their own counts.
+   */
+  contextFacets?: Facet[];
+  /**
    * Attribute handles such as `neckline` (at most 50). A value's count ignores
    * your own facet on that attribute.
    */
   attributes?: string[];
+  /**
+   * Count every filterable attribute under the category path in
+   * `contextFacets` instead of naming `attributes`; attributes on more leaf
+   * categories come first. Not with `attributes` (the server answers `422`).
+   */
+  deriveAttributes?: boolean;
   /** Facets whose values to count; the server counts `color_family` when omitted. */
   facetNames?: FacetCountName[];
   /** Most values returned per attribute and facet, 1–1000 (server default 100). */
@@ -1115,7 +1160,9 @@ export interface ProgrammaticFacetCountsRequest {
   brand_quality_max?: number;
   catalogs?: string[];
   categories?: FacetCountCategory[];
+  context_facets?: Facet[];
   attributes?: string[];
+  derive_attributes?: boolean;
   facet_names?: FacetCountName[];
   value_limit?: number;
 }

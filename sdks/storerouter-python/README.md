@@ -228,6 +228,18 @@ More brand calls: `search_brand_prefix` (autocomplete), `search_similar_brands`,
 `get_brand_directory`, `get_brand_coverage`, `browse_brand_products` and
 `get_brand_top_categories`. For stores there is also `search_similar_stores`.
 
+To list the catalogs your key may search, and pass their keys as
+`catalogs` to `search_products`:
+
+```python
+for page in client.iter_catalog_pages(q="allbirds", limit=50):
+    for catalog in page.items or []:
+        print(catalog.catalog, catalog.display_name, catalog.product_count)
+```
+
+`list_catalogs` returns one page; `page.taxonomy_root_counts` counts the
+catalogs per top-level taxonomy category across the whole listing.
+
 ## Async
 
 `AsyncStoreRouter` has the same constructor and the same methods as
