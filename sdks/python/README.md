@@ -117,7 +117,16 @@ if that stops being true — see
   back into `search_products` unchanged.
 - `count_product_facets(...)` counts the products `search_products` would
   filter to — by `categories`, `attributes` and `facet_names` — under the same
-  `q`, facets, bounds and `catalogs`.
+  `q`, facets, bounds and `catalogs`. `context_facets` (such as the category
+  being browsed) narrow attribute and facet value counts but not category
+  counts. `derive_attributes=True` counts every filterable attribute under the
+  category path in `context_facets` instead of naming `attributes`; sending
+  both is a `422`, so the SDK raises before the request.
+- `list_catalogs(q=..., taxonomy_root=..., cursor=..., limit=...)` lists the
+  catalogs your key may search, by display name; each `catalog` key goes in
+  `catalogs` on `search_products`. The page's `taxonomy_root_counts` counts
+  catalogs per dominant taxonomy category across the whole listing.
+  `iter_catalog_pages(...)` is an async iterator that follows `next_cursor`.
 
 - `search_brand_prefix(prefix)` completes a canonical brand name from its
   first characters. `search_brands(q=..., similar_to_brands=..., facets=...,
@@ -182,6 +191,26 @@ async with OctogenClient() as client:
         attributes=["neckline"],
     )
     print(counts.categories[0].count, counts.attributes[0].values[:3])
+```
+
+```python
+async with OctogenClient() as client:
+    clothing = await client.list_taxonomy_categories(parent="Apparel & Accessories")
+    category = next(c for c in clothing.categories if c.name == "Clothing")
+    # Every filterable attribute under Clothing, counted within Clothing.
+    counts = await client.count_product_facets(
+        context_facets=category.facets, derive_attributes=True
+    )
+    print([attribute.handle for attribute in counts.attributes[:5]])
+```
+
+```python
+async with OctogenClient() as client:
+    page = await client.list_catalogs(limit=1)
+    print([(root.name, root.catalog_count) for root in page.taxonomy_root_counts or []])
+    async for page in client.iter_catalog_pages(q="allbirds"):
+        for catalog in page.items or []:
+            print(catalog.catalog, catalog.display_name, catalog.product_count)
 ```
 
 ```python

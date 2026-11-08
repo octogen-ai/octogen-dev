@@ -261,6 +261,26 @@ describe("countProductFacets", () => {
     expect(bodyOf(lastCall(calls))).toEqual({});
   });
 
+  it("sends contextFacets and deriveAttributes under their wire names", async () => {
+    const { calls, fetchMock } = fetchReturning(COUNTS);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    await client.countProductFacets({
+      contextFacets: DRESSES_FACETS,
+      deriveAttributes: true,
+    });
+    expect(bodyOf(lastCall(calls))).toEqual({
+      context_facets: DRESSES_FACETS,
+      derive_attributes: true,
+    });
+
+    await client.countProductFacets({ facetNames: [], deriveAttributes: true });
+    expect(bodyOf(lastCall(calls))).toEqual({
+      derive_attributes: true,
+      facet_names: [],
+    });
+  });
+
   const refused: [string, CountProductFacetsParams][] = [
     ["omit without q", { omitGeneratedFacets: ["gender"] }],
     ["fallback without q", { fallbackCategory: ["apparel & accessories"] }],
@@ -285,6 +305,19 @@ describe("countProductFacets", () => {
     ],
     ["a category with no facets", { categories: [{ key: "a", facets: [] }] }],
     ["a repeated attribute", { attributes: ["neckline", "neckline"] }],
+    [
+      "attributes with deriveAttributes",
+      { attributes: ["neckline"], deriveAttributes: true },
+    ],
+    [
+      "a repeated context facet",
+      {
+        contextFacets: [
+          { name: "category_path.depth_0", values: ["a"] },
+          { name: "category_path.depth_0", values: ["b"] },
+        ],
+      },
+    ],
     ["nothing to count", { facetNames: [] }],
     ["an out-of-range value limit", { valueLimit: 0 }],
     ["empty catalogs", { catalogs: [] }],
@@ -296,5 +329,103 @@ describe("countProductFacets", () => {
 
     await expect(client.countProductFacets(params)).rejects.toThrow(TypeError);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("listCatalogs", () => {
+  function catalogPage(catalog: string, nextCursor: string | null): unknown {
+    return {
+      items: [
+        {
+          catalog,
+          catalogType: "CRAWLED",
+          displayName: catalog,
+          productCount: 1840,
+          storeDomains: [`${catalog}.com`],
+          taxonomyRoots: [{ name: "Apparel & Accessories", productPercent: 91.2 }],
+          updatedAt: "2026-11-06T09:14:00Z",
+        },
+      ],
+      nextCursor,
+      taxonomyRootCounts: [{ name: "Apparel & Accessories", catalogCount: 2 }],
+    };
+  }
+
+  function fetchPages(pages: unknown[]): { urls: URL[]; fetchMock: FetchLike } {
+    const urls: URL[] = [];
+    const fetchMock: FetchLike = (input) => {
+      urls.push(new URL(input));
+      return Promise.resolve(
+        new Response(JSON.stringify(pages[urls.length - 1]), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        }),
+      );
+    };
+    return { urls, fetchMock };
+  }
+
+  it("sends filters under their wire names", async () => {
+    const { calls, fetchMock } = fetchReturning(catalogPage("allbirds", null));
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const page = await client.listCatalogs({
+      q: "allbirds",
+      taxonomyRoot: "Apparel & Accessories",
+      cursor: "c0",
+      limit: 5,
+    });
+
+    const call = lastCall(calls);
+    expect(call.init?.method).toBe("GET");
+    const url = new URL(call.input);
+    expect(`${url.origin}${url.pathname}`).toBe(`${BASE_URL}/catalogs`);
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      q: "allbirds",
+      taxonomyRoot: "Apparel & Accessories",
+      cursor: "c0",
+      limit: "5",
+    });
+    expect(page.items?.[0]?.catalog).toBe("allbirds");
+    expect(page.taxonomyRootCounts?.[0]?.catalogCount).toBe(2);
+  });
+
+  it("follows nextCursor with the same filters", async () => {
+    const { urls, fetchMock } = fetchPages([
+      catalogPage("allbirds", "c1"),
+      catalogPage("rothys", null),
+    ]);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const catalogs: string[] = [];
+    for await (const page of client.iterCatalogPages({
+      taxonomyRoot: "Apparel & Accessories",
+      limit: 1,
+    })) {
+      catalogs.push(...(page.items ?? []).map((item) => item.catalog));
+    }
+
+    expect(catalogs).toEqual(["allbirds", "rothys"]);
+    expect(urls.map((url) => Object.fromEntries(url.searchParams))).toEqual([
+      { taxonomyRoot: "Apparel & Accessories", limit: "1" },
+      { taxonomyRoot: "Apparel & Accessories", limit: "1", cursor: "c1" },
+    ]);
+  });
+
+  it("stops on a repeated cursor", async () => {
+    const { urls, fetchMock } = fetchPages([catalogPage("allbirds", "c1")]);
+    const client = new OctogenClient({ apiKey: "key", fetch: fetchMock });
+
+    const pages = [];
+    for await (const page of client.iterCatalogPages({ cursor: "c1" })) {
+      pages.push(page);
+    }
+
+    expect(pages).toHaveLength(1);
+    expect(urls).toHaveLength(1);
+  });
+
+  it("is not part of the keyless trial", () => {
+    expect(KEYLESS_TRIAL_OPERATIONS).not.toContain("listCatalogs");
   });
 });

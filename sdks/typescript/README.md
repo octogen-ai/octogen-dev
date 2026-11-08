@@ -123,7 +123,16 @@ each, sent without merging or truncation. `q` is at most 500 characters,
   back into `searchProducts` unchanged.
 - `countProductFacets(params?)` counts the products `searchProducts` would
   filter to — by `categories`, `attributes` and `facetNames` — under the same
-  `q`, facets, bounds and `catalogs`.
+  `q`, facets, bounds and `catalogs`. `contextFacets` (such as the category
+  being browsed) narrow attribute and facet value counts but not category
+  counts. `deriveAttributes: true` counts every filterable attribute under the
+  category path in `contextFacets` instead of naming `attributes`; sending
+  both is a `422`, so the SDK throws a `TypeError` before the request.
+- `listCatalogs(params?)` lists the catalogs your key may search, by display
+  name, filtered by `q` or `taxonomyRoot`; each `catalog` key goes in
+  `catalogs` on `searchProducts`. The page's `taxonomyRootCounts` counts
+  catalogs per dominant taxonomy category across the whole listing.
+  `iterCatalogPages(params?)` is an async generator that follows `nextCursor`.
 
 - `createCoverageUrlList(name)`, `listCoverageUrlLists(params?)`,
   `getCoverageUrlList(urlListId)`, and `deleteCoverageUrlList(urlListId)`
@@ -148,6 +157,27 @@ const similar = await client.moreLikeThisProducts({
 for (const product of similar.items) {
   console.log(product.title, product.productUrl);
 }
+```
+
+```ts
+const groups = await client.listCatalogs({ limit: 1 });
+console.log(groups.taxonomyRootCounts?.map((root) => [root.name, root.catalogCount]));
+
+for await (const page of client.iterCatalogPages({ q: "allbirds" })) {
+  for (const catalog of page.items ?? []) {
+    console.log(catalog.catalog, catalog.displayName, catalog.productCount);
+  }
+}
+
+const clothing = (
+  await client.listTaxonomyCategories({ parent: "Apparel & Accessories" })
+).categories.find((category) => category.name === "Clothing");
+// Every filterable attribute under Clothing, counted within Clothing.
+const counts = await client.countProductFacets({
+  contextFacets: clothing?.facets ?? [],
+  deriveAttributes: true,
+});
+console.log(counts.attributes.slice(0, 5).map((attribute) => attribute.handle));
 ```
 
 ```ts

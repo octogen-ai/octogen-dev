@@ -3821,6 +3821,161 @@
         "title": "ProgrammaticAttributeCounts",
         "type": "object"
       },
+      "ProgrammaticCatalog": {
+        "description": "One catalog the calling key may search.",
+        "properties": {
+          "catalog": {
+            "description": "Catalog key. Pass it in `catalogs` on `POST /products/search` and `POST /products/more-like-this`.",
+            "title": "Catalog",
+            "type": "string"
+          },
+          "catalogType": {
+            "anyOf": [
+              {
+                "enum": [
+                  "CRAWLED",
+                  "MERCHANT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`CRAWLED` for a catalog Octogen crawls from a public store, `MERCHANT` for one a merchant supplies. Null when unknown.",
+            "title": "Catalogtype"
+          },
+          "displayName": {
+            "description": "Human-readable catalog name.",
+            "title": "Displayname",
+            "type": "string"
+          },
+          "productCount": {
+            "description": "Active products in the catalog, from the catalog's serving summary. Refreshed when the catalog is indexed, not per request.",
+            "title": "Productcount",
+            "type": "integer"
+          },
+          "storeDomains": {
+            "description": "Store domains the catalog covers, e.g. `allbirds.com`. Empty when none is recorded.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Storedomains",
+            "type": "array"
+          },
+          "taxonomyRoots": {
+            "description": "The catalog's dominant top-level taxonomy category. At most one entry today; empty when the catalog has none (filter those with `taxonomyRoot=Uncategorized`).",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticCatalogTaxonomyRoot"
+            },
+            "title": "Taxonomyroots",
+            "type": "array"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the catalog's products were last indexed. Null if never.",
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "catalog",
+          "displayName",
+          "productCount"
+        ],
+        "title": "ProgrammaticCatalog",
+        "type": "object"
+      },
+      "ProgrammaticCatalogPage": {
+        "description": "One page of the catalogs the calling key may search.",
+        "properties": {
+          "items": {
+            "description": "Catalogs ordered by `displayName`, case-insensitively.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticCatalog"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for the next page; pass it back verbatim as `cursor` with the same `q` and `taxonomyRoot`. Null when this is the last page.",
+            "title": "Nextcursor"
+          },
+          "taxonomyRootCounts": {
+            "description": "Catalogs per dominant taxonomy category, across every page: all catalogs `q` matches, before `taxonomyRoot` narrows them. Ordered by name, case-insensitively. The same on every page of a listing, so `limit=1` is enough to read the counts alone.",
+            "items": {
+              "$ref": "#/components/schemas/ProgrammaticCatalogTaxonomyRootCount"
+            },
+            "title": "Taxonomyrootcounts",
+            "type": "array"
+          }
+        },
+        "title": "ProgrammaticCatalogPage",
+        "type": "object"
+      },
+      "ProgrammaticCatalogTaxonomyRoot": {
+        "description": "A top-level taxonomy category of the catalog's products.",
+        "properties": {
+          "name": {
+            "description": "Top-level taxonomy category, e.g. `Apparel & Accessories`. Pass it as `taxonomyRoot` to list the catalogs it leads.",
+            "title": "Name",
+            "type": "string"
+          },
+          "productPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Share of the catalog's active products under this category, 0 to 100. Null when not computed.",
+            "title": "Productpercent"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProgrammaticCatalogTaxonomyRoot",
+        "type": "object"
+      },
+      "ProgrammaticCatalogTaxonomyRootCount": {
+        "description": "How many listed catalogs a top-level taxonomy category leads.",
+        "properties": {
+          "catalogCount": {
+            "description": "Catalogs whose dominant category it is.",
+            "title": "Catalogcount",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Top-level taxonomy category, as in `taxonomyRoots[].name`; `Uncategorized` counts catalogs that have none. Pass it as `taxonomyRoot` to list those catalogs.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalogCount",
+          "name"
+        ],
+        "title": "ProgrammaticCatalogTaxonomyRootCount",
+        "type": "object"
+      },
       "ProgrammaticCategoryCount": {
         "properties": {
           "count": {
@@ -3933,6 +4088,28 @@
             "maxItems": 100,
             "title": "Categories",
             "type": "array"
+          },
+          "context_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Facet"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters for attribute and facet value counts only, such as the category being browsed. Category counts ignore them, so sibling categories keep their own counts. Each name at most once.",
+            "title": "Context Facets"
+          },
+          "derive_attributes": {
+            "default": false,
+            "description": "Count every filterable attribute on any leaf category under the category path in `context_facets` (its `category_path.depth_N` facets), instead of naming `attributes`. Attributes on more leaf categories come first. With no category path in `context_facets`, no attributes are counted.",
+            "title": "Derive Attributes",
+            "type": "boolean"
           },
           "exclude_facets": {
             "anyOf": [
@@ -8124,6 +8301,232 @@
         "tags": [
           "brands",
           "platform-catalog-api"
+        ]
+      }
+    },
+    "/catalogs": {
+      "get": {
+        "description": "Lists the catalogs the calling key may search, ordered by display name. Every `catalog` returned is accepted in `catalogs` on `POST /products/search` for the same key.\n\n`q` matches catalogs whose key, display name or dominant taxonomy category contains it, ignoring case; for a Developer key, also a crawled catalog's source URL. `taxonomyRoot` keeps catalogs whose dominant category is exactly that name; `Uncategorized` keeps catalogs that have none. Page with `cursor` and `nextCursor`. Not billed.",
+        "operationId": "listCatalogs",
+        "parameters": [
+          {
+            "description": "`nextCursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`nextCursor` from the previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Catalogs per page.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Catalogs per page.",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Keep catalogs whose key, display name or dominant taxonomy category contains this text, ignoring case; for a Developer key, also a crawled catalog's source URL.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep catalogs whose key, display name or dominant taxonomy category contains this text, ignoring case; for a Developer key, also a crawled catalog's source URL.",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Keep catalogs whose dominant taxonomy category is exactly this name (see `taxonomyRoots`); `Uncategorized` keeps catalogs with none.",
+            "in": "query",
+            "name": "taxonomyRoot",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Keep catalogs whose dominant taxonomy category is exactly this name (see `taxonomyRoots`); `Uncategorized` keeps catalogs with none.",
+              "title": "Taxonomyroot"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RequestContext"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "firstPage": {
+                    "summary": "A Developer key's first page",
+                    "value": {
+                      "items": [
+                        {
+                          "catalog": "allbirds",
+                          "catalogType": "CRAWLED",
+                          "displayName": "Allbirds",
+                          "productCount": 1840,
+                          "storeDomains": [
+                            "allbirds.com"
+                          ],
+                          "taxonomyRoots": [
+                            {
+                              "name": "Apparel & Accessories",
+                              "productPercent": 91.2
+                            }
+                          ],
+                          "updatedAt": "2026-11-06T09:14:00Z"
+                        }
+                      ],
+                      "nextCursor": "eyJ2IjoxLCJhZnRlciI6WyJhbGxiaXJkcyIsImFsbGJpcmRzIl19"
+                    }
+                  },
+                  "lastPage": {
+                    "summary": "No further page",
+                    "value": {
+                      "items": [
+                        {
+                          "catalog": "allbirds",
+                          "catalogType": "CRAWLED",
+                          "displayName": "Allbirds",
+                          "productCount": 1840,
+                          "storeDomains": [
+                            "allbirds.com"
+                          ],
+                          "taxonomyRoots": [
+                            {
+                              "name": "Apparel & Accessories",
+                              "productPercent": 91.2
+                            }
+                          ],
+                          "updatedAt": "2026-11-06T09:14:00Z"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProgrammaticCatalogPage"
+                }
+              }
+            },
+            "description": "One page of the catalogs the calling key may search."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidCursor": {
+                    "summary": "Malformed cursor",
+                    "value": {
+                      "detail": "invalid cursor"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`cursor` is not one this route issued."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidKey": {
+                    "summary": "Invalid API key",
+                    "value": {
+                      "detail": "Invalid API key"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Missing, invalid, or revoked Bearer API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "wrongOrgType": {
+                    "summary": "Forbidden org type",
+                    "value": {
+                      "detail": "api_key_org_type_forbidden"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "The key's organization may not use this API."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "rateLimited": {
+                    "summary": "Per-org request-rate limit",
+                    "value": {
+                      "detail": "rate_limit_exceeded"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Standard per-org request-rate limit."
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          }
+        ],
+        "summary": "List the catalogs the key may search",
+        "tags": [
+          "platform-catalog-api",
+          "platform-catalogs-api"
         ]
       }
     },

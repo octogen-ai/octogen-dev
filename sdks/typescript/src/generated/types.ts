@@ -201,6 +201,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalogs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the catalogs the key may search
+         * @description Lists the catalogs the calling key may search, ordered by display name. Every `catalog` returned is accepted in `catalogs` on `POST /products/search` for the same key.
+         *
+         *     `q` matches catalogs whose key, display name or dominant taxonomy category contains it, ignoring case; for a Developer key, also a crawled catalog's source URL. `taxonomyRoot` keeps catalogs whose dominant category is exactly that name; `Uncategorized` keeps catalogs that have none. Page with `cursor` and `nextCursor`. Not billed.
+         */
+        get: operations["listCatalogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coverage/url-lists": {
         parameters: {
             query?: never;
@@ -2296,6 +2318,100 @@ export interface components {
              */
             values: components["schemas"]["ProgrammaticFacetValueCount"][];
         };
+        /**
+         * ProgrammaticCatalog
+         * @description One catalog the calling key may search.
+         */
+        ProgrammaticCatalog: {
+            /**
+             * Catalog
+             * @description Catalog key. Pass it in `catalogs` on `POST /products/search` and `POST /products/more-like-this`.
+             */
+            catalog: string;
+            /**
+             * Catalogtype
+             * @description `CRAWLED` for a catalog Octogen crawls from a public store, `MERCHANT` for one a merchant supplies. Null when unknown.
+             */
+            catalogType?: ("CRAWLED" | "MERCHANT") | null;
+            /**
+             * Displayname
+             * @description Human-readable catalog name.
+             */
+            displayName: string;
+            /**
+             * Productcount
+             * @description Active products in the catalog, from the catalog's serving summary. Refreshed when the catalog is indexed, not per request.
+             */
+            productCount: number;
+            /**
+             * Storedomains
+             * @description Store domains the catalog covers, e.g. `allbirds.com`. Empty when none is recorded.
+             */
+            storeDomains?: string[];
+            /**
+             * Taxonomyroots
+             * @description The catalog's dominant top-level taxonomy category. At most one entry today; empty when the catalog has none (filter those with `taxonomyRoot=Uncategorized`).
+             */
+            taxonomyRoots?: components["schemas"]["ProgrammaticCatalogTaxonomyRoot"][];
+            /**
+             * Updatedat
+             * @description When the catalog's products were last indexed. Null if never.
+             */
+            updatedAt?: string | null;
+        };
+        /**
+         * ProgrammaticCatalogPage
+         * @description One page of the catalogs the calling key may search.
+         */
+        ProgrammaticCatalogPage: {
+            /**
+             * Items
+             * @description Catalogs ordered by `displayName`, case-insensitively.
+             */
+            items?: components["schemas"]["ProgrammaticCatalog"][];
+            /**
+             * Nextcursor
+             * @description Opaque cursor for the next page; pass it back verbatim as `cursor` with the same `q` and `taxonomyRoot`. Null when this is the last page.
+             */
+            nextCursor?: string | null;
+            /**
+             * Taxonomyrootcounts
+             * @description Catalogs per dominant taxonomy category, across every page: all catalogs `q` matches, before `taxonomyRoot` narrows them. Ordered by name, case-insensitively. The same on every page of a listing, so `limit=1` is enough to read the counts alone.
+             */
+            taxonomyRootCounts?: components["schemas"]["ProgrammaticCatalogTaxonomyRootCount"][];
+        };
+        /**
+         * ProgrammaticCatalogTaxonomyRoot
+         * @description A top-level taxonomy category of the catalog's products.
+         */
+        ProgrammaticCatalogTaxonomyRoot: {
+            /**
+             * Name
+             * @description Top-level taxonomy category, e.g. `Apparel & Accessories`. Pass it as `taxonomyRoot` to list the catalogs it leads.
+             */
+            name: string;
+            /**
+             * Productpercent
+             * @description Share of the catalog's active products under this category, 0 to 100. Null when not computed.
+             */
+            productPercent?: number | null;
+        };
+        /**
+         * ProgrammaticCatalogTaxonomyRootCount
+         * @description How many listed catalogs a top-level taxonomy category leads.
+         */
+        ProgrammaticCatalogTaxonomyRootCount: {
+            /**
+             * Catalogcount
+             * @description Catalogs whose dominant category it is.
+             */
+            catalogCount: number;
+            /**
+             * Name
+             * @description Top-level taxonomy category, as in `taxonomyRoots[].name`; `Uncategorized` counts catalogs that have none. Pass it as `taxonomyRoot` to list those catalogs.
+             */
+            name: string;
+        };
         /** ProgrammaticCategoryCount */
         ProgrammaticCategoryCount: {
             /** Count */
@@ -2349,6 +2465,17 @@ export interface components {
              * @description Categories to count. Each count is the products matching the filters above and the category's own facets.
              */
             categories?: components["schemas"]["ProgrammaticFacetCountCategory"][];
+            /**
+             * Context Facets
+             * @description Filters for attribute and facet value counts only, such as the category being browsed. Category counts ignore them, so sibling categories keep their own counts. Each name at most once.
+             */
+            context_facets?: components["schemas"]["Facet"][] | null;
+            /**
+             * Derive Attributes
+             * @description Count every filterable attribute on any leaf category under the category path in `context_facets` (its `category_path.depth_N` facets), instead of naming `attributes`. Attributes on more leaf categories come first. With no category path in `context_facets`, no attributes are counted.
+             * @default false
+             */
+            derive_attributes: boolean;
             /**
              * Exclude Facets
              * @description Filters a product must not match, as on search.
@@ -4400,6 +4527,83 @@ export interface operations {
             };
             /** @description Brand search backend unavailable (safe to retry). */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    listCatalogs: {
+        parameters: {
+            query?: {
+                /** @description `nextCursor` from the previous page. */
+                cursor?: string | null;
+                /** @description Catalogs per page. */
+                limit?: number;
+                /** @description Keep catalogs whose key, display name or dominant taxonomy category contains this text, ignoring case; for a Developer key, also a crawled catalog's source URL. */
+                q?: string | null;
+                /** @description Keep catalogs whose dominant taxonomy category is exactly this name (see `taxonomyRoots`); `Uncategorized` keeps catalogs with none. */
+                taxonomyRoot?: string | null;
+            };
+            header?: {
+                /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
+                "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the catalogs the calling key may search. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgrammaticCatalogPage"];
+                };
+            };
+            /** @description `cursor` is not one this route issued. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Missing, invalid, or revoked Bearer API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description The key's organization may not use this API. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Standard per-org request-rate limit. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -72,11 +72,12 @@ describe("command coverage of the published operation set", () => {
     }
   });
 
-  it("excludes URL-list operations, catalog discovery, retrieve and the exact lookup alias", () => {
+  it("excludes URL-list operations, catalog discovery, catalog listing, retrieve and the exact lookup alias", () => {
     // Named rather than counted, so widening the exclusion list is a visible
     // change to this test rather than a number going up.
     const catalogDiscovery = [
       "countProductFacets",
+      "listCatalogs",
       "listTaxonomyAttributeValues",
       "listTaxonomyAttributes",
       "listTaxonomyCategories",
@@ -88,6 +89,7 @@ describe("command coverage of the published operation set", () => {
       "createUrlList",
       "deleteUrlList",
       "getUrlList",
+      "listCatalogs",
       "listTaxonomyAttributeValues",
       "listTaxonomyAttributes",
       "listTaxonomyCategories",

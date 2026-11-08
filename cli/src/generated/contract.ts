@@ -237,6 +237,50 @@ export const PUBLIC_CONTRACT = {
             "title": "Categories",
             "type": "array"
           },
+          "context_facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "description": "Canonical facet name: gender, age_groups, product_type, brand_name, brand_slug, raw_brand_name, color, color_family, is_activewear, category_path.depth_0 through category_path.depth_6, a brand profile facet such as brand_origin_country, or a taxonomy attribute handle such as fit. The attribute named color is attribute_facets.color. Unknown names are rejected.",
+                      "title": "Name",
+                      "type": "string"
+                    },
+                    "values": {
+                      "description": "Values to match; a product matches when it has ANY of them. Values are canonical lowercase handles and may contain spaces. Taxonomy attribute values may omit the attribute prefix: temple_color=gold means temple_color__gold.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "title": "Values",
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "title": "Facet",
+                  "type": "object"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filters for attribute and facet value counts only, such as the category being browsed. Category counts ignore them, so sibling categories keep their own counts. Each name at most once.",
+            "title": "Context Facets"
+          },
+          "derive_attributes": {
+            "default": false,
+            "description": "Count every filterable attribute on any leaf category under the category path in `context_facets` (its `category_path.depth_N` facets), instead of naming `attributes`. Attributes on more leaf categories come first. With no category path in `context_facets`, no attributes are counted.",
+            "title": "Derive Attributes",
+            "type": "boolean"
+          },
           "exclude_facets": {
             "anyOf": [
               {
@@ -599,6 +643,90 @@ export const PUBLIC_CONTRACT = {
         }
       ],
       "path": "/coverage/url-lists/{urlListId}"
+    },
+    "listCatalogs": {
+      "body": {
+        "properties": {},
+        "type": "object"
+      },
+      "method": "GET",
+      "parameters": [
+        {
+          "description": "`nextCursor` from the previous page.",
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`nextCursor` from the previous page.",
+            "title": "Cursor"
+          }
+        },
+        {
+          "description": "Catalogs per page.",
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "description": "Catalogs per page.",
+            "maximum": 200,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        {
+          "description": "Keep catalogs whose key, display name or dominant taxonomy category contains this text, ignoring case; for a Developer key, also a crawled catalog's source URL.",
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keep catalogs whose key, display name or dominant taxonomy category contains this text, ignoring case; for a Developer key, also a crawled catalog's source URL.",
+            "title": "Q"
+          }
+        },
+        {
+          "description": "Keep catalogs whose dominant taxonomy category is exactly this name (see `taxonomyRoots`); `Uncategorized` keeps catalogs with none.",
+          "in": "query",
+          "name": "taxonomyRoot",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keep catalogs whose dominant taxonomy category is exactly this name (see `taxonomyRoots`); `Uncategorized` keeps catalogs with none.",
+            "title": "Taxonomyroot"
+          }
+        }
+      ],
+      "path": "/catalogs"
     },
     "listTaxonomyAttributeValues": {
       "body": {
@@ -2225,6 +2353,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "7d5f7b211b32e0be6b6617897e0bcef88c50e79f79848578c3557bc4ecbbbdf4",
+  "sha256": "5d8b0bfc455d5696261e5db8c2f3b21eb0c7e086274b640b369e5e7aa275f67c",
   "version": "1.0.0"
 } as const;

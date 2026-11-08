@@ -1,6 +1,24 @@
 # Changelog — `@octogen-ai/sdk`
 
-## 0.14.0 (unreleased)
+## 0.15.0 (unreleased)
+
+- `listCatalogs()` lists the catalogs your key may search
+  (`GET /v1/catalogs`, OCT-4848): filter by `q` or `taxonomyRoot`, page with
+  `cursor`. Each `catalog` key is accepted in `catalogs` on `searchProducts`.
+  The page's `taxonomyRootCounts` counts catalogs per dominant taxonomy
+  category across the whole listing. `iterCatalogPages()` is an async
+  generator that follows `nextCursor`. New types: `ListCatalogsParams`,
+  `ProgrammaticCatalog`, `ProgrammaticCatalogPage`,
+  `ProgrammaticCatalogTaxonomyRoot`, `ProgrammaticCatalogTaxonomyRootCount`.
+- `countProductFacets()` takes `contextFacets` (filters for attribute and
+  facet value counts only, such as the category being browsed) and
+  `deriveAttributes` (count every filterable attribute under the category
+  path in `contextFacets` instead of naming `attributes`), sent as
+  `context_facets` and `derive_attributes` (OCT-4849). Sending
+  `deriveAttributes` with `attributes` is a `422` on the server and a
+  `TypeError` here.
+
+## 0.14.0 — 2026-11-04
 
 - **Breaking:** brand details now returns the lightweight profile, typed articles and
   navigation facets. Read the approximate snapshot with the separate coverage method.
@@ -8,7 +26,7 @@
 - Brand browsing exposes server `nextOffset` and supports offset 11976 inclusive.
   Follow that offset through empty projected pages; totals count source rows.
 
-## 0.13.0 (unreleased)
+## 0.13.0 — 2026-11-03
 
 - Add the canonical `q`, `facets`, `exclude_facets`, `similar_to_brands`,
   `understand`, and `limit` request fields, including reference/filter-only modes.
@@ -16,7 +34,7 @@
   canonical server and live-contract parity.
 - **Breaking:** replace `searchBrandsFromText` with `searchBrands` and `SearchBrandsParams`; no legacy wrapper.
 
-## 0.12.0 (unreleased)
+## 0.12.0 — 2026-11-02
 
 - `BrandCoverageResponse` declares `targetAudience`, the brand's recorded audience
   or fit category from `GET /v1/brands/{brand}` (OCT-4729). It remains optional
@@ -26,7 +44,7 @@
   documented `brand_name` relaxation and the more-like-this operation’s existing
   prepaid 402/503 response variants.
 
-## 0.11.0 (unreleased)
+## 0.11.0 — 2026-10-29
 
 - `MerchantProductView` declares the product-detail fields Platform added in
   octogen#14347: `availability` (the schema.org term the product's own offer
@@ -39,7 +57,7 @@
   `contentUrl` and `embedUrl`. `BreadcrumbView.url` now also carries the
   item's schema.org `@id`.
 
-## 0.10.0 (unreleased)
+## 0.10.0 — 2026-10-29
 
 - Add `retrieveProduct(uuid)` for `GET /v1/products/retrieve/{uuid}` and
   `retrieveProducts(uuids)` for `POST /v1/products/retrieve` (1-50 ids),
@@ -49,7 +67,7 @@
   product no longer offered is returned with `isActive: false` and
   `lastDeactivatedAt`.
 
-## 0.9.0 (unreleased)
+## 0.9.0 — 2026-10-28
 
 - Search `facets` take `SearchFacet`, a `Facet` with `relaxable`. A facet sent
   with `relaxable: true` may be dropped by `relax`; it still replaces an
@@ -88,7 +106,7 @@
   `detail` `brand_not_found`.
 - Refresh the OpenAPI snapshot and generated mirrors for the brand routes.
 
-## 0.8.0
+## 0.8.0 — 2026-10-20
 
 - Add typed per-call `RequestContext` on every API operation, with stable
   application defaults, explicit override/clear semantics and isolated request
@@ -102,7 +120,7 @@
 - Publication is a separate OCT-4518 step after merge; this change does not
   publish a package or activate context collection.
 
-## 0.7.0 (unreleased)
+## 0.7.0 — 2026-10-20
 
 **Breaking:** the covered-domain list is gone. The API no longer serves
 `GET /v1/domains` (octogen#13525), so `listDomains` and `fetchDomainCoverage`

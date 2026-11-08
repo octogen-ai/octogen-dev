@@ -39,6 +39,7 @@ export const OPERATIONS = {
   getStore: { method: "GET", path: "/stores/{domain}" },
   getMe: { method: "GET", path: "/me" },
   getUrlList: { method: "GET", path: "/coverage/url-lists/{urlListId}" },
+  listCatalogs: { method: "GET", path: "/catalogs" },
   listTaxonomyAttributeValues: {
     method: "GET",
     path: "/taxonomy/attributes/{handle}/values",
