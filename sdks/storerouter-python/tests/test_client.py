@@ -299,3 +299,21 @@ def test_sync_iter_catalog_pages_follows_next_cursor(api: respx.MockRouter) -> N
     assert second["cursor"] == "c1"
     assert second["q"] == "a"
     assert second["limit"] == "1"
+
+
+def test_sync_iter_catalog_pages_closes_the_async_iterator_on_early_exit() -> None:
+    finished: list[str] = []
+
+    async def pages(**_: object):
+        try:
+            for cursor in ("c1", "c2", "c3"):
+                yield cursor
+        finally:
+            finished.append("closed")
+
+    with StoreRouter(api_key="sk_test", base_url=BASE_URL, max_retries=0) as client:
+        client._client.iter_catalog_pages = pages  # type: ignore[method-assign]
+        for page in client.iter_catalog_pages():
+            assert page == "c1"
+            break
+        assert finished == ["closed"]

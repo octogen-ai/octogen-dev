@@ -280,8 +280,19 @@ class _BlockingPages(Generic[_P, _R]):
                 except StopAsyncIteration:
                     return []
 
-            while page := instance._run(next_page()):
-                yield page[0]
+            async def close_pages() -> None:
+                aclose = getattr(pages, "aclose", None)
+                if aclose is not None:
+                    await aclose()
+
+            try:
+                while page := instance._run(next_page()):
+                    yield page[0]
+            finally:
+                # Finish the async iterator on its own loop when the caller
+                # stops early or raises, not later from the garbage collector.
+                if not instance._closed:
+                    instance._run(close_pages())
 
         call.__name__ = name
         call.__qualname__ = f"StoreRouter.{name}"
