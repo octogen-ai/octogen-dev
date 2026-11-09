@@ -10820,7 +10820,7 @@
     },
     "/products/retrieve": {
       "post": {
-        "description": "Batch form of `GET /products/retrieve/{uuid}` for 1-50 ids. Returns one result per requested id, in request order: `found` with the product (and its current `uuid` when a historical id was sent), or `not_found`. Index-only, like the single form. Every id counts toward the organization's daily retrieve item ceiling.",
+        "description": "Batch form of `GET /products/retrieve/{uuid}` for 1-50 ids. Returns one result per requested id, in request order: `found` with the product, or `not_found`. Index-only, like the single form. Every id counts toward the organization's daily retrieve item ceiling.",
         "operationId": "retrieveProducts",
         "parameters": [
           {
@@ -10938,7 +10938,7 @@
     },
     "/products/retrieve/{uuid}": {
       "get": {
-        "description": "Return a product Octogen already gave you an id for (from search, lookup, or an earlier retrieve). Index-only: nothing is fetched from the merchant, so a miss is final. Historical ids resolve to the current product; store the returned `uuid`. Unlike lookup, an inactive product is returned with `isActive: false` and `lastDeactivatedAt`, so you can tell a product that is gone from one you cannot see. Use `POST /products/search` to find products and `POST /products/lookup` to resolve a URL. Responses carry a weak `ETag`; send `If-None-Match` to revalidate (304).",
+        "description": "Return a product Octogen already gave you an id for (from search, lookup, or an earlier retrieve). Index-only: nothing is fetched from the merchant, so a miss is final. Send the product's current `uuid`; an older id is not found. Unlike lookup, an inactive product is returned with `isActive: false` and `lastDeactivatedAt`, so you can tell a product that is gone from one you cannot see. Use `POST /products/search` to find products and `POST /products/lookup` to resolve a URL. Responses carry a weak `ETag`; send `If-None-Match` to revalidate (304).",
         "operationId": "retrieveProduct",
         "parameters": [
           {
