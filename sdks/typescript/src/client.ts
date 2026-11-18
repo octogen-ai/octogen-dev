@@ -73,7 +73,7 @@ import { EmbeddingColumn } from "./models.js";
 
 export const DEFAULT_BASE_URL = "https://api.storerouter.ai/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = "0.15.0";
+export const SDK_VERSION = "0.16.0";
 export const USER_AGENT = `octogen-ai-sdk-typescript/${SDK_VERSION}`;
 
 /**
