@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import type { components } from "../src/generated/types.js";
 import type {
   MerchantProductImageMetadataView,
   MerchantProductListItem,
   MerchantProductView,
+  MerchantVariantView,
   MoreLikeThisEffectiveQuery,
   MoreLikeThisProductsResponse,
+  ProductDetail,
+  ProductSummary,
+  ProductVariant,
   ProgrammaticFacetCountsRequest,
   ProgrammaticMoreLikeThisRequest,
   ProgrammaticProductSearchPage,
   ProgrammaticProductSearchRequest,
-} from "../src/models.js";
+  components,
+} from "../src/index.js";
 
 /**
  * Compile-time parity gates between the hand-written view models and the
@@ -165,7 +169,49 @@ const listItemPrimaryImageParity: Extends<
   NonNullable<MerchantProductListItem["primaryImage"]>
 > = true;
 
+interface ProductSchemaAliases {
+  EnrichmentAttribute: "Attribute";
+  EnrichmentAttributeValue: "AttributeValue";
+  MerchantProvidedAttribute: "AdditionalAttributeView";
+  ProductAudience: "AudienceView";
+  ProductBrand: "BrandView";
+  ProductBreadcrumb: "BreadcrumbView";
+  ProductCategory: "CategoryView";
+  ProductColor: "ColorView";
+  ProductDetail: "MerchantProductView";
+  ProductIdentifiers: "IdentifiersView";
+  ProductImage: "MerchantProductImageMetadataView";
+  ProductPromotion: "PromotionView";
+  ProductRatingSummary: "RatingView";
+  ProductReview: "ReviewView";
+  ProductSpecifications: "ProductDetailsView";
+  ProductSummary: "MerchantProductListItem";
+  ProductVariant: "MerchantVariantView";
+  ProductVideo: "VideoView";
+}
+type Schemas = components["schemas"];
+type SameType<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type MatchingSchemaAliases = {
+  [Alias in keyof ProductSchemaAliases]: SameType<
+    Schemas[Alias],
+    Schemas[ProductSchemaAliases[Alias]]
+  >;
+}[keyof ProductSchemaAliases];
+
 describe("Unit: view model parity with the generated contract", () => {
+  it("keeps both names usable in the SDK and generated components", () => {
+    const generatedAliases: MatchingSchemaAliases extends true ? true : false = true;
+    const summary: SameType<ProductSummary, MerchantProductListItem> = true;
+    const detail: SameType<ProductDetail, MerchantProductView> = true;
+    const variant: SameType<ProductVariant, MerchantVariantView> = true;
+    expect([generatedAliases, summary, detail, variant]).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+  });
+
   it("keeps the hand-written models field-complete against the contract", () => {
     expect(listItemKeysCovered).toBe(true);
     expect(productViewKeysCovered).toBe(true);

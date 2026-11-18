@@ -82,6 +82,26 @@ export const PUBLIC_CONTRACT = {
             "title": "Offset",
             "type": "integer"
           }
+        },
+        {
+          "description": "Catalog key, such as `saksfifthavenue`, to browse and count in. Omit to browse every catalog your key can access. A key your key cannot access returns no products.",
+          "in": "query",
+          "name": "catalog",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog key, such as `saksfifthavenue`, to browse and count in. Omit to browse every catalog your key can access. A key your key cannot access returns no products.",
+            "title": "Catalog"
+          }
         }
       ],
       "path": "/brands/{brand}/products"
@@ -515,6 +535,26 @@ export const PUBLIC_CONTRACT = {
             "minLength": 1,
             "title": "Brand",
             "type": "string"
+          }
+        },
+        {
+          "description": "Catalog key (a `catalogs[].catalog` value) to scope the snapshot to. `productCount`, `fields` and `price` then describe only the brand's products in that catalog, and `catalogs` lists at most that catalog. A key that does not carry the brand returns an empty snapshot.",
+          "in": "query",
+          "name": "catalog",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Catalog key (a `catalogs[].catalog` value) to scope the snapshot to. `productCount`, `fields` and `price` then describe only the brand's products in that catalog, and `catalogs` lists at most that catalog. A key that does not carry the brand returns an empty snapshot.",
+            "title": "Catalog"
           }
         }
       ],
@@ -1557,7 +1597,7 @@ export const PUBLIC_CONTRACT = {
         "description": "Batch retrieve request: product ids the caller already holds.",
         "properties": {
           "uuids": {
-            "description": "Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+            "description": "Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
             "items": {
               "format": "uuid",
               "type": "string"
@@ -2353,6 +2393,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "ac0e00775f919a31dc7bfe511d0955f101fcd1bb38ab36bd9102bb98d2677ce8",
+  "sha256": "6ef27bd228938b52215fdb76d5053651c3b5c36ac716c77544322ee4c276c060",
   "version": "1.0.0"
 } as const;

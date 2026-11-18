@@ -653,10 +653,16 @@ class AttributeValue(_ResponseModel):
     handle: str
 
 
+EnrichmentAttributeValue = AttributeValue
+
+
 class Attribute(_ResponseModel):
     handle: str
     name: str
-    values: list[AttributeValue] = Field(default_factory=list)
+    values: list[EnrichmentAttributeValue] = Field(default_factory=list)
+
+
+EnrichmentAttribute = Attribute
 
 
 class BrandView(_ResponseModel):
@@ -670,6 +676,9 @@ class ColorView(_ResponseModel):
     label: str
     swatch_url: str | None = Field(default=None, alias="swatchUrl")
     hex_code: str | None = Field(default=None, alias="hexCode")
+
+
+ProductColor = ColorView
 
 
 class CategoryView(_ResponseModel):
@@ -736,7 +745,7 @@ class IdentifiersView(_ResponseModel):
 class MerchantVariantView(_ResponseModel):
     sku: str | None = None
     product_url: str | None = Field(default=None, alias="productUrl")
-    color: ColorView | None = None
+    color: ProductColor | None = None
     size: str | None = None
     in_stock: bool | None = Field(default=None, alias="inStock")
     image_url: str | None = Field(default=None, alias="imageUrl")
@@ -809,7 +818,7 @@ class ProductEnrichment(_ResponseModel):
     category_path: list[str] | None = None
     attributes: dict[str, list[str]] | None = None
     attribute_handles: dict[str, list[str]] | None = None
-    structured_attributes: list[Attribute] | None = None
+    structured_attributes: list[EnrichmentAttribute] | None = None
     brand_id: str | None = None
     canonical_brand: CanonicalBrand | None = None
     summary: str | None = None
@@ -830,22 +839,36 @@ class MerchantProductImageMetadataView(_ResponseModel):
     mime_type: str | None = Field(default=None, alias="mimeType")
 
 
+# Product schema names are aliases so existing imports and model identity stay stable.
+MerchantProvidedAttribute = AdditionalAttributeView
+ProductAudience = AudienceView
+ProductBrand = BrandView
+ProductBreadcrumb = BreadcrumbView
+ProductCategory = CategoryView
+ProductIdentifiers = IdentifiersView
+ProductImage = MerchantProductImageMetadataView
+ProductPromotion = PromotionView
+ProductRatingSummary = RatingView
+ProductReview = ReviewView
+ProductSpecifications = ProductDetailsView
+ProductVariant = MerchantVariantView
+ProductVideo = VideoView
+
+
 class MerchantProductListItem(_ResponseModel):
     uuid: str
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     product_url: str = Field(alias="productUrl")
     title: str | None = None
-    brand: BrandView | None = None
+    brand: ProductBrand | None = None
     current_price: float | None = Field(default=None, alias="currentPrice")
     original_price: float | None = Field(default=None, alias="originalPrice")
     #: Deprecated: primary image CDN URL, kept populated during migration.
     #: Read ``primary_image`` instead.
     image_url: str | None = Field(default=None, alias="imageUrl")
-    primary_image: MerchantProductImageMetadataView | None = Field(
-        default=None, alias="primaryImage"
-    )
-    images: list[MerchantProductImageMetadataView] = Field(default_factory=list)
-    rating: RatingView | None = None
+    primary_image: ProductImage | None = Field(default=None, alias="primaryImage")
+    images: list[ProductImage] = Field(default_factory=list)
+    rating: ProductRatingSummary | None = None
     is_active: bool = Field(default=True, alias="isActive")
     raw_score: float | None = Field(default=None, alias="rawScore")
     display_match_score: int | None = Field(default=None, alias="displayMatchScore")
@@ -868,8 +891,11 @@ class MerchantProductListItem(_ResponseModel):
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
 
 
+ProductSummary = MerchantProductListItem
+
+
 class MerchantProductListPage(_ResponseModel):
-    items: list[MerchantProductListItem] = Field(default_factory=list)
+    items: list[ProductSummary] = Field(default_factory=list)
     next_cursor: str | None = Field(default=None, alias="nextCursor")
 
 
@@ -885,24 +911,24 @@ class ProgrammaticProductSearchPage(MerchantProductListPage):
     )
 
 
-class MerchantProductView(MerchantProductListItem):
+class MerchantProductView(ProductSummary):
     uuid: str | None
     is_active: bool | None = Field(default=None, alias="isActive")
     currency: str | None = None
     description: str | None = None
     in_stock: bool | None = Field(default=None, alias="inStock")
-    categories: list[CategoryView] = Field(default_factory=list)
+    categories: list[ProductCategory] = Field(default_factory=list)
     sizes: list[str] = Field(default_factory=list)
-    colors: list[ColorView] = Field(default_factory=list)
+    colors: list[ProductColor] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
-    variants: list[MerchantVariantView] = Field(default_factory=list)
-    details: ProductDetailsView = Field(default_factory=ProductDetailsView)
-    audience: AudienceView | None = None
-    identifiers: IdentifiersView = Field(default_factory=IdentifiersView)
-    breadcrumbs: list[BreadcrumbView] = Field(default_factory=list)
-    promotions: list[PromotionView] = Field(default_factory=list)
-    reviews: list[ReviewView] = Field(default_factory=list)
-    videos: list[VideoView] = Field(default_factory=list)
+    variants: list[ProductVariant] = Field(default_factory=list)
+    details: ProductSpecifications = Field(default_factory=ProductSpecifications)
+    audience: ProductAudience | None = None
+    identifiers: ProductIdentifiers = Field(default_factory=ProductIdentifiers)
+    breadcrumbs: list[ProductBreadcrumb] = Field(default_factory=list)
+    promotions: list[ProductPromotion] = Field(default_factory=list)
+    reviews: list[ProductReview] = Field(default_factory=list)
+    videos: list[ProductVideo] = Field(default_factory=list)
     enrichment: ProductEnrichment | None = None
     #: Schema.org ItemAvailability term the product's own offer states, e.g.
     #: ``"PreOrder"``. ``in_stock`` is the rollup over the variants.
@@ -915,9 +941,12 @@ class MerchantProductView(MerchantProductListItem):
     language_code: str | None = Field(default=None, alias="languageCode")
     #: Merchant-stated name/value pairs in the merchant's order; a name with
     #: several values repeats. Distinct from ``enrichment.attributes``.
-    additional_attributes: list[AdditionalAttributeView] = Field(
+    additional_attributes: list[MerchantProvidedAttribute] = Field(
         default_factory=list, alias="additionalAttributes"
     )
+
+
+ProductDetail = MerchantProductView
 
 
 # Response enums are open — `Literal[...] | str` — so a value the server adds
@@ -942,7 +971,7 @@ class MerchantProductUrlLookupResponse(_ResponseModel):
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     catalog_display_name: str | None = Field(default=None, alias="catalogDisplayName")
     source_base_url: str | None = Field(default=None, alias="sourceBaseUrl")
-    product: MerchantProductView
+    product: ProductDetail
     requested_url: str | None = Field(default=None, alias="requestedUrl")
     resolved_url: str | None = Field(default=None, alias="resolvedUrl")
     normalized_url: str | None = Field(default=None, alias="normalizedUrl")
@@ -981,7 +1010,7 @@ class ProductRetrieveResult(_ResponseModel):
     last_deactivated_at: datetime | None = Field(
         default=None, alias="lastDeactivatedAt"
     )
-    product: MerchantProductView | None = None
+    product: ProductDetail | None = None
 
 
 class ProductRetrieveBatchResponse(_ResponseModel):

@@ -216,11 +216,25 @@ export const BRAND_SHOW_FIELDS = {
   brand: { flag: "<brand> (positional)" },
 } satisfies FieldMap<{ brand: string }>;
 
+const BRAND_CATALOG_FILTER = unsupported(
+  "These brand commands use their default catalog scope. Use `storerouter api` to supply a catalog filter.",
+);
+
+export const BRAND_COVERAGE_FIELDS = {
+  ...BRAND_SHOW_FIELDS,
+  catalog: BRAND_CATALOG_FILTER,
+} satisfies FieldMap<{ brand: string; catalog?: string }>;
+
 export const BRAND_PRODUCTS_FIELDS = {
-  brand: { flag: "<brand> (positional)" },
+  ...BRAND_COVERAGE_FIELDS,
   limit: { flag: "--limit" },
   offset: { flag: "--offset" },
-} satisfies FieldMap<{ brand: string; limit: number; offset: number }>;
+} satisfies FieldMap<{
+  brand: string;
+  catalog?: string;
+  limit: number;
+  offset: number;
+}>;
 
 export const BRAND_CATEGORIES_FIELDS = {
   brand: { flag: "<brand> (positional)" },
@@ -246,7 +260,7 @@ export const FIELD_MAPS: Readonly<
   searchSimilarBrands: BRAND_SIMILAR_FIELDS,
   searchBrandPrefix: BRAND_PREFIX_FIELDS,
   getBrandDetails: BRAND_SHOW_FIELDS,
-  getBrandCoverage: BRAND_SHOW_FIELDS,
+  getBrandCoverage: BRAND_COVERAGE_FIELDS,
   getBrandDirectory: {},
   browseBrandProducts: BRAND_PRODUCTS_FIELDS,
   getBrandTopCategories: BRAND_CATEGORIES_FIELDS,

@@ -346,6 +346,13 @@ class DomainFieldValue(BaseModel):
     )
 
 
+class EnrichmentAttributeValue(AttributeValue):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class Facet(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -502,6 +509,13 @@ class MerchantProductImageMetadataView(BaseModel):
     )
 
 
+class MerchantProvidedAttribute(AdditionalAttributeView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class MerchantVariantView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -523,6 +537,11 @@ class MerchantVariantView(BaseModel):
         alias="currentPrice",
         description="Price of this variant: its sale price when it has one.",
         title="Currentprice",
+    )
+    gtin: str | None = Field(
+        None,
+        description="GTIN (barcode) of this variant as the merchant publishes it, passed through without validation; null when unstated. Each size or color usually has its own GTIN, unlike the product-level `identifiers.gtin`.",
+        title="Gtin",
     )
     image_url: str | None = Field(None, alias="imageUrl", title="Imageurl")
     in_stock: bool | None = Field(None, alias="inStock", title="Instock")
@@ -577,6 +596,41 @@ class PriceDistribution(BaseModel):
     )
 
 
+class ProductAudience(AudienceView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductBrand(BrandView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductBreadcrumb(BreadcrumbView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductCategory(CategoryView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductColor(ColorView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class ProductDetailsView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -586,6 +640,20 @@ class ProductDetailsView(BaseModel):
     fit: list[str] | None = Field([], title="Fit")
     materials: list[str] | None = Field([], title="Materials")
     patterns: list[str] | None = Field([], title="Patterns")
+
+
+class ProductIdentifiers(IdentifiersView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductImage(MerchantProductImageMetadataView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
 
 
 class ProductResolutionMetadata(BaseModel):
@@ -614,8 +682,22 @@ class ProductRetrieveBatchRequest(BaseModel):
     )
     uuids: list[UUID] = Field(
         ...,
-        description="Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+        description="Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
         title="Uuids",
+    )
+
+
+class ProductSpecifications(ProductDetailsView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductVariant(MerchantVariantView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
     )
 
 
@@ -1598,6 +1680,13 @@ class DomainField(BaseModel):
     )
 
 
+class EnrichmentAttribute(Attribute):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class HTTPValidationError(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1955,6 +2044,41 @@ class ProductEnrichment(BaseModel):
     type: str | None = Field(None, description="Type of the product.", title="Type")
     type_synonyms: list[str] | None = Field(
         None, description="Synonyms for the type of the product.", title="Type Synonyms"
+    )
+
+
+class ProductPromotion(PromotionView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductRatingSummary(RatingView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductReview(ReviewView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductSummary(MerchantProductListItem):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductVideo(VideoView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
     )
 
 
@@ -2534,7 +2658,7 @@ class BrandCoverageResponse(BaseModel):
     )
     catalogs: list[BrandCatalog] = Field(
         ...,
-        description="Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.",
+        description="Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand. With `catalog`, at most that catalog.",
         title="Catalogs",
     )
     catalogs_truncated: bool = Field(
@@ -2587,7 +2711,7 @@ class BrandCoverageResponse(BaseModel):
     product_count: int = Field(
         ...,
         alias="productCount",
-        description="Indexed product groups of the brand across catalogs.",
+        description="Indexed product groups of the brand across catalogs, or within the requested `catalog` when one is given.",
         title="Productcount",
     )
     target_audience: str | None = Field(
@@ -2748,6 +2872,13 @@ class MerchantProductView(BaseModel):
     videos: list[VideoView] | None = Field([], title="Videos")
 
 
+class ProductDetail(MerchantProductView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class ProductRetrieveResult(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2782,7 +2913,7 @@ class ProductRetrieveResult(BaseModel):
     status: Literal["found", "not_found"] | str = Field(..., title="Status")
     uuid: str | None = Field(
         None,
-        description="The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.",
+        description="The product's uuid, the same id as requestedUuid. Absent when not_found.",
         title="Uuid",
     )
 
