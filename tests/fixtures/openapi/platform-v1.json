@@ -1942,22 +1942,6 @@
         "title": "EmbeddingColumn",
         "type": "string"
       },
-      "EnrichmentAttribute": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Attribute"
-          }
-        ],
-        "title": "EnrichmentAttribute"
-      },
-      "EnrichmentAttributeValue": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/AttributeValue"
-          }
-        ],
-        "title": "EnrichmentAttributeValue"
-      },
       "Facet": {
         "additionalProperties": false,
         "properties": {
@@ -3068,14 +3052,6 @@
         "title": "MerchantProductView",
         "type": "object"
       },
-      "MerchantProvidedAttribute": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/AdditionalAttributeView"
-          }
-        ],
-        "title": "MerchantProvidedAttribute"
-      },
       "MerchantVariantView": {
         "description": "A single variant of a product (size/color/sku combo).",
         "properties": {
@@ -3276,54 +3252,6 @@
         ],
         "title": "PriceDistribution",
         "type": "object"
-      },
-      "ProductAudience": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/AudienceView"
-          }
-        ],
-        "title": "ProductAudience"
-      },
-      "ProductBrand": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/BrandView"
-          }
-        ],
-        "title": "ProductBrand"
-      },
-      "ProductBreadcrumb": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/BreadcrumbView"
-          }
-        ],
-        "title": "ProductBreadcrumb"
-      },
-      "ProductCategory": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/CategoryView"
-          }
-        ],
-        "title": "ProductCategory"
-      },
-      "ProductColor": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ColorView"
-          }
-        ],
-        "title": "ProductColor"
-      },
-      "ProductDetail": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/MerchantProductView"
-          }
-        ],
-        "title": "ProductDetail"
       },
       "ProductDetailsView": {
         "properties": {
@@ -3666,38 +3594,6 @@
         "title": "ProductEnrichment",
         "type": "object"
       },
-      "ProductIdentifiers": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/IdentifiersView"
-          }
-        ],
-        "title": "ProductIdentifiers"
-      },
-      "ProductImage": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/MerchantProductImageMetadataView"
-          }
-        ],
-        "title": "ProductImage"
-      },
-      "ProductPromotion": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/PromotionView"
-          }
-        ],
-        "title": "ProductPromotion"
-      },
-      "ProductRatingSummary": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/RatingView"
-          }
-        ],
-        "title": "ProductRatingSummary"
-      },
       "ProductResolutionMetadata": {
         "description": "Public, provider-neutral metadata for an on-demand resolution.",
         "properties": {
@@ -3895,46 +3791,6 @@
         ],
         "title": "ProductRetrieveResult",
         "type": "object"
-      },
-      "ProductReview": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ReviewView"
-          }
-        ],
-        "title": "ProductReview"
-      },
-      "ProductSpecifications": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ProductDetailsView"
-          }
-        ],
-        "title": "ProductSpecifications"
-      },
-      "ProductSummary": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/MerchantProductListItem"
-          }
-        ],
-        "title": "ProductSummary"
-      },
-      "ProductVariant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/MerchantVariantView"
-          }
-        ],
-        "title": "ProductVariant"
-      },
-      "ProductVideo": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/VideoView"
-          }
-        ],
-        "title": "ProductVideo"
       },
       "ProgrammaticAttributeCounts": {
         "properties": {

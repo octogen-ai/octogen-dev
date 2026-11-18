@@ -11,7 +11,8 @@ change lands as a reviewable diff rather than as a surprise at runtime:
 
 The input is the **committed snapshot** at
 ``tests/fixtures/openapi/platform-v1.json``, not the network, so codegen is
-reproducible offline and in CI. ``--fetch`` refreshes that snapshot from
+reproducible offline and in CI. The SDK generators also add product model aliases
+while they are being rolled out. ``--fetch`` refreshes the snapshot from
 ``cdn.storerouter.ai`` first; ``--check`` regenerates into a temporary directory and
 fails when the committed output is stale.
 
@@ -44,6 +45,28 @@ TS_OUTPUT = REPO_ROOT / "sdks" / "typescript" / "src" / "generated" / "types.ts"
 PY_OUTPUT = (
     REPO_ROOT / "sdks" / "python" / "src" / "octogen_ai_sdk" / "generated" / "models.py"
 )
+
+# Keep the CDN snapshot usable as a live contract comparison during rollout.
+_PRODUCT_MODEL_ALIASES = {
+    "EnrichmentAttribute": "Attribute",
+    "EnrichmentAttributeValue": "AttributeValue",
+    "MerchantProvidedAttribute": "AdditionalAttributeView",
+    "ProductAudience": "AudienceView",
+    "ProductBrand": "BrandView",
+    "ProductBreadcrumb": "BreadcrumbView",
+    "ProductCategory": "CategoryView",
+    "ProductColor": "ColorView",
+    "ProductDetail": "MerchantProductView",
+    "ProductIdentifiers": "IdentifiersView",
+    "ProductImage": "MerchantProductImageMetadataView",
+    "ProductPromotion": "PromotionView",
+    "ProductRatingSummary": "RatingView",
+    "ProductReview": "ReviewView",
+    "ProductSpecifications": "ProductDetailsView",
+    "ProductSummary": "MerchantProductListItem",
+    "ProductVariant": "MerchantVariantView",
+    "ProductVideo": "VideoView",
+}
 
 # Pinned so regeneration on two machines produces byte-identical output. The npm
 # pin is in the root package-lock.json; this is the openapi-typescript binary
@@ -95,7 +118,7 @@ def fetch_snapshot() -> None:
     print(f"fetched {CONTRACT_URL} -> {_display(SNAPSHOT)}")
 
 
-def generate_typescript(destination: Path) -> None:
+def generate_typescript(destination: Path, spec_path: Path) -> None:
     if not OPENAPI_TYPESCRIPT_BIN.exists():
         raise SystemExit(
             "openapi-typescript is not installed. Run `npm install` at the "
@@ -105,7 +128,7 @@ def generate_typescript(destination: Path) -> None:
     result = subprocess.run(
         [
             str(OPENAPI_TYPESCRIPT_BIN),
-            str(SNAPSHOT),
+            str(spec_path),
             "--empty-objects-unknown",
             "--alphabetize",
         ],
@@ -237,18 +260,14 @@ def _forward_compatible_responses(spec: dict) -> dict:
     return spec
 
 
-def generate_python(destination: Path) -> None:
+def generate_python(destination: Path, sdk_schema: dict) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         raw = Path(tmp) / "models.py"
         spec = Path(tmp) / "openapi.json"
         spec.write_text(
             json.dumps(
-                _forward_compatible_responses(
-                    _without_validation_keywords(
-                        json.loads(SNAPSHOT.read_text(encoding="utf-8"))
-                    )
-                ),
+                _forward_compatible_responses(_without_validation_keywords(sdk_schema)),
                 indent=2,
                 sort_keys=True,
                 ensure_ascii=False,
@@ -312,6 +331,23 @@ def generate_python(destination: Path) -> None:
     print(f"generated {_display(destination)}")
 
 
+def generate_sdk_models(ts_destination: Path, py_destination: Path) -> None:
+    schema = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    components = schema["components"]["schemas"]
+    for alias, original in _PRODUCT_MODEL_ALIASES.items():
+        if original not in components:
+            raise ValueError(f"Missing OpenAPI component {original} for {alias}")
+        components.setdefault(
+            alias,
+            {"title": alias, "allOf": [{"$ref": f"#/components/schemas/{original}"}]},
+        )
+    with tempfile.TemporaryDirectory() as tmp:
+        spec_path = Path(tmp) / "openapi.json"
+        spec_path.write_text(json.dumps(schema, ensure_ascii=False), encoding="utf-8")
+        generate_typescript(ts_destination, spec_path)
+        generate_python(py_destination, schema)
+
+
 def generate_reference(*, check: bool = False) -> None:
     subprocess.run(
         [
@@ -334,8 +370,7 @@ def run_check() -> int:
         tmp_py = Path(tmp) / "models.py"
         tmp_cli = Path(tmp) / "contract.ts"
         generate_cli(SNAPSHOT, tmp_cli)
-        generate_typescript(tmp_ts)
-        generate_python(tmp_py)
+        generate_sdk_models(tmp_ts, tmp_py)
         for committed, fresh in (
             (TS_OUTPUT, tmp_ts),
             (PY_OUTPUT, tmp_py),
@@ -388,8 +423,7 @@ def main() -> int:
         return run_check()
 
     generate_cli(SNAPSHOT, CLI_OUTPUT)
-    generate_typescript(TS_OUTPUT)
-    generate_python(PY_OUTPUT)
+    generate_sdk_models(TS_OUTPUT, PY_OUTPUT)
     generate_reference()
     return 0
 

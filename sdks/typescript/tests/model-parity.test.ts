@@ -169,7 +169,7 @@ const listItemPrimaryImageParity: Extends<
   NonNullable<MerchantProductListItem["primaryImage"]>
 > = true;
 
-type ProductSchemaAliases = {
+interface ProductSchemaAliases {
   EnrichmentAttribute: "Attribute";
   EnrichmentAttributeValue: "AttributeValue";
   MerchantProvidedAttribute: "AdditionalAttributeView";
@@ -188,7 +188,7 @@ type ProductSchemaAliases = {
   ProductSummary: "MerchantProductListItem";
   ProductVariant: "MerchantVariantView";
   ProductVideo: "VideoView";
-};
+}
 type Schemas = components["schemas"];
 type SameType<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type MatchingSchemaAliases = {
