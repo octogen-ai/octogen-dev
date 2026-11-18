@@ -48,8 +48,10 @@ export interface paths {
          *     facets with top values, and a price histogram. ``catalogs`` lists the
          *     catalogs carrying the brand by product count; pass a host to
          *     ``GET /v1/stores/{domain}`` for a store's own coverage. The domain is the brand website,
-         *     not a promise that a store or seller is indexed. Unbilled; snapshots are
-         *     cached per brand for about a day.
+         *     not a promise that a store or seller is indexed. Pass ``catalog`` for the
+         *     same snapshot within one of those catalogs, such as the brand's category
+         *     mix and prices at one retailer. Unbilled; snapshots are cached per brand
+         *     (and per brand and catalog) for about a day.
          */
         get: operations["getBrandCoverage"];
         put?: never;
@@ -840,7 +842,7 @@ export interface components {
             brandUuid: string;
             /**
              * Catalogs
-             * @description Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.
+             * @description Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand. With `catalog`, at most that catalog.
              */
             catalogs: components["schemas"]["BrandCatalog"][];
             /**
@@ -887,7 +889,7 @@ export interface components {
             priceTier?: string | null;
             /**
              * Productcount
-             * @description Indexed product groups of the brand across catalogs.
+             * @description Indexed product groups of the brand across catalogs, or within the requested `catalog` when one is given.
              */
             productCount: number;
             /**
@@ -1990,6 +1992,11 @@ export interface components {
              * @description Price of this variant: its sale price when it has one.
              */
             currentPrice?: number | null;
+            /**
+             * Gtin
+             * @description GTIN (barcode) of this variant as the merchant publishes it, passed through without validation; null when unstated. Each size or color usually has its own GTIN, unlike the product-level `identifiers.gtin`.
+             */
+            gtin?: string | null;
             /** Imageurl */
             imageUrl?: string | null;
             /** Instock */
@@ -2272,7 +2279,7 @@ export interface components {
         ProductRetrieveBatchRequest: {
             /**
              * Uuids
-             * @description Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.
+             * @description Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.
              */
             uuids: string[];
         };
@@ -2322,7 +2329,7 @@ export interface components {
             status: "found" | "not_found";
             /**
              * Uuid
-             * @description The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.
+             * @description The product's uuid, the same id as requestedUuid. Absent when not_found.
              */
             uuid?: string | null;
         };
@@ -3948,7 +3955,10 @@ export interface operations {
     };
     getBrandCoverage: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Catalog key (a `catalogs[].catalog` value) to scope the snapshot to. `productCount`, `fields` and `price` then describe only the brand's products in that catalog, and `catalogs` lists at most that catalog. A key that does not carry the brand returns an empty snapshot. */
+                catalog?: string | null;
+            };
             header?: {
                 /** @description Optional caller-reported context as compact, ASCII-safe JSON. At most 4096 encoded bytes; strings at most 256 characters except user_agent (1024). Repeated headers, unknown fields, invalid types or vocabularies, and size violations return a bounded 400. Does not establish authenticated identity or trusted bot status. */
                 "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
@@ -4041,6 +4051,8 @@ export interface operations {
     browseBrandProducts: {
         parameters: {
             query?: {
+                /** @description Catalog key, such as `saksfifthavenue`, to browse and count in. Omit to browse every catalog your key can access. A key your key cannot access returns no products. */
+                catalog?: string | null;
                 limit?: number;
                 /** @description Source rows to skip, at most 11976 (page 500 at 24 rows per page). Follow `nextOffset`; `hasMore` is false when the next page would exceed this bound, even if more source rows exist. */
                 offset?: number;

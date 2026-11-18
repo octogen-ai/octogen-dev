@@ -30,6 +30,7 @@ import { ExitCode, noResult, usageError } from "../exit.js";
 import {
   BRAND_CATEGORIES_FIELDS,
   BRAND_PREFIX_FIELDS,
+  BRAND_COVERAGE_FIELDS,
   BRAND_PRODUCTS_FIELDS,
   BRAND_SEARCH_FIELDS,
   BRAND_SHOW_FIELDS,
@@ -605,7 +606,7 @@ export const brandsCoverageCommand = {
   operations: ["getBrandCoverage"] as const,
   async run(context: CommandContext): Promise<ExitCode> {
     const brand = brandArgument(context);
-    contractRequest("getBrandCoverage", BRAND_SHOW_FIELDS, context.args, { brand });
+    contractRequest("getBrandCoverage", BRAND_COVERAGE_FIELDS, context.args, { brand });
     const api = context.api();
     let coverage: BrandCoverageResponse;
     try {

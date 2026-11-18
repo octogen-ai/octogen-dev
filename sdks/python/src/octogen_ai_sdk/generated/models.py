@@ -538,6 +538,11 @@ class MerchantVariantView(BaseModel):
         description="Price of this variant: its sale price when it has one.",
         title="Currentprice",
     )
+    gtin: str | None = Field(
+        None,
+        description="GTIN (barcode) of this variant as the merchant publishes it, passed through without validation; null when unstated. Each size or color usually has its own GTIN, unlike the product-level `identifiers.gtin`.",
+        title="Gtin",
+    )
     image_url: str | None = Field(None, alias="imageUrl", title="Imageurl")
     in_stock: bool | None = Field(None, alias="inStock", title="Instock")
     offer_sku: str | None = Field(
@@ -677,7 +682,7 @@ class ProductRetrieveBatchRequest(BaseModel):
     )
     uuids: list[UUID] = Field(
         ...,
-        description="Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
+        description="Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
         title="Uuids",
     )
 
@@ -2653,7 +2658,7 @@ class BrandCoverageResponse(BaseModel):
     )
     catalogs: list[BrandCatalog] = Field(
         ...,
-        description="Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand.",
+        description="Catalogs carrying the brand, most products first. Empty when no indexed product carries the brand. With `catalog`, at most that catalog.",
         title="Catalogs",
     )
     catalogs_truncated: bool = Field(
@@ -2706,7 +2711,7 @@ class BrandCoverageResponse(BaseModel):
     product_count: int = Field(
         ...,
         alias="productCount",
-        description="Indexed product groups of the brand across catalogs.",
+        description="Indexed product groups of the brand across catalogs, or within the requested `catalog` when one is given.",
         title="Productcount",
     )
     target_audience: str | None = Field(
@@ -2908,7 +2913,7 @@ class ProductRetrieveResult(BaseModel):
     status: Literal["found", "not_found"] | str = Field(..., title="Status")
     uuid: str | None = Field(
         None,
-        description="The product's current id. Differs from requestedUuid when a historical id was sent; store this one. Absent when not_found.",
+        description="The product's uuid, the same id as requestedUuid. Absent when not_found.",
         title="Uuid",
     )
 
