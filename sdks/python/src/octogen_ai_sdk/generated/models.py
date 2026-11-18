@@ -346,6 +346,13 @@ class DomainFieldValue(BaseModel):
     )
 
 
+class EnrichmentAttributeValue(AttributeValue):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class Facet(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -502,6 +509,13 @@ class MerchantProductImageMetadataView(BaseModel):
     )
 
 
+class MerchantProvidedAttribute(AdditionalAttributeView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class MerchantVariantView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -577,6 +591,41 @@ class PriceDistribution(BaseModel):
     )
 
 
+class ProductAudience(AudienceView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductBrand(BrandView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductBreadcrumb(BreadcrumbView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductCategory(CategoryView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductColor(ColorView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class ProductDetailsView(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -586,6 +635,20 @@ class ProductDetailsView(BaseModel):
     fit: list[str] | None = Field([], title="Fit")
     materials: list[str] | None = Field([], title="Materials")
     patterns: list[str] | None = Field([], title="Patterns")
+
+
+class ProductIdentifiers(IdentifiersView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductImage(MerchantProductImageMetadataView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
 
 
 class ProductResolutionMetadata(BaseModel):
@@ -616,6 +679,20 @@ class ProductRetrieveBatchRequest(BaseModel):
         ...,
         description="Product ids previously returned by Octogen (current or historical), 1-50. Results come back in this order, one per entry, duplicates included.",
         title="Uuids",
+    )
+
+
+class ProductSpecifications(ProductDetailsView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductVariant(MerchantVariantView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
     )
 
 
@@ -1598,6 +1675,13 @@ class DomainField(BaseModel):
     )
 
 
+class EnrichmentAttribute(Attribute):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class HTTPValidationError(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1955,6 +2039,41 @@ class ProductEnrichment(BaseModel):
     type: str | None = Field(None, description="Type of the product.", title="Type")
     type_synonyms: list[str] | None = Field(
         None, description="Synonyms for the type of the product.", title="Type Synonyms"
+    )
+
+
+class ProductPromotion(PromotionView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductRatingSummary(RatingView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductReview(ReviewView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductSummary(MerchantProductListItem):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ProductVideo(VideoView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
     )
 
 
@@ -2746,6 +2865,13 @@ class MerchantProductView(BaseModel):
     uuid: str | None = Field(..., title="Uuid")
     variants: list[MerchantVariantView] | None = Field([], title="Variants")
     videos: list[VideoView] | None = Field([], title="Videos")
+
+
+class ProductDetail(MerchantProductView):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
 
 
 class ProductRetrieveResult(BaseModel):

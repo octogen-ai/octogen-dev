@@ -1512,6 +1512,10 @@ export interface components {
          * @enum {string}
          */
         EmbeddingColumn: "embedding" | "style_embedding" | "tags_embedding" | "attributes_embedding";
+        /** EnrichmentAttribute */
+        EnrichmentAttribute: components["schemas"]["Attribute"];
+        /** EnrichmentAttributeValue */
+        EnrichmentAttributeValue: components["schemas"]["AttributeValue"];
         /** Facet */
         Facet: {
             /**
@@ -1963,6 +1967,8 @@ export interface components {
              */
             videos: components["schemas"]["VideoView"][];
         };
+        /** MerchantProvidedAttribute */
+        MerchantProvidedAttribute: components["schemas"]["AdditionalAttributeView"];
         /**
          * MerchantVariantView
          * @description A single variant of a product (size/color/sku combo).
@@ -2086,6 +2092,18 @@ export interface components {
              */
             populated: number;
         };
+        /** ProductAudience */
+        ProductAudience: components["schemas"]["AudienceView"];
+        /** ProductBrand */
+        ProductBrand: components["schemas"]["BrandView"];
+        /** ProductBreadcrumb */
+        ProductBreadcrumb: components["schemas"]["BreadcrumbView"];
+        /** ProductCategory */
+        ProductCategory: components["schemas"]["CategoryView"];
+        /** ProductColor */
+        ProductColor: components["schemas"]["ColorView"];
+        /** ProductDetail */
+        ProductDetail: components["schemas"]["MerchantProductView"];
         /** ProductDetailsView */
         ProductDetailsView: {
             /** Dimensions */
@@ -2214,6 +2232,14 @@ export interface components {
              */
             type_synonyms?: string[] | null;
         };
+        /** ProductIdentifiers */
+        ProductIdentifiers: components["schemas"]["IdentifiersView"];
+        /** ProductImage */
+        ProductImage: components["schemas"]["MerchantProductImageMetadataView"];
+        /** ProductPromotion */
+        ProductPromotion: components["schemas"]["PromotionView"];
+        /** ProductRatingSummary */
+        ProductRatingSummary: components["schemas"]["RatingView"];
         /**
          * ProductResolutionMetadata
          * @description Public, provider-neutral metadata for an on-demand resolution.
@@ -2300,6 +2326,16 @@ export interface components {
              */
             uuid?: string | null;
         };
+        /** ProductReview */
+        ProductReview: components["schemas"]["ReviewView"];
+        /** ProductSpecifications */
+        ProductSpecifications: components["schemas"]["ProductDetailsView"];
+        /** ProductSummary */
+        ProductSummary: components["schemas"]["MerchantProductListItem"];
+        /** ProductVariant */
+        ProductVariant: components["schemas"]["MerchantVariantView"];
+        /** ProductVideo */
+        ProductVideo: components["schemas"]["VideoView"];
         /** ProgrammaticAttributeCounts */
         ProgrammaticAttributeCounts: {
             /**

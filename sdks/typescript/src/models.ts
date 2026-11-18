@@ -416,7 +416,7 @@ export interface MoreLikeThisProductsResponse {
    * `"cached_image_query"`); absent for product sources.
    */
   resolution?: string | null;
-  items: MerchantProductListItem[];
+  items: ProductSummary[];
   nextCursor?: string | null;
   effectiveQuery?: MoreLikeThisEffectiveQuery | null;
   /** Server-generated id for this execution, matching `X-Request-ID`. */
@@ -431,7 +431,7 @@ export interface AttributeValue {
 export interface Attribute {
   handle: string;
   name: string;
-  values?: AttributeValue[];
+  values?: EnrichmentAttributeValue[];
 }
 
 export interface BrandView {
@@ -510,7 +510,7 @@ export interface IdentifiersView {
 export interface MerchantVariantView {
   sku?: string | null;
   productUrl?: string | null;
-  color?: ColorView | null;
+  color?: ProductColor | null;
   size?: string | null;
   inStock?: boolean | null;
   imageUrl?: string | null;
@@ -581,7 +581,7 @@ export interface ProductEnrichment {
   category_path?: string[] | null;
   attributes?: Record<string, string[]> | null;
   attribute_handles?: Record<string, string[]> | null;
-  structured_attributes?: Attribute[] | null;
+  structured_attributes?: EnrichmentAttribute[] | null;
   brand_id?: string | null;
   canonical_brand?: CanonicalBrand | null;
   summary?: string | null;
@@ -600,7 +600,7 @@ export interface MerchantProductListItem {
   catalogKey?: string | null;
   productUrl: string;
   title?: string | null;
-  brand?: BrandView | null;
+  brand?: ProductBrand | null;
   currentPrice?: number | null;
   originalPrice?: number | null;
   /**
@@ -612,9 +612,9 @@ export interface MerchantProductListItem {
    * The product's display image with full metadata. Its `url` is the merchant
    * source URL; `cdnUrl` carries the hosted copy when one exists.
    */
-  primaryImage?: MerchantProductImageMetadataView | null;
-  images?: MerchantProductImageMetadataView[];
-  rating?: RatingView | null;
+  primaryImage?: ProductImage | null;
+  images?: ProductImage[];
+  rating?: ProductRatingSummary | null;
   isActive?: boolean;
   rawScore?: number | null;
   displayMatchScore?: number | null;
@@ -642,12 +642,12 @@ export interface MerchantProductListItem {
 }
 
 export interface MerchantProductListPage {
-  items: MerchantProductListItem[];
+  items: ProductSummary[];
   nextCursor?: string | null;
 }
 
 export interface MerchantProductView extends Omit<
-  MerchantProductListItem,
+  ProductSummary,
   | "uuid"
   | "isActive"
   | "colors"
@@ -661,18 +661,18 @@ export interface MerchantProductView extends Omit<
   currency?: string | null;
   description?: string | null;
   inStock?: boolean | null;
-  categories?: CategoryView[];
+  categories?: ProductCategory[];
   sizes?: string[];
-  colors?: ColorView[];
+  colors?: ProductColor[];
   tags?: string[];
-  variants?: MerchantVariantView[];
-  details?: ProductDetailsView;
-  audience?: AudienceView | null;
-  identifiers?: IdentifiersView;
-  breadcrumbs?: BreadcrumbView[];
-  promotions?: PromotionView[];
-  reviews?: ReviewView[];
-  videos?: VideoView[];
+  variants?: ProductVariant[];
+  details?: ProductSpecifications;
+  audience?: ProductAudience | null;
+  identifiers?: ProductIdentifiers;
+  breadcrumbs?: ProductBreadcrumb[];
+  promotions?: ProductPromotion[];
+  reviews?: ProductReview[];
+  videos?: ProductVideo[];
   enrichment?: ProductEnrichment | null;
   /** Schema.org ItemAvailability term the product's own offer states, e.g. `PreOrder`. `inStock` is the rollup over the variants. */
   availability?: string | null;
@@ -683,8 +683,28 @@ export interface MerchantProductView extends Omit<
   /** Language of the title and description, e.g. `en-US`. */
   languageCode?: string | null;
   /** Merchant-stated name/value pairs in the merchant's order; a name with several values repeats. Distinct from `enrichment.attributes`. */
-  additionalAttributes?: AdditionalAttributeView[];
+  additionalAttributes?: MerchantProvidedAttribute[];
 }
+
+// Add public names while preserving the original interfaces for existing imports.
+export type EnrichmentAttribute = Attribute;
+export type EnrichmentAttributeValue = AttributeValue;
+export type MerchantProvidedAttribute = AdditionalAttributeView;
+export type ProductAudience = AudienceView;
+export type ProductBrand = BrandView;
+export type ProductBreadcrumb = BreadcrumbView;
+export type ProductCategory = CategoryView;
+export type ProductColor = ColorView;
+export type ProductDetail = MerchantProductView;
+export type ProductIdentifiers = IdentifiersView;
+export type ProductImage = MerchantProductImageMetadataView;
+export type ProductPromotion = PromotionView;
+export type ProductRatingSummary = RatingView;
+export type ProductReview = ReviewView;
+export type ProductSpecifications = ProductDetailsView;
+export type ProductSummary = MerchantProductListItem;
+export type ProductVariant = MerchantVariantView;
+export type ProductVideo = VideoView;
 
 export interface ProductResolutionMetadata {
   completeness: "complete" | "partial";
@@ -699,7 +719,7 @@ export interface MerchantProductUrlLookupResponse {
   catalogKey?: string | null;
   catalogDisplayName?: string | null;
   sourceBaseUrl?: string | null;
-  product: MerchantProductView;
+  product: ProductDetail;
   requestedUrl?: string | null;
   resolvedUrl?: string | null;
   normalizedUrl?: string | null;
@@ -738,7 +758,7 @@ export interface ProductRetrieveResult {
   sourceBaseUrl?: string | null;
   isActive?: boolean | null;
   lastDeactivatedAt?: string | null;
-  product?: MerchantProductView | null;
+  product?: ProductDetail | null;
 }
 
 /** `retrieveProducts` results: one per requested id, in request order. */
