@@ -1,6 +1,12 @@
 # Changelog — `@octogen-ai/sdk`
 
-## 0.15.0 (unreleased)
+## 0.16.0 — 2026-11-18
+
+- Export 18 product model aliases, including `ProductSummary`, `ProductDetail`,
+  and `ProductVariant`. Both old and new model names are supported.
+- Refresh the generated types from the published Platform v1 OpenAPI contract.
+
+## 0.15.0 — 2026-11-08
 
 - `listCatalogs()` lists the catalogs your key may search
   (`GET /v1/catalogs`, OCT-4848): filter by `q` or `taxonomyRoot`, page with
