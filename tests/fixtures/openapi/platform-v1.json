@@ -2295,6 +2295,17 @@
       "MerchantProductListItem": {
         "description": "Compact product representation for list, grid, or search results.",
         "properties": {
+          "availableOptions": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/ProductOptionValue"
+              },
+              "type": "array"
+            },
+            "description": "Merchant option values in scope. Required for scoped results.",
+            "title": "Availableoptions",
+            "type": "object"
+          },
           "brand": {
             "anyOf": [
               {
@@ -2436,7 +2447,7 @@
                 "type": "null"
               }
             ],
-            "description": "Product-family availability; null when unknown. Does not establish stock for a specific color or size.",
+            "description": "Aggregate availability for the returned group or selection; null when unknown. Individual units can have different availability.",
             "title": "Instock"
           },
           "isActive": {
@@ -2455,6 +2466,17 @@
             ],
             "title": "Originalprice"
           },
+          "priceRange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductPriceRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Known current prices in scope. Explicitly null on scoped results when unknown."
+          },
           "primaryImage": {
             "anyOf": [
               {
@@ -2465,6 +2487,18 @@
               }
             ],
             "description": "The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists."
+          },
+          "productGroupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent pg-prefixed ID. Required for scoped results and equal to uuid on a group.",
+            "title": "Productgroupuuid"
           },
           "productUrl": {
             "title": "Producturl",
@@ -2491,6 +2525,21 @@
             ],
             "description": "Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
             "title": "Rawscore"
+          },
+          "selectedOptions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fixed merchant option values. Required for scoped results and empty on a group.",
+            "title": "Selectedoptions"
           },
           "sizes": {
             "anyOf": [
@@ -2737,6 +2786,17 @@
             "description": "Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.",
             "title": "Availability"
           },
+          "availableOptions": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/ProductOptionValue"
+              },
+              "type": "array"
+            },
+            "description": "Merchant option values in scope. Required for scoped results.",
+            "title": "Availableoptions",
+            "type": "object"
+          },
           "brand": {
             "anyOf": [
               {
@@ -2941,6 +3001,17 @@
             ],
             "title": "Originalprice"
           },
+          "priceRange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductPriceRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Known current prices in scope. Explicitly null on scoped results when unknown."
+          },
           "primaryImage": {
             "anyOf": [
               {
@@ -2951,6 +3022,18 @@
               }
             ],
             "description": "The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists."
+          },
+          "productGroupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent group ID. Null for unindexed products.",
+            "title": "Productgroupuuid"
           },
           "productUrl": {
             "title": "Producturl",
@@ -2993,6 +3076,21 @@
             },
             "title": "Reviews",
             "type": "array"
+          },
+          "selectedOptions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fixed merchant option values. Null when scope is unknown.",
+            "title": "Selectedoptions"
           },
           "sizes": {
             "default": [],
@@ -3148,6 +3246,13 @@
             ],
             "title": "Imageurl"
           },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/MerchantProductImageMetadataView"
+            },
+            "title": "Images",
+            "type": "array"
+          },
           "inStock": {
             "anyOf": [
               {
@@ -3171,6 +3276,14 @@
             "description": "SKU on the variant's offer. Can differ from `sku`, which is the variant's own identifier.",
             "title": "Offersku"
           },
+          "options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Merchant option values for this unit.",
+            "title": "Options",
+            "type": "object"
+          },
           "originalPrice": {
             "anyOf": [
               {
@@ -3182,6 +3295,16 @@
             ],
             "description": "List or regular price of this variant, when stated.",
             "title": "Originalprice"
+          },
+          "primaryImage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MerchantProductImageMetadataView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "productUrl": {
             "anyOf": [
@@ -3215,6 +3338,18 @@
               }
             ],
             "title": "Sku"
+          },
+          "variantUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable var-prefixed purchasable unit ID. Null for unindexed variants.",
+            "title": "Variantuuid"
           }
         },
         "title": "MerchantVariantView",
@@ -3694,6 +3829,56 @@
         ],
         "title": "ProductImage"
       },
+      "ProductOptionValue": {
+        "description": "A merchant option value with an optional selection link.",
+        "properties": {
+          "productUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID of the indexed product for this option value.",
+            "title": "Productuuid"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "ProductOptionValue",
+        "type": "object"
+      },
+      "ProductPriceRange": {
+        "description": "Minimum and maximum known current prices in one currency.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "max": {
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "title": "Min",
+            "type": "number"
+          }
+        },
+        "required": [
+          "currency",
+          "max",
+          "min"
+        ],
+        "title": "ProductPriceRange",
+        "type": "object"
+      },
       "ProductPromotion": {
         "allOf": [
           {
@@ -3770,10 +3955,18 @@
         "description": "Batch retrieve request: product ids the caller already holds.",
         "properties": {
           "uuids": {
-            "description": "Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Send 1-50 IDs. Results come back in the same order, one per entry, duplicates included. One invalid ID rejects the entire request.",
             "items": {
-              "format": "uuid",
-              "type": "string"
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "pattern": "^(pg|prd)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              ]
             },
             "maxItems": 50,
             "minItems": 1,
@@ -4996,7 +5189,7 @@
                 "type": "null"
               }
             ],
-            "description": "Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.",
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Find products similar to this set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price. One invalid ID rejects the whole request.",
             "title": "Sources"
           }
         },
@@ -5131,7 +5324,7 @@
                 "type": "null"
               }
             ],
-            "description": "Indexed product UUID to use as the source product.",
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Uses this product as the source.",
             "title": "Uuid"
           }
         },
@@ -5160,9 +5353,36 @@
             "title": "Catalogkey",
             "type": "string"
           },
+          "productGroupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent group ID for a scoped source.",
+            "title": "Productgroupuuid"
+          },
           "productUrl": {
             "title": "Producturl",
             "type": "string"
+          },
+          "selectedOptions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fixed merchant option values for a scoped source.",
+            "title": "Selectedoptions"
           },
           "title": {
             "anyOf": [
@@ -11138,13 +11358,23 @@
         "operationId": "retrieveProduct",
         "parameters": [
           {
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs.",
             "in": "path",
             "name": "uuid",
             "required": true,
             "schema": {
-              "format": "uuid",
-              "title": "Uuid",
-              "type": "string"
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "pattern": "^(pg|prd)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              ],
+              "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs.",
+              "title": "Uuid"
             }
           },
           {

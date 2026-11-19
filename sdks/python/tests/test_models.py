@@ -120,3 +120,41 @@ def test_generated_lookup_and_retrieve_still_parse_legacy_model_classes() -> Non
         assert type(item.variants[0]) is generated.MerchantVariantView
         assert item.variants[0].color is not None
         assert item.variants[0].color.label == "Blue"
+
+
+def test_scoped_product_detail_uses_typed_options_prices_and_variant_images() -> None:
+    group = "pg-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    selection = "prd-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    variant = "var-cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    item = MerchantProductView.model_validate(
+        {
+            **WIRE_LIST_ITEM,
+            "uuid": selection,
+            "productGroupUuid": group,
+            "selectedOptions": {"color": "Blue"},
+            "availableOptions": {
+                "color": [{"value": "Blue", "productUuid": selection}]
+            },
+            "priceRange": {"min": 0, "max": 30, "currency": "USD"},
+            "variants": [
+                {
+                    "variantUuid": variant,
+                    "options": {"size": "M"},
+                    "primaryImage": WIRE_LIST_ITEM["primaryImage"],
+                    "images": WIRE_LIST_ITEM["images"],
+                }
+            ],
+        }
+    )
+    assert item.product_group_uuid == group
+    assert item.selected_options == {"color": "Blue"}
+    assert item.available_options["color"][0].product_uuid == selection
+    assert item.price_range is not None
+    assert item.price_range.min == 0 and item.price_range.currency == "USD"
+    assert item.variants[0].variant_uuid == variant
+    assert item.variants[0].options == {"size": "M"}
+    assert item.variants[0].primary_image is not None
+    assert item.variants[0].primary_image.width == 1200
+
+    request = generated.ProductRetrieveBatchRequest(uuids=[group, selection])
+    assert request.model_dump(mode="json") == {"uuids": [group, selection]}

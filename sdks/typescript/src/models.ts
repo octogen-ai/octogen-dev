@@ -376,6 +376,8 @@ export interface MoreLikeThisSourceResponse {
   uuid: string;
   productUrl: string;
   title?: string | null;
+  productGroupUuid?: string | null;
+  selectedOptions?: Record<string, string> | null;
 }
 
 /** Identity of an image source, which has no indexed product. */
@@ -514,6 +516,10 @@ export interface MerchantVariantView {
   size?: string | null;
   inStock?: boolean | null;
   imageUrl?: string | null;
+  variantUuid?: string | null;
+  options?: Record<string, string>;
+  primaryImage?: ProductImage | null;
+  images?: ProductImage[];
   /** Schema.org ItemAvailability term of the variant's offer, e.g. `InStock`, `PreOrder`, `BackOrder`. */
   availability?: string | null;
   /** SKU on the variant's offer; `sku` is the variant's own identifier. */
@@ -597,6 +603,10 @@ export type MerchantProductImageMetadataView =
 
 export interface MerchantProductListItem {
   uuid: string;
+  productGroupUuid?: string | null;
+  selectedOptions?: Record<string, string> | null;
+  availableOptions?: Record<string, ProductOptionValue[]>;
+  priceRange?: ProductPriceRange | null;
   catalogKey?: string | null;
   productUrl: string;
   title?: string | null;
@@ -698,6 +708,8 @@ export type ProductColor = ColorView;
 export type ProductDetail = MerchantProductView;
 export type ProductIdentifiers = IdentifiersView;
 export type ProductImage = MerchantProductImageMetadataView;
+export type ProductOptionValue = components["schemas"]["ProductOptionValue"];
+export type ProductPriceRange = components["schemas"]["ProductPriceRange"];
 export type ProductPromotion = PromotionView;
 export type ProductRatingSummary = RatingView;
 export type ProductReview = ReviewView;

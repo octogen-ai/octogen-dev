@@ -50,8 +50,8 @@ def test_new_validation_keywords_require_validator_support() -> None:
     spec = document()
     spec["components"]["schemas"]["ProgrammaticProductSearchRequest"]["properties"][
         "q"
-    ]["pattern"] = "^[a-z]+$"
-    with pytest.raises(ValueError, match="pattern"):
+    ]["not"] = {"type": "null"}
+    with pytest.raises(ValueError, match="schema keywords:.*not"):
         module.render(spec)
 
 

@@ -1670,6 +1670,13 @@ export interface components {
          * @description Compact product representation for list, grid, or search results.
          */
         MerchantProductListItem: {
+            /**
+             * Availableoptions
+             * @description Merchant option values in scope. Required for scoped results.
+             */
+            availableOptions?: {
+                [key: string]: components["schemas"]["ProductOptionValue"][];
+            };
             brand?: components["schemas"]["BrandView"] | null;
             /**
              * Catalogdisplayname
@@ -1717,7 +1724,7 @@ export interface components {
             imageUrl?: string | null;
             /**
              * Instock
-             * @description Product-family availability; null when unknown. Does not establish stock for a specific color or size.
+             * @description Aggregate availability for the returned group or selection; null when unknown. Individual units can have different availability.
              */
             inStock?: boolean | null;
             /**
@@ -1727,8 +1734,15 @@ export interface components {
             isActive: boolean;
             /** Originalprice */
             originalPrice?: number | null;
+            /** @description Known current prices in scope. Explicitly null on scoped results when unknown. */
+            priceRange?: components["schemas"]["ProductPriceRange"] | null;
             /** @description The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists. */
             primaryImage?: components["schemas"]["MerchantProductImageMetadataView"] | null;
+            /**
+             * Productgroupuuid
+             * @description Parent pg-prefixed ID. Required for scoped results and equal to uuid on a group.
+             */
+            productGroupUuid?: string | null;
             /** Producturl */
             productUrl: string;
             rating?: components["schemas"]["RatingView"] | null;
@@ -1737,6 +1751,13 @@ export interface components {
              * @description Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.
              */
             rawScore?: number | null;
+            /**
+             * Selectedoptions
+             * @description Fixed merchant option values. Required for scoped results and empty on a group.
+             */
+            selectedOptions?: {
+                [key: string]: string;
+            } | null;
             /**
              * Sizes
              * @description Product-family size labels.
@@ -1848,6 +1869,13 @@ export interface components {
              * @description Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.
              */
             availability?: string | null;
+            /**
+             * Availableoptions
+             * @description Merchant option values in scope. Required for scoped results.
+             */
+            availableOptions?: {
+                [key: string]: components["schemas"]["ProductOptionValue"][];
+            };
             brand?: components["schemas"]["BrandView"] | null;
             /**
              * Breadcrumbs
@@ -1922,8 +1950,15 @@ export interface components {
             offerSku?: string | null;
             /** Originalprice */
             originalPrice?: number | null;
+            /** @description Known current prices in scope. Explicitly null on scoped results when unknown. */
+            priceRange?: components["schemas"]["ProductPriceRange"] | null;
             /** @description The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists. */
             primaryImage?: components["schemas"]["MerchantProductImageMetadataView"] | null;
+            /**
+             * Productgroupuuid
+             * @description Parent group ID. Null for unindexed products.
+             */
+            productGroupUuid?: string | null;
             /** Producturl */
             productUrl: string;
             /**
@@ -1942,6 +1977,13 @@ export interface components {
              * @default []
              */
             reviews: components["schemas"]["ReviewView"][];
+            /**
+             * Selectedoptions
+             * @description Fixed merchant option values. Null when scope is unknown.
+             */
+            selectedOptions?: {
+                [key: string]: string;
+            } | null;
             /**
              * Sizes
              * @default []
@@ -1997,6 +2039,8 @@ export interface components {
              * @description GTIN (barcode) of this variant as the merchant publishes it, passed through without validation; null when unstated. Each size or color usually has its own GTIN, unlike the product-level `identifiers.gtin`.
              */
             gtin?: string | null;
+            /** Images */
+            images?: components["schemas"]["MerchantProductImageMetadataView"][];
             /** Imageurl */
             imageUrl?: string | null;
             /** Instock */
@@ -2007,16 +2051,29 @@ export interface components {
              */
             offerSku?: string | null;
             /**
+             * Options
+             * @description Merchant option values for this unit.
+             */
+            options?: {
+                [key: string]: string;
+            };
+            /**
              * Originalprice
              * @description List or regular price of this variant, when stated.
              */
             originalPrice?: number | null;
+            primaryImage?: components["schemas"]["MerchantProductImageMetadataView"] | null;
             /** Producturl */
             productUrl?: string | null;
             /** Size */
             size?: string | null;
             /** Sku */
             sku?: string | null;
+            /**
+             * Variantuuid
+             * @description Stable var-prefixed purchasable unit ID. Null for unindexed variants.
+             */
+            variantUuid?: string | null;
         };
         /**
          * MeResponse
@@ -2243,6 +2300,31 @@ export interface components {
         ProductIdentifiers: components["schemas"]["IdentifiersView"];
         /** ProductImage */
         ProductImage: components["schemas"]["MerchantProductImageMetadataView"];
+        /**
+         * ProductOptionValue
+         * @description A merchant option value with an optional selection link.
+         */
+        ProductOptionValue: {
+            /**
+             * Productuuid
+             * @description ID of the indexed product for this option value.
+             */
+            productUuid?: string | null;
+            /** Value */
+            value: string;
+        };
+        /**
+         * ProductPriceRange
+         * @description Minimum and maximum known current prices in one currency.
+         */
+        ProductPriceRange: {
+            /** Currency */
+            currency: string;
+            /** Max */
+            max: number;
+            /** Min */
+            min: number;
+        };
         /** ProductPromotion */
         ProductPromotion: components["schemas"]["PromotionView"];
         /** ProductRatingSummary */
@@ -2279,9 +2361,9 @@ export interface components {
         ProductRetrieveBatchRequest: {
             /**
              * Uuids
-             * @description Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.
+             * @description Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Send 1-50 IDs. Results come back in the same order, one per entry, duplicates included. One invalid ID rejects the entire request.
              */
-            uuids: string[];
+            uuids: (string)[];
         };
         /**
          * ProductRetrieveBatchResponse
@@ -2769,7 +2851,7 @@ export interface components {
             source?: components["schemas"]["ProgrammaticMoreLikeThisSource"] | null;
             /**
              * Sources
-             * @description Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.
+             * @description Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Find products similar to this set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price. One invalid ID rejects the whole request.
              */
             sources?: string[] | null;
         };
@@ -2812,7 +2894,7 @@ export interface components {
             url?: string | null;
             /**
              * Uuid
-             * @description Indexed product UUID to use as the source product.
+             * @description Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Uses this product as the source.
              */
             uuid?: string | null;
         };
@@ -2834,8 +2916,20 @@ export interface components {
         ProgrammaticMoreLikeThisSourceResponse: {
             /** Catalogkey */
             catalogKey: string;
+            /**
+             * Productgroupuuid
+             * @description Parent group ID for a scoped source.
+             */
+            productGroupUuid?: string | null;
             /** Producturl */
             productUrl: string;
+            /**
+             * Selectedoptions
+             * @description Fixed merchant option values for a scoped source.
+             */
+            selectedOptions?: {
+                [key: string]: string;
+            } | null;
             /** Title */
             title?: string | null;
             /** Uuid */
@@ -6012,6 +6106,7 @@ export interface operations {
                 "X-Octogen-Request-Context"?: components["parameters"]["RequestContext"];
             };
             path: {
+                /** @description Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. */
                 uuid: string;
             };
             cookie?: never;

@@ -585,6 +585,10 @@ class ProgrammaticMoreLikeThisSourceResponse(_ResponseModel):
     uuid: str
     product_url: str = Field(alias="productUrl")
     title: str | None = None
+    product_group_uuid: str | None = Field(default=None, alias="productGroupUuid")
+    selected_options: dict[str, str] | None = Field(
+        default=None, alias="selectedOptions"
+    )
 
 
 class ProgrammaticMoreLikeThisSourceImageResponse(_ResponseModel):
@@ -749,6 +753,10 @@ class MerchantVariantView(_ResponseModel):
     size: str | None = None
     in_stock: bool | None = Field(default=None, alias="inStock")
     image_url: str | None = Field(default=None, alias="imageUrl")
+    variant_uuid: str | None = Field(default=None, alias="variantUuid")
+    options: dict[str, str] = Field(default_factory=dict)
+    primary_image: ProductImage | None = Field(default=None, alias="primaryImage")
+    images: list[ProductImage] = Field(default_factory=list)
     #: Schema.org ItemAvailability term of the variant's offer, e.g.
     #: ``"InStock"``, ``"PreOrder"``, ``"BackOrder"``.
     availability: str | None = None
@@ -847,6 +855,8 @@ ProductBreadcrumb = BreadcrumbView
 ProductCategory = CategoryView
 ProductIdentifiers = IdentifiersView
 ProductImage = MerchantProductImageMetadataView
+ProductOptionValue = _contract.ProductOptionValue
+ProductPriceRange = _contract.ProductPriceRange
 ProductPromotion = PromotionView
 ProductRatingSummary = RatingView
 ProductReview = ReviewView
@@ -857,6 +867,14 @@ ProductVideo = VideoView
 
 class MerchantProductListItem(_ResponseModel):
     uuid: str
+    product_group_uuid: str | None = Field(default=None, alias="productGroupUuid")
+    selected_options: dict[str, str] | None = Field(
+        default=None, alias="selectedOptions"
+    )
+    available_options: dict[str, list[ProductOptionValue]] = Field(
+        default_factory=dict, alias="availableOptions"
+    )
+    price_range: ProductPriceRange | None = Field(default=None, alias="priceRange")
     catalog_key: str | None = Field(default=None, alias="catalogKey")
     product_url: str = Field(alias="productUrl")
     title: str | None = None

@@ -1392,7 +1392,7 @@ export const PUBLIC_CONTRACT = {
                         "type": "null"
                       }
                     ],
-                    "description": "Indexed product UUID to use as the source product.",
+                    "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Uses this product as the source.",
                     "title": "Uuid"
                   }
                 },
@@ -1420,7 +1420,7 @@ export const PUBLIC_CONTRACT = {
                 "type": "null"
               }
             ],
-            "description": "Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.",
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Find products similar to this set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price. One invalid ID rejects the whole request.",
             "title": "Sources"
           }
         },
@@ -1580,13 +1580,23 @@ export const PUBLIC_CONTRACT = {
       "method": "GET",
       "parameters": [
         {
+          "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs.",
           "in": "path",
           "name": "uuid",
           "required": true,
           "schema": {
-            "format": "uuid",
-            "title": "Uuid",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "pattern": "^(pg|prd)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              }
+            ],
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs.",
+            "title": "Uuid"
           }
         }
       ],
@@ -1597,10 +1607,18 @@ export const PUBLIC_CONTRACT = {
         "description": "Batch retrieve request: product ids the caller already holds.",
         "properties": {
           "uuids": {
-            "description": "Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
+            "description": "Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Send 1-50 IDs. Results come back in the same order, one per entry, duplicates included. One invalid ID rejects the entire request.",
             "items": {
-              "format": "uuid",
-              "type": "string"
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "pattern": "^(pg|prd)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              ]
             },
             "maxItems": 50,
             "minItems": 1,
@@ -2393,6 +2411,6 @@ export const PUBLIC_CONTRACT = {
       "path": "/stores/search"
     }
   },
-  "sha256": "6ef27bd228938b52215fdb76d5053651c3b5c36ac716c77544322ee4c276c060",
+  "sha256": "b3341a338e4357581d18173636719b13dcc9350a27378075a0892861d111379a",
   "version": "1.0.0"
 } as const;

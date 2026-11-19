@@ -45,6 +45,7 @@ def render(spec: dict) -> str:
             "examples",
             "deprecated",
             "format",
+            "pattern",
         }
         unknown = schema.keys() - supported
         if unknown:
