@@ -1,5 +1,12 @@
 # Changelog — `octogen-ai-sdk`
 
+## 0.20.0 — 2026-11-19
+
+- Add typed group relationships, selected and available options, scoped price
+  ranges, and variant IDs, options, and image metadata (OCT-4980).
+- Update the generated Platform v1 contract to accept opaque group and
+  selected-product IDs in addition to legacy UUIDs.
+
 ## 0.19.0 — 2026-11-18
 
 - Export 18 product model aliases, including `ProductSummary`, `ProductDetail`,
