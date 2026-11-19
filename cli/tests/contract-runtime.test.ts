@@ -14,6 +14,7 @@ import {
 } from "../src/contract.js";
 import { SEARCH_FIELDS, LOOKUP_FIELDS, FIELD_MAPS } from "../src/fields.js";
 import { COMMAND_LIST } from "../src/commands/index.js";
+import { sourceFor } from "../src/commands/similar.js";
 import { EXCLUDED_OPERATIONS, mappedOperations } from "../src/registry.js";
 import { ExitCode } from "../src/exit.js";
 import { runCli, TEST_KEY } from "./harness.js";
@@ -145,14 +146,20 @@ describe("contract mutations change runtime behavior", () => {
       validate({ type: "array", maxItems: 1 }, [1, 2], "catalogs");
     }).toThrow();
   });
-  it("validates uuid-format ids the way the server does", () => {
+  it("validates legacy and scoped product IDs for retrieve and similar", () => {
     const schema = requestSchema("retrieveProducts");
+    const legacy = "0c0e3bb8-965a-4f2d-919b-182e7a24efc9";
+    const group = `pg-${legacy}`;
+    const selection = `prd-${legacy}`;
     expect(() => {
-      validate(schema, { uuids: ["0c0e3bb8-965a-4f2d-919b-182e7a24efc9"] }, "retrieve");
+      validate(schema, { uuids: [legacy, group, selection] }, "retrieve");
     }).not.toThrow();
     expect(() => {
-      validate(schema, { uuids: ["not-a-uuid"] }, "retrieve");
+      validate(schema, { uuids: [group, `var-${legacy}`] }, "retrieve");
     }).toThrow("must be a UUID");
+    expect(sourceFor(group)).toEqual({ uuid: group });
+    expect(sourceFor(selection)).toEqual({ uuid: selection });
+    expect(() => sourceFor("pg-invalid")).toThrow("product URL or product ID");
   });
   it("accounts for fields of every mapped operation, including parameters", () => {
     for (const operation of mappedOperations(COMMAND_LIST)) {

@@ -544,6 +544,7 @@ class MerchantVariantView(BaseModel):
         title="Gtin",
     )
     image_url: str | None = Field(None, alias="imageUrl", title="Imageurl")
+    images: list[MerchantProductImageMetadataView] | None = Field(None, title="Images")
     in_stock: bool | None = Field(None, alias="inStock", title="Instock")
     offer_sku: str | None = Field(
         None,
@@ -551,15 +552,27 @@ class MerchantVariantView(BaseModel):
         description="SKU on the variant's offer. Can differ from `sku`, which is the variant's own identifier.",
         title="Offersku",
     )
+    options: dict[str, str] | None = Field(
+        None, description="Merchant option values for this unit.", title="Options"
+    )
     original_price: float | None = Field(
         None,
         alias="originalPrice",
         description="List or regular price of this variant, when stated.",
         title="Originalprice",
     )
+    primary_image: MerchantProductImageMetadataView | None = Field(
+        None, alias="primaryImage"
+    )
     product_url: str | None = Field(None, alias="productUrl", title="Producturl")
     size: str | None = Field(None, title="Size")
     sku: str | None = Field(None, title="Sku")
+    variant_uuid: str | None = Field(
+        None,
+        alias="variantUuid",
+        description="Stable var-prefixed purchasable unit ID. Null for unindexed variants.",
+        title="Variantuuid",
+    )
 
 
 class PriceBucket(BaseModel):
@@ -656,6 +669,30 @@ class ProductImage(MerchantProductImageMetadataView):
     )
 
 
+class ProductOptionValue(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    product_uuid: str | None = Field(
+        None,
+        alias="productUuid",
+        description="ID of the indexed product for this option value.",
+        title="Productuuid",
+    )
+    value: str = Field(..., title="Value")
+
+
+class ProductPriceRange(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    currency: str = Field(..., title="Currency")
+    max: float = Field(..., title="Max")
+    min: float = Field(..., title="Min")
+
+
 class ProductResolutionMetadata(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -680,9 +717,9 @@ class ProductRetrieveBatchRequest(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
     )
-    uuids: list[UUID] = Field(
+    uuids: list[UUID | str] = Field(
         ...,
-        description="Current product uuids previously returned by Octogen, 1-50. Results come back in this order, one per entry, duplicates included.",
+        description="Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Send 1-50 IDs. Results come back in the same order, one per entry, duplicates included. One invalid ID rejects the entire request.",
         title="Uuids",
     )
 
@@ -912,7 +949,7 @@ class ProgrammaticMoreLikeThisSource(BaseModel):
     )
     uuid: str | None = Field(
         None,
-        description="Indexed product UUID to use as the source product.",
+        description="Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Uses this product as the source.",
         title="Uuid",
     )
 
@@ -933,7 +970,19 @@ class ProgrammaticMoreLikeThisSourceResponse(BaseModel):
         populate_by_name=True,
     )
     catalog_key: str = Field(..., alias="catalogKey", title="Catalogkey")
+    product_group_uuid: str | None = Field(
+        None,
+        alias="productGroupUuid",
+        description="Parent group ID for a scoped source.",
+        title="Productgroupuuid",
+    )
     product_url: str = Field(..., alias="productUrl", title="Producturl")
+    selected_options: dict[str, str] | None = Field(
+        None,
+        alias="selectedOptions",
+        description="Fixed merchant option values for a scoped source.",
+        title="Selectedoptions",
+    )
     title: str | None = Field(None, title="Title")
     uuid: str = Field(..., title="Uuid")
 
@@ -1700,6 +1749,12 @@ class MerchantProductListItem(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
+    available_options: dict[str, list[ProductOptionValue]] | None = Field(
+        None,
+        alias="availableOptions",
+        description="Merchant option values in scope. Required for scoped results.",
+        title="Availableoptions",
+    )
     brand: BrandView | None = None
     catalog_display_name: str | None = Field(
         None,
@@ -1751,17 +1806,28 @@ class MerchantProductListItem(BaseModel):
     in_stock: bool | None = Field(
         None,
         alias="inStock",
-        description="Product-family availability; null when unknown. Does not establish stock for a specific color or size.",
+        description="Aggregate availability for the returned group or selection; null when unknown. Individual units can have different availability.",
         title="Instock",
     )
     is_active: bool | None = Field(True, alias="isActive", title="Isactive")
     original_price: float | None = Field(
         None, alias="originalPrice", title="Originalprice"
     )
+    price_range: ProductPriceRange | None = Field(
+        None,
+        alias="priceRange",
+        description="Known current prices in scope. Explicitly null on scoped results when unknown.",
+    )
     primary_image: MerchantProductImageMetadataView | None = Field(
         None,
         alias="primaryImage",
         description="The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists.",
+    )
+    product_group_uuid: str | None = Field(
+        None,
+        alias="productGroupUuid",
+        description="Parent pg-prefixed ID. Required for scoped results and equal to uuid on a group.",
+        title="Productgroupuuid",
     )
     product_url: str = Field(..., alias="productUrl", title="Producturl")
     rating: RatingView | None = None
@@ -1770,6 +1836,12 @@ class MerchantProductListItem(BaseModel):
         alias="rawScore",
         description="Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
         title="Rawscore",
+    )
+    selected_options: dict[str, str] | None = Field(
+        None,
+        alias="selectedOptions",
+        description="Fixed merchant option values. Required for scoped results and empty on a group.",
+        title="Selectedoptions",
     )
     sizes: list[str] | None = Field(
         None, description="Product-family size labels.", title="Sizes"
@@ -2315,7 +2387,7 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     )
     sources: list[str] | None = Field(
         None,
-        description="Indexed product UUIDs to find products similar to as a set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price.",
+        description="Opaque product ID previously returned by Octogen. The scoped product contract accepts pg- and prd-prefixed IDs with canonical UUID suffixes. Organizations on the original contract can still send their legacy UUIDs. Find products similar to this set, for example a collection. Send exactly one of `source` and `sources`; each UUID at most once. Results exclude every source. One UUID behaves exactly like `source: {uuid}`. With several, their style and tag terms are blended into one query, most widely shared first; a facet is generated only when every source has it, with the values of all of them; and `price_preference` compares with the sources' median price. One invalid ID rejects the whole request.",
         title="Sources",
     )
 
@@ -2790,6 +2862,12 @@ class MerchantProductView(BaseModel):
         description="Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.",
         title="Availability",
     )
+    available_options: dict[str, list[ProductOptionValue]] | None = Field(
+        None,
+        alias="availableOptions",
+        description="Merchant option values in scope. Required for scoped results.",
+        title="Availableoptions",
+    )
     brand: BrandView | None = None
     breadcrumbs: list[BreadcrumbView] | None = Field([], title="Breadcrumbs")
     catalog_key: str | None = Field(
@@ -2848,10 +2926,21 @@ class MerchantProductView(BaseModel):
     original_price: float | None = Field(
         None, alias="originalPrice", title="Originalprice"
     )
+    price_range: ProductPriceRange | None = Field(
+        None,
+        alias="priceRange",
+        description="Known current prices in scope. Explicitly null on scoped results when unknown.",
+    )
     primary_image: MerchantProductImageMetadataView | None = Field(
         None,
         alias="primaryImage",
         description="The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists.",
+    )
+    product_group_uuid: str | None = Field(
+        None,
+        alias="productGroupUuid",
+        description="Parent group ID. Null for unindexed products.",
+        title="Productgroupuuid",
     )
     product_url: str = Field(..., alias="productUrl", title="Producturl")
     promotions: list[PromotionView] | None = Field([], title="Promotions")
@@ -2863,6 +2952,12 @@ class MerchantProductView(BaseModel):
         title="Rawscore",
     )
     reviews: list[ReviewView] | None = Field([], title="Reviews")
+    selected_options: dict[str, str] | None = Field(
+        None,
+        alias="selectedOptions",
+        description="Fixed merchant option values. Null when scope is unknown.",
+        title="Selectedoptions",
+    )
     sizes: list[str] | None = Field([], title="Sizes")
     tags: list[str] | None = Field([], title="Tags")
     title: str | None = Field(None, title="Title")

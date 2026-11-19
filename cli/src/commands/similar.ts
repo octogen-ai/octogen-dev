@@ -1,7 +1,7 @@
 /**
- * `storerouter similar <url|uuid>` — more like this.
+ * `storerouter similar <url|product-id>` — more like this.
  *
- * The source is a URL or a UUID and exactly one of them: the API takes
+ * The source is a URL or a product ID: the API takes
  * `{source: {url}}` or `{source: {uuid}}` and rejects both. Which one you meant
  * is decided by shape here rather than by a flag, because an agent holding an
  * identifier out of a previous `search` should not have to say which kind it is.
@@ -12,30 +12,37 @@ import type {
   MoreLikeThisProductsResponse,
 } from "@octogen-ai/sdk";
 
-import { contractFlags, contractRequest } from "../contract.js";
+import {
+  contractFlags,
+  contractRequest,
+  requestSchema,
+  validate,
+} from "../contract.js";
 
 import { call } from "../client.js";
 import type { CommandContext } from "../context.js";
-import { ExitCode, noResult, usageError } from "../exit.js";
+import { CliError, ExitCode, noResult, usageError } from "../exit.js";
 import { SIMILAR_FIELDS } from "../fields.js";
 import type { CommandSpec } from "../registry.js";
 import { parseFacets } from "./search.js";
 
-/** A canonical UUID, which is the only thing that is not a URL. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function sourceFor(value: string): { url: string } | { uuid: string } {
   const trimmed = value.trim();
-  if (UUID.test(trimmed)) {
-    return { uuid: trimmed };
-  }
   if (/^https?:\/\//i.test(trimmed)) {
     return { url: trimmed };
   }
-  throw usageError(
-    `storerouter similar takes a product URL or a UUID; ${trimmed} is neither.`,
-    "invalid_argument",
-  );
+  // Retrieve and similar use the same indexed product identities.
+  const ids = requestSchema("retrieveProducts");
+  try {
+    validate(ids, { uuids: [trimmed] }, "similar");
+    return { uuid: trimmed };
+  } catch (error) {
+    if (!(error instanceof CliError)) throw error;
+    throw usageError(
+      "storerouter similar takes a product URL or product ID.",
+      "invalid_argument",
+    );
+  }
 }
 
 async function runSimilar(context: CommandContext): Promise<ExitCode> {
@@ -43,7 +50,7 @@ async function runSimilar(context: CommandContext): Promise<ExitCode> {
   const target = context.positionals[0];
   if (target === undefined || target.length === 0) {
     throw usageError(
-      "storerouter similar <url|uuid> requires a source product.",
+      "storerouter similar <url|product-id> requires a source product.",
       "missing_argument",
     );
   }
@@ -161,5 +168,5 @@ export const similarCommand = {
   run: runSimilar,
   summary: "Find products similar to one you already have",
   usage:
-    "similar <url|uuid> [--catalog <key>] [--facet k=v]… [--no-relax] [--limit <n>]",
+    "similar <url|product-id> [--catalog <key>] [--facet k=v]… [--no-relax] [--limit <n>]",
 } satisfies CommandSpec;

@@ -22,6 +22,7 @@ export interface Schema {
   maxItems?: number;
   /** Only `uuid`; codegen rejects any other format. */
   format?: string;
+  pattern?: string;
 }
 export interface RequestOperation {
   method: string;
@@ -210,6 +211,11 @@ export function validate(schema: Schema, value: unknown, label: string): void {
     if (schema.maxLength !== undefined && length > schema.maxLength)
       fail(`must have at most ${String(schema.maxLength)} characters`);
     if (schema.format === "uuid" && !UUID.test(value as string)) fail("must be a UUID");
+    if (
+      schema.pattern !== undefined &&
+      !new RegExp(schema.pattern, "u").test(value as string)
+    )
+      fail(`must match ${schema.pattern}`);
   }
   if (
     schema.type === "number" ||
