@@ -59,8 +59,8 @@ merchant domain is unsupported. Use `get_me()` to check credentials.
 
 ## API
 
-> Canonical Brand Search is prepared against a local server candidate. Its
-> deployment and package release are pending; see the [snapshot provenance](../../tests/fixtures/openapi/platform-v1.provenance.json).
+> The [snapshot provenance](../../tests/fixtures/openapi/platform-v1.provenance.json)
+> records the Platform API commit used to generate these models.
 
 
 Every published `/v1` operation has a method. `tests/contract` fails the build
