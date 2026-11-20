@@ -7,7 +7,9 @@ import type {
   MerchantVariantView,
   MoreLikeThisEffectiveQuery,
   MoreLikeThisProductsResponse,
+  ProductAvailableOptions,
   ProductDetail,
+  ProductOptionLink,
   ProductSummary,
   ProductVariant,
   ProgrammaticFacetCountsRequest,
@@ -210,6 +212,27 @@ describe("Unit: view model parity with the generated contract", () => {
       true,
       true,
     ]);
+  });
+
+  it("types the same full-selection links on summary and detail", () => {
+    const summary: SameType<
+      ProductSummary["availableOptions"],
+      GeneratedListItem["availableOptions"]
+    > = true;
+    const detail: SameType<
+      ProductDetail["availableOptions"],
+      GeneratedProductView["availableOptions"]
+    > = true;
+    const link: ProductOptionLink = {
+      selectedOptions: { color: "Black", fit: "Tall" },
+      productUuid: "prd-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    };
+    const available: ProductAvailableOptions = {
+      options: { color: ["Black"], fit: ["Tall"], size: ["M"] },
+      optionIndex: [link],
+    };
+    expect([summary, detail]).toEqual([true, true]);
+    expect(available.optionIndex[0]?.productUuid).toBe(link.productUuid);
   });
 
   it("keeps the hand-written models field-complete against the contract", () => {

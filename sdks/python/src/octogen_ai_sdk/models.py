@@ -855,7 +855,8 @@ ProductBreadcrumb = BreadcrumbView
 ProductCategory = CategoryView
 ProductIdentifiers = IdentifiersView
 ProductImage = MerchantProductImageMetadataView
-ProductOptionValue = _contract.ProductOptionValue
+ProductAvailableOptions = _contract.ProductAvailableOptions
+ProductOptionLink = _contract.ProductOptionLink
 ProductPriceRange = _contract.ProductPriceRange
 ProductPromotion = PromotionView
 ProductRatingSummary = RatingView
@@ -865,14 +866,23 @@ ProductVariant = MerchantVariantView
 ProductVideo = VideoView
 
 
+class ProductOptionValue(BaseModel):
+    """Legacy per-value option. Read ProductOptionLink for scoped selections."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    value: str
+    product_uuid: str | None = Field(default=None, alias="productUuid")
+
+
 class MerchantProductListItem(_ResponseModel):
     uuid: str
     product_group_uuid: str | None = Field(default=None, alias="productGroupUuid")
     selected_options: dict[str, str] | None = Field(
         default=None, alias="selectedOptions"
     )
-    available_options: dict[str, list[ProductOptionValue]] = Field(
-        default_factory=dict, alias="availableOptions"
+    available_options: ProductAvailableOptions | None = Field(
+        default=None, alias="availableOptions"
     )
     price_range: ProductPriceRange | None = Field(default=None, alias="priceRange")
     catalog_key: str | None = Field(default=None, alias="catalogKey")

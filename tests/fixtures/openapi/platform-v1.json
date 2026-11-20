@@ -2296,15 +2296,8 @@
         "description": "Compact product representation for list, grid, or search results.",
         "properties": {
           "availableOptions": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/ProductOptionValue"
-              },
-              "type": "array"
-            },
-            "description": "Merchant option values in scope. Required for scoped results.",
-            "title": "Availableoptions",
-            "type": "object"
+            "$ref": "#/components/schemas/ProductAvailableOptions",
+            "description": "Merchant option values and look links. Required for scoped results."
           },
           "brand": {
             "anyOf": [
@@ -2787,15 +2780,8 @@
             "title": "Availability"
           },
           "availableOptions": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/ProductOptionValue"
-              },
-              "type": "array"
-            },
-            "description": "Merchant option values in scope. Required for scoped results.",
-            "title": "Availableoptions",
-            "type": "object"
+            "$ref": "#/components/schemas/ProductAvailableOptions",
+            "description": "Merchant option values and look links. Required for scoped results."
           },
           "brand": {
             "anyOf": [
@@ -3432,6 +3418,36 @@
         ],
         "title": "ProductAudience"
       },
+      "ProductAvailableOptions": {
+        "description": "Option values to display and indexed selections that open a look.",
+        "properties": {
+          "optionIndex": {
+            "description": "Look links keyed by full selections. Match every axis in a row.",
+            "items": {
+              "$ref": "#/components/schemas/ProductOptionLink"
+            },
+            "title": "Optionindex",
+            "type": "array"
+          },
+          "options": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "Merchant option labels by axis within this result's scope.",
+            "title": "Options",
+            "type": "object"
+          }
+        },
+        "required": [
+          "optionIndex",
+          "options"
+        ],
+        "title": "ProductAvailableOptions",
+        "type": "object"
+      },
       "ProductBrand": {
         "allOf": [
           {
@@ -3829,30 +3845,28 @@
         ],
         "title": "ProductImage"
       },
-      "ProductOptionValue": {
-        "description": "A merchant option value with an optional selection link.",
+      "ProductOptionLink": {
+        "description": "An indexed look and its complete fixed merchant selection.",
         "properties": {
           "productUuid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "ID of the indexed product for this option value.",
-            "title": "Productuuid"
-          },
-          "value": {
-            "title": "Value",
+            "description": "The prd-prefixed ID of the look.",
+            "title": "Productuuid",
             "type": "string"
+          },
+          "selectedOptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The complete set of fixed merchant option values for the look.",
+            "title": "Selectedoptions",
+            "type": "object"
           }
         },
         "required": [
-          "value"
+          "productUuid",
+          "selectedOptions"
         ],
-        "title": "ProductOptionValue",
+        "title": "ProductOptionLink",
         "type": "object"
       },
       "ProductPriceRange": {

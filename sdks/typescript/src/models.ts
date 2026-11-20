@@ -605,7 +605,7 @@ export interface MerchantProductListItem {
   uuid: string;
   productGroupUuid?: string | null;
   selectedOptions?: Record<string, string> | null;
-  availableOptions?: Record<string, ProductOptionValue[]>;
+  availableOptions?: ProductAvailableOptions;
   priceRange?: ProductPriceRange | null;
   catalogKey?: string | null;
   productUrl: string;
@@ -708,7 +708,13 @@ export type ProductColor = ColorView;
 export type ProductDetail = MerchantProductView;
 export type ProductIdentifiers = IdentifiersView;
 export type ProductImage = MerchantProductImageMetadataView;
-export type ProductOptionValue = components["schemas"]["ProductOptionValue"];
+export type ProductAvailableOptions = components["schemas"]["ProductAvailableOptions"];
+export type ProductOptionLink = components["schemas"]["ProductOptionLink"];
+/** @deprecated Use ProductOptionLink for scoped look selections. */
+export interface ProductOptionValue {
+  value: string;
+  productUuid?: string | null;
+}
 export type ProductPriceRange = components["schemas"]["ProductPriceRange"];
 export type ProductPromotion = PromotionView;
 export type ProductRatingSummary = RatingView;
