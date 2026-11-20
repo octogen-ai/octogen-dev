@@ -10,7 +10,13 @@ the model entirely.
 import octogen_ai_sdk
 import pydantic
 import pytest
-from octogen_ai_sdk import MerchantProductListItem, MerchantProductView
+from octogen_ai_sdk import (
+    MerchantProductListItem,
+    MerchantProductView,
+    ProductAvailableOptions,
+    ProductOptionLink,
+    ProgrammaticProductSearchPage,
+)
 from octogen_ai_sdk.generated import models as generated
 
 WIRE_LIST_ITEM = {
@@ -39,6 +45,7 @@ WIRE_LIST_ITEM = {
 def test_list_item_parses_image_metadata_objects() -> None:
     item = MerchantProductListItem.model_validate(WIRE_LIST_ITEM)
 
+    assert item.available_options is None
     assert item.primary_image is not None
     assert item.primary_image.url == "https://example.com/image.jpg"
     assert item.primary_image.cdn_url == "https://cdn.octogen.ai/abc/primary.webp"
@@ -131,9 +138,15 @@ def test_scoped_product_detail_uses_typed_options_prices_and_variant_images() ->
             **WIRE_LIST_ITEM,
             "uuid": selection,
             "productGroupUuid": group,
-            "selectedOptions": {"color": "Blue"},
+            "selectedOptions": {"color": "Black", "fit": "Tall"},
             "availableOptions": {
-                "color": [{"value": "Blue", "productUuid": selection}]
+                "options": {"color": ["Black"], "fit": ["Tall"]},
+                "optionIndex": [
+                    {
+                        "selectedOptions": {"color": "Black", "fit": "Tall"},
+                        "productUuid": selection,
+                    }
+                ],
             },
             "priceRange": {"min": 0, "max": 30, "currency": "USD"},
             "variants": [
@@ -147,8 +160,12 @@ def test_scoped_product_detail_uses_typed_options_prices_and_variant_images() ->
         }
     )
     assert item.product_group_uuid == group
-    assert item.selected_options == {"color": "Blue"}
-    assert item.available_options["color"][0].product_uuid == selection
+    assert item.selected_options == {"color": "Black", "fit": "Tall"}
+    assert item.available_options is not None
+    assert item.available_options.option_index[0].product_uuid == selection
+    assert (
+        item.available_options.option_index[0].selected_options == item.selected_options
+    )
     assert item.price_range is not None
     assert item.price_range.min == 0 and item.price_range.currency == "USD"
     assert item.variants[0].variant_uuid == variant
@@ -158,3 +175,44 @@ def test_scoped_product_detail_uses_typed_options_prices_and_variant_images() ->
 
     request = generated.ProductRetrieveBatchRequest(uuids=[group, selection])
     assert request.model_dump(mode="json") == {"uuids": [group, selection]}
+
+
+def test_search_group_option_index_resolves_full_selection() -> None:
+    regular = "prd-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    tall = "prd-cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    page = ProgrammaticProductSearchPage.model_validate(
+        {
+            "items": [
+                {
+                    **WIRE_LIST_ITEM,
+                    "availableOptions": {
+                        "options": {
+                            "color": ["Black"],
+                            "fit": ["Regular", "Tall"],
+                            "size": ["M"],
+                        },
+                        "optionIndex": [
+                            {
+                                "selectedOptions": {"color": "Black", "fit": "Regular"},
+                                "productUuid": regular,
+                            },
+                            {
+                                "selectedOptions": {"color": "Black", "fit": "Tall"},
+                                "productUuid": tall,
+                            },
+                        ],
+                    },
+                }
+            ],
+        }
+    )
+    available = page.items[0].available_options
+    assert isinstance(available, ProductAvailableOptions)
+    assert available.options["size"] == ["M"]
+    link = next(
+        link
+        for link in available.option_index
+        if link.selected_options == {"fit": "Tall", "color": "Black"}
+    )
+    assert isinstance(link, ProductOptionLink)
+    assert link.product_uuid == tall

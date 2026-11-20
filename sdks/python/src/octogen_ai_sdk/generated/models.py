@@ -669,18 +669,23 @@ class ProductImage(MerchantProductImageMetadataView):
     )
 
 
-class ProductOptionValue(BaseModel):
+class ProductOptionLink(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
     )
-    product_uuid: str | None = Field(
-        None,
+    product_uuid: str = Field(
+        ...,
         alias="productUuid",
-        description="ID of the indexed product for this option value.",
+        description="The prd-prefixed ID of the look.",
         title="Productuuid",
     )
-    value: str = Field(..., title="Value")
+    selected_options: dict[str, str] = Field(
+        ...,
+        alias="selectedOptions",
+        description="The complete set of fixed merchant option values for the look.",
+        title="Selectedoptions",
+    )
 
 
 class ProductPriceRange(BaseModel):
@@ -1744,111 +1749,22 @@ class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
 
 
-class MerchantProductListItem(BaseModel):
+class ProductAvailableOptions(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
     )
-    available_options: dict[str, list[ProductOptionValue]] | None = Field(
-        None,
-        alias="availableOptions",
-        description="Merchant option values in scope. Required for scoped results.",
-        title="Availableoptions",
+    option_index: list[ProductOptionLink] = Field(
+        ...,
+        alias="optionIndex",
+        description="Look links keyed by full selections. Match every axis in a row.",
+        title="Optionindex",
     )
-    brand: BrandView | None = None
-    catalog_display_name: str | None = Field(
-        None,
-        alias="catalogDisplayName",
-        description="Display name of the catalog that supplied it.",
-        title="Catalogdisplayname",
+    options: dict[str, list[str]] = Field(
+        ...,
+        description="Merchant option labels by axis within this result's scope.",
+        title="Options",
     )
-    catalog_key: str | None = Field(
-        None,
-        alias="catalogKey",
-        description="Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.",
-        title="Catalogkey",
-    )
-    category_path: list[str] | None = Field(
-        None,
-        alias="categoryPath",
-        description="Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.",
-        title="Categorypath",
-    )
-    colors: list[str] | None = Field(
-        None,
-        description="Product-family color labels; the linked variant may differ.",
-        title="Colors",
-    )
-    currency: str | None = Field(
-        None,
-        description="ISO 4217 currency of the prices; null when unknown or mixed.",
-        title="Currency",
-    )
-    current_price: float | None = Field(
-        None, alias="currentPrice", title="Currentprice"
-    )
-    display_match_score: int | None = Field(
-        None,
-        alias="displayMatchScore",
-        description="User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.",
-        title="Displaymatchscore",
-    )
-    gender: Literal["male", "female", "unisex"] | str | None = Field(
-        None, description="Target gender; null when unknown or when several are listed."
-    )
-    image_url: str | None = Field(
-        None,
-        alias="imageUrl",
-        description="Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.",
-        title="Imageurl",
-    )
-    images: list[MerchantProductImageMetadataView] | None = Field([], title="Images")
-    in_stock: bool | None = Field(
-        None,
-        alias="inStock",
-        description="Aggregate availability for the returned group or selection; null when unknown. Individual units can have different availability.",
-        title="Instock",
-    )
-    is_active: bool | None = Field(True, alias="isActive", title="Isactive")
-    original_price: float | None = Field(
-        None, alias="originalPrice", title="Originalprice"
-    )
-    price_range: ProductPriceRange | None = Field(
-        None,
-        alias="priceRange",
-        description="Known current prices in scope. Explicitly null on scoped results when unknown.",
-    )
-    primary_image: MerchantProductImageMetadataView | None = Field(
-        None,
-        alias="primaryImage",
-        description="The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists.",
-    )
-    product_group_uuid: str | None = Field(
-        None,
-        alias="productGroupUuid",
-        description="Parent pg-prefixed ID. Required for scoped results and equal to uuid on a group.",
-        title="Productgroupuuid",
-    )
-    product_url: str = Field(..., alias="productUrl", title="Producturl")
-    rating: RatingView | None = None
-    raw_score: float | None = Field(
-        None,
-        alias="rawScore",
-        description="Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
-        title="Rawscore",
-    )
-    selected_options: dict[str, str] | None = Field(
-        None,
-        alias="selectedOptions",
-        description="Fixed merchant option values. Required for scoped results and empty on a group.",
-        title="Selectedoptions",
-    )
-    sizes: list[str] | None = Field(
-        None, description="Product-family size labels.", title="Sizes"
-    )
-    title: str | None = Field(None, title="Title")
-    updated_at: AwareDatetime | None = Field(None, alias="updatedAt", title="Updatedat")
-    uuid: str = Field(..., title="Uuid")
 
 
 class ProductEnrichment(BaseModel):
@@ -2140,13 +2056,6 @@ class ProductReview(ReviewView):
     )
 
 
-class ProductSummary(MerchantProductListItem):
-    pass
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-
-
 class ProductVideo(VideoView):
     pass
     model_config = ConfigDict(
@@ -2392,38 +2301,6 @@ class ProgrammaticMoreLikeThisRequest(BaseModel):
     )
 
 
-class ProgrammaticMoreLikeThisResponse(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
-        None, alias="effectiveQuery"
-    )
-    items: list[MerchantProductListItem] = Field(..., title="Items")
-    next_cursor: str | None = Field(None, alias="nextCursor", title="Nextcursor")
-    request_id: str = Field(
-        ...,
-        alias="requestId",
-        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
-        title="Requestid",
-    )
-    resolution: str | None = Field(
-        None,
-        description="How the source was resolved. Product sources omit this; image sources report the resolution-ladder rung: 'image_query_generation' (pipeline ran) or 'cached_image_query' (served from the image-content-hash cache).",
-        title="Resolution",
-    )
-    source: ProgrammaticMoreLikeThisSourceResponse | None = None
-    source_image: ProgrammaticMoreLikeThisSourceImageResponse | None = Field(
-        None, alias="sourceImage"
-    )
-    sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = Field(
-        None,
-        description="The resolved `sources`, in request order. Present only when the request sent `sources`.",
-        title="Sources",
-    )
-
-
 class ProgrammaticProductSearchEffectiveQuery(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2459,31 +2336,6 @@ class ProgrammaticProductSearchEffectiveQuery(BaseModel):
     )
     understood: bool = Field(
         ..., description="Whether query understanding ran.", title="Understood"
-    )
-
-
-class ProgrammaticProductSearchPage(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-    )
-    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
-        ...,
-        alias="effectiveQuery",
-        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response, with or without `debug`.",
-    )
-    items: list[MerchantProductListItem] | None = Field([], title="Items")
-    next_cursor: str | None = Field(
-        None,
-        alias="nextCursor",
-        description="Opaque cursor for the next page; pass it back verbatim as `cursor` with the same request body. Null when no further page is available. With diversity off, text or brand-similarity searches continue in relevance order within a bounded retrieval window; filter-only browsing uses quality-score order. Pages rerun retrieval rather than reading a frozen snapshot. Products can repeat with `diversity: true` or catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
-        title="Nextcursor",
-    )
-    request_id: str = Field(
-        ...,
-        alias="requestId",
-        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
-        title="Requestid",
     )
 
 
@@ -2794,55 +2646,110 @@ class BrandCoverageResponse(BaseModel):
     )
 
 
-class BrandProductsPage(BaseModel):
+class MerchantProductListItem(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
     )
-    brand_name: str = Field(
-        ...,
-        alias="brandName",
-        description="Canonical brand name used for the query.",
-        title="Brandname",
-    )
-    brand_slug: str | None = Field(
+    available_options: ProductAvailableOptions | None = Field(
         None,
-        alias="brandSlug",
-        description="Canonical brand slug used for the query.",
-        title="Brandslug",
+        alias="availableOptions",
+        description="Merchant option values and look links. Required for scoped results.",
     )
-    has_more: bool = Field(
-        ...,
-        alias="hasMore",
-        description="Whether another fetchable page exists. False once pagination would pass the offset ceiling (11976), even if `total` is larger.",
-        title="Hasmore",
+    brand: BrandView | None = None
+    catalog_display_name: str | None = Field(
+        None,
+        alias="catalogDisplayName",
+        description="Display name of the catalog that supplied it.",
+        title="Catalogdisplayname",
     )
-    limit: int = Field(
-        ...,
-        description="Maximum source rows per page, before projection.",
-        title="Limit",
+    catalog_key: str | None = Field(
+        None,
+        alias="catalogKey",
+        description="Catalog that supplied this product. Present for search/list results so cross-catalog searches can link back to the correct catalog.",
+        title="Catalogkey",
     )
-    next_offset: int | None = Field(
-        ...,
-        alias="nextOffset",
-        description="Offset of the next fetchable page, or null at the end or depth bound. Advances by source page size, including rows omitted during projection; use this value even when products is empty.",
-        title="Nextoffset",
+    category_path: list[str] | None = Field(
+        None,
+        alias="categoryPath",
+        description="Taxonomy category path, root first, in the names the `category_path.depth_N` facets accept.",
+        title="Categorypath",
     )
-    offset: int = Field(
-        ...,
-        description="Number of source rows skipped (at most 11976).",
-        title="Offset",
+    colors: list[str] | None = Field(
+        None,
+        description="Product-family color labels; the linked variant may differ.",
+        title="Colors",
     )
-    products: list[MerchantProductListItem] = Field(
-        ...,
-        description="Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.",
-        title="Products",
+    currency: str | None = Field(
+        None,
+        description="ISO 4217 currency of the prices; null when unknown or mixed.",
+        title="Currency",
     )
-    total: int = Field(
-        ...,
-        description="Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.",
-        title="Total",
+    current_price: float | None = Field(
+        None, alias="currentPrice", title="Currentprice"
     )
+    display_match_score: int | None = Field(
+        None,
+        alias="displayMatchScore",
+        description="User-facing match score normalized for the current result set. This is intended for display only and is not comparable across queries.",
+        title="Displaymatchscore",
+    )
+    gender: Literal["male", "female", "unisex"] | str | None = Field(
+        None, description="Target gender; null when unknown or when several are listed."
+    )
+    image_url: str | None = Field(
+        None,
+        alias="imageUrl",
+        description="Deprecated: primary image CDN URL, kept populated during migration. Read primaryImage instead.",
+        title="Imageurl",
+    )
+    images: list[MerchantProductImageMetadataView] | None = Field([], title="Images")
+    in_stock: bool | None = Field(
+        None,
+        alias="inStock",
+        description="Aggregate availability for the returned group or selection; null when unknown. Individual units can have different availability.",
+        title="Instock",
+    )
+    is_active: bool | None = Field(True, alias="isActive", title="Isactive")
+    original_price: float | None = Field(
+        None, alias="originalPrice", title="Originalprice"
+    )
+    price_range: ProductPriceRange | None = Field(
+        None,
+        alias="priceRange",
+        description="Known current prices in scope. Explicitly null on scoped results when unknown.",
+    )
+    primary_image: MerchantProductImageMetadataView | None = Field(
+        None,
+        alias="primaryImage",
+        description="The product's display image with full metadata. Its url is the merchant source URL; cdnUrl carries the hosted copy when one exists.",
+    )
+    product_group_uuid: str | None = Field(
+        None,
+        alias="productGroupUuid",
+        description="Parent pg-prefixed ID. Required for scoped results and equal to uuid on a group.",
+        title="Productgroupuuid",
+    )
+    product_url: str = Field(..., alias="productUrl", title="Producturl")
+    rating: RatingView | None = None
+    raw_score: float | None = Field(
+        None,
+        alias="rawScore",
+        description="Raw Elasticsearch score for the source hit. Useful for debugging; not normalized across queries or strategies.",
+        title="Rawscore",
+    )
+    selected_options: dict[str, str] | None = Field(
+        None,
+        alias="selectedOptions",
+        description="Fixed merchant option values. Required for scoped results and empty on a group.",
+        title="Selectedoptions",
+    )
+    sizes: list[str] | None = Field(
+        None, description="Product-family size labels.", title="Sizes"
+    )
+    title: str | None = Field(None, title="Title")
+    updated_at: AwareDatetime | None = Field(None, alias="updatedAt", title="Updatedat")
+    uuid: str = Field(..., title="Uuid")
 
 
 class MerchantProductView(BaseModel):
@@ -2862,11 +2769,10 @@ class MerchantProductView(BaseModel):
         description="Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.",
         title="Availability",
     )
-    available_options: dict[str, list[ProductOptionValue]] | None = Field(
+    available_options: ProductAvailableOptions | None = Field(
         None,
         alias="availableOptions",
-        description="Merchant option values in scope. Required for scoped results.",
-        title="Availableoptions",
+        description="Merchant option values and look links. Required for scoped results.",
     )
     brand: BrandView | None = None
     breadcrumbs: list[BreadcrumbView] | None = Field([], title="Breadcrumbs")
@@ -3013,6 +2919,13 @@ class ProductRetrieveResult(BaseModel):
     )
 
 
+class ProductSummary(MerchantProductListItem):
+    pass
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
 class ProgrammaticFacetCountsResponse(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -3037,6 +2950,38 @@ class ProgrammaticFacetCountsResponse(BaseModel):
         ...,
         description="One entry per requested facet name, in request order.",
         title="Facets",
+    )
+
+
+class ProgrammaticMoreLikeThisResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    effective_query: ProgrammaticMoreLikeThisEffectiveQuery | None = Field(
+        None, alias="effectiveQuery"
+    )
+    items: list[MerchantProductListItem] = Field(..., title="Items")
+    next_cursor: str | None = Field(None, alias="nextCursor", title="Nextcursor")
+    request_id: str = Field(
+        ...,
+        alias="requestId",
+        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+        title="Requestid",
+    )
+    resolution: str | None = Field(
+        None,
+        description="How the source was resolved. Product sources omit this; image sources report the resolution-ladder rung: 'image_query_generation' (pipeline ran) or 'cached_image_query' (served from the image-content-hash cache).",
+        title="Resolution",
+    )
+    source: ProgrammaticMoreLikeThisSourceResponse | None = None
+    source_image: ProgrammaticMoreLikeThisSourceImageResponse | None = Field(
+        None, alias="sourceImage"
+    )
+    sources: list[ProgrammaticMoreLikeThisSourceResponse] | None = Field(
+        None,
+        description="The resolved `sources`, in request order. Present only when the request sent `sources`.",
+        title="Sources",
     )
 
 
@@ -3100,6 +3045,31 @@ class ProgrammaticProductLookupResponse(BaseModel):
         None,
         description="Stable, deduplicated warning codes for on-demand and\nclient-HTML results. Renames or removals are breaking changes; clients should\ntolerate unknown additions. Current successful-response vocabulary:\n\n| Code | Overview |\n| --- | --- |\n| `source_url_missing` | The client-HTML request omitted `url`. |\n| `multiple_product_nodes` | Multiple JSON-LD product candidates were found; the strongest was selected. |\n| `variant_url_no_match` | The selected candidate URL did not match the submitted URL; this can be a sibling product or the same product with query parameters dropped. |\n| `malformed_json_ld` | At least one malformed JSON-LD block was skipped. |\n| `canonical_invalid` | The page declared a canonical URL with an unusable hostname—often because two URLs were accidentally concatenated. Octogen discarded it and tried another URL source. |\n| `canonical_cross_origin` | The canonical URL's hostname is neither the submitted hostname nor its parent or subdomain. This may indicate cross-site or incorrect product metadata. |\n| `canonical_listing_page` | The canonical URL looks like a parent listing or category page. |\n| `price_currency_missing` | A price was extracted without a currency. |\n| `product_fields_clamped` | One or more extracted fields were adjusted to fit API limits—for example, long text was truncated, extra or invalid image URLs were removed, or a negative price was omitted. |\n\nFor shallow and client-HTML resolution, a missing canonical URL produces\n`404 product_not_found`, not a warning in a successful response. Catalog\nextraction can succeed with a null canonicalUrl. See the integration guide for selection rules, edge cases,\nand recommended handling.\n",
         title="Warnings",
+    )
+
+
+class ProgrammaticProductSearchPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    effective_query: ProgrammaticProductSearchEffectiveQuery = Field(
+        ...,
+        alias="effectiveQuery",
+        description="The text, filters and bounds that actually ran, with each facet's origin. Present on every response, with or without `debug`.",
+    )
+    items: list[MerchantProductListItem] | None = Field([], title="Items")
+    next_cursor: str | None = Field(
+        None,
+        alias="nextCursor",
+        description="Opaque cursor for the next page; pass it back verbatim as `cursor` with the same request body. Null when no further page is available. With diversity off, text or brand-similarity searches continue in relevance order within a bounded retrieval window; filter-only browsing uses quality-score order. Pages rerun retrieval rather than reading a frozen snapshot. Products can repeat with `diversity: true` or catalog changes between requests, so de-duplicate by `uuid` when concatenating pages.",
+        title="Nextcursor",
+    )
+    request_id: str = Field(
+        ...,
+        alias="requestId",
+        description="Server-generated UUID for this execution, matching X-Request-ID. A new invocation or page gets a fresh ID even when the caller reuses X-Request-ID.",
+        title="Requestid",
     )
 
 
@@ -3183,6 +3153,57 @@ class StoreSearchResult(BaseModel):
     store: StoreIdentity
     summary: str = Field(
         ..., description="Published overall profile summary.", title="Summary"
+    )
+
+
+class BrandProductsPage(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+    )
+    brand_name: str = Field(
+        ...,
+        alias="brandName",
+        description="Canonical brand name used for the query.",
+        title="Brandname",
+    )
+    brand_slug: str | None = Field(
+        None,
+        alias="brandSlug",
+        description="Canonical brand slug used for the query.",
+        title="Brandslug",
+    )
+    has_more: bool = Field(
+        ...,
+        alias="hasMore",
+        description="Whether another fetchable page exists. False once pagination would pass the offset ceiling (11976), even if `total` is larger.",
+        title="Hasmore",
+    )
+    limit: int = Field(
+        ...,
+        description="Maximum source rows per page, before projection.",
+        title="Limit",
+    )
+    next_offset: int | None = Field(
+        ...,
+        alias="nextOffset",
+        description="Offset of the next fetchable page, or null at the end or depth bound. Advances by source page size, including rows omitted during projection; use this value even when products is empty.",
+        title="Nextoffset",
+    )
+    offset: int = Field(
+        ...,
+        description="Number of source rows skipped (at most 11976).",
+        title="Offset",
+    )
+    products: list[MerchantProductListItem] = Field(
+        ...,
+        description="Products on this page, shaped like `/v1/products/search` items. Rows without a usable product URL are dropped, so a page may contain fewer than `limit` items even when more rows exist.",
+        title="Products",
+    )
+    total: int = Field(
+        ...,
+        description="Total active products for the brand within the caller's catalog scope, counted before any per-row projection drops.",
+        title="Total",
     )
 
 

@@ -1670,13 +1670,8 @@ export interface components {
          * @description Compact product representation for list, grid, or search results.
          */
         MerchantProductListItem: {
-            /**
-             * Availableoptions
-             * @description Merchant option values in scope. Required for scoped results.
-             */
-            availableOptions?: {
-                [key: string]: components["schemas"]["ProductOptionValue"][];
-            };
+            /** @description Merchant option values and look links. Required for scoped results. */
+            availableOptions?: components["schemas"]["ProductAvailableOptions"];
             brand?: components["schemas"]["BrandView"] | null;
             /**
              * Catalogdisplayname
@@ -1869,13 +1864,8 @@ export interface components {
              * @description Schema.org ItemAvailability term the product's own offer states, e.g. `InStock`, `PreOrder`; null when unstated or not a schema.org term. `inStock` is the rollup over the variants; use it for stock.
              */
             availability?: string | null;
-            /**
-             * Availableoptions
-             * @description Merchant option values in scope. Required for scoped results.
-             */
-            availableOptions?: {
-                [key: string]: components["schemas"]["ProductOptionValue"][];
-            };
+            /** @description Merchant option values and look links. Required for scoped results. */
+            availableOptions?: components["schemas"]["ProductAvailableOptions"];
             brand?: components["schemas"]["BrandView"] | null;
             /**
              * Breadcrumbs
@@ -2158,6 +2148,24 @@ export interface components {
         };
         /** ProductAudience */
         ProductAudience: components["schemas"]["AudienceView"];
+        /**
+         * ProductAvailableOptions
+         * @description Option values to display and indexed selections that open a look.
+         */
+        ProductAvailableOptions: {
+            /**
+             * Optionindex
+             * @description Look links keyed by full selections. Match every axis in a row.
+             */
+            optionIndex: components["schemas"]["ProductOptionLink"][];
+            /**
+             * Options
+             * @description Merchant option labels by axis within this result's scope.
+             */
+            options: {
+                [key: string]: string[];
+            };
+        };
         /** ProductBrand */
         ProductBrand: components["schemas"]["BrandView"];
         /** ProductBreadcrumb */
@@ -2301,17 +2309,22 @@ export interface components {
         /** ProductImage */
         ProductImage: components["schemas"]["MerchantProductImageMetadataView"];
         /**
-         * ProductOptionValue
-         * @description A merchant option value with an optional selection link.
+         * ProductOptionLink
+         * @description An indexed look and its complete fixed merchant selection.
          */
-        ProductOptionValue: {
+        ProductOptionLink: {
             /**
              * Productuuid
-             * @description ID of the indexed product for this option value.
+             * @description The prd-prefixed ID of the look.
              */
-            productUuid?: string | null;
-            /** Value */
-            value: string;
+            productUuid: string;
+            /**
+             * Selectedoptions
+             * @description The complete set of fixed merchant option values for the look.
+             */
+            selectedOptions: {
+                [key: string]: string;
+            };
         };
         /**
          * ProductPriceRange
